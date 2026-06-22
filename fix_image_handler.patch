@@ -1,0 +1,14 @@
+// В handleImageGen добавить try-catch и логирование
+try {
+  console.log('[Bot] Generating image for:', topic);
+  const image = await generatePostImage(topic);
+  console.log('[Bot] Image generated:', image.url);
+  
+  await telegram.sendPhoto(chatId, image.url, {
+    caption: `🎨 ${topic}\n\n[Нажми /start для меню]`,
+    reply_markup: { inline_keyboard: [[{ text: '📝 Использовать в посте', callback_data: `edo:post_with_image:${image.url}` }]] }
+  });
+} catch (err) {
+  console.error('[Bot] Image generation failed:', err.message);
+  await telegram.sendMessage(chatId, `❌ Ошибка генерации: ${err.message}`);
+}
