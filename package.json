@@ -1,0 +1,15 @@
+{
+  "name": "legalauto-bot",
+  "version": "2.0.0",
+  "description": "LegalAuto Jarvis Bot",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "cd legalauto-node-bot && node index.js",
+    "dev": "cd legalauto-node-bot && node index.js"
+  },
+  "engines": {
+    "node": "20.x"
+  },
+  "install": "cd legalauto-node-bot && npm install"
+}
