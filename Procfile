@@ -1,1 +1,1 @@
-web: bash start-bot.sh
+web: cd legalauto-node-bot && npm install && cd .. && node index.js
