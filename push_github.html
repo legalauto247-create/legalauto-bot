@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LegalAuto — Push to GitHub</title>
+    <style>
+        body { font-family: monospace; background: #1e1e1e; color: #0f0; padding: 20px; }
+        .log { white-space: pre-wrap; overflow: auto; height: 400px; border: 1px solid #0f0; padding: 10px; margin-bottom: 20px; }
+        button { background: #0f0; color: #000; padding: 10px 20px; border: none; cursor: pointer; }
+        .success { color: #0f0; }
+        .error { color: #f00; }
+    </style>
+</head>
+<body>
+    <h1>🤖 LegalAuto Jarvis — Push to GitHub</h1>
+    <div class="log" id="log"></div>
+    <button onclick="startPush()">Пушить файлы</button>
+
+    <script>
+// ⚠️ ВНИМАНИЕ: Токен ДОЛЖЕН быть введен вручную или из .env!
+let TOKEN = '';
+const REPO = 'legalauto247-create/legalauto-bot';
+
+// Попросить токен у пользователя при загрузке
+document.addEventListener('DOMContentLoaded', () => {
+  TOKEN = prompt('🔑 Введите GitHub Personal Access Token (PAT):\n\nНЕ делайте это публично! Используйте .env файл и Railway Variables.');
+  if (!TOKEN) {
+    alert('❌ Токен не введен. Пушить не могу.');
+  }
+});
+const FILES = [
+    { path: 'agents/carDocAgent.js', b64: 'Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci8vIExFR0FMIEFVVE8g4oCUIENhciBEb2N1bWVudGF0aW9uIEFnZW50Ci8vINCh0L7Qv9GA0L7QstC+0LbQtNC10L3QuNC1INC60LvQuNC10L3RgtC+0LIg0L/QvjoKLy8gICDigKIg0KHQkdCa0KLQoSAo0YHQtdGA0YLQuNGE0LjQutCw0YbQuNGPINC60L7QvdGB0YLRgNGD0LrRhtC40Lgg0KLQoSkKLy8gICDigKIg0K3Qn9Ci0KEgKNGN0LvQtdC60YLRgNC+0L3QvdGL0Lkg0L/QsNGB0L/QvtGA0YIg0KLQoSkKLy8gICDigKIg0KLQsNC80L7QttC90Y8g0Lgg0L/RgNC40LLQvtC3ICLQsNCy0YLQvgogLy8gICDigKIg0J/0L7RgdGC0LDQvdC+0LLQutCwINC90LAg0YPRh9GR0YIKLy8gICDigKIg0J/QtdGA0LXQv9GA0L7QtNCw0LbQsCDQsNCy0YLQviAo0LTQvtC60YPQvNC10L3RgtCw0LvRjNC90L7QtSDRgdC+0L/RgNC+0LLQvtC20LTQtdC90LjQtSkKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgppbXBvcnQgeyBTQktUU19LTk9XTEVER0UsIEVQVFNfS05PV0xFREdFLCBDQVJfSU1QT1JUX0tOT1dMRURHRSwgQ0FSX1JFU0FMRV9LTk9XTEVER0UgfSBmcm9tICcuL2tub3dsZWRnZUJhc2UuanMnOwppbXBvcnQgeyBhc2tDbGF1ZGVPbmx5IH0gZnJvbSAnLi9kdWFsQnJhaW5BZ2VudC5qcyc7CgovLyDilIDilIAg0KLQuNC/0Ysg0LTQvtC60YPQvNC10L3RgtCw0LvRjNC90YvRhSDQt9Cw0LTQsNGHIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgApleHBvcnQgY29uc3QgRE9DX1RBU0tfVFlQRVMgPSB7CiAgU0JLVFM6ICAgICAgJ3Nia3RzJywKICBFUFRTOiAgICAgICAnZXB0cycsCiAgQ1VTVE9NUzogICAgJ2N1c3RvbXMnLAogIENBUl9JTVBPUlQ6ICdjYXJfaW1wb3J0JywKICBDQVJfUkVTQUxFOiAnY2FyX3Jlc2FsZScsCiAgR0lCREQ6ICAgICAgJ2dpYmRkJywKICBHRU5FUkFMOiAgICAnZ2VuZXJhbF9kb2MnLAp9OwoKLy8g4pSA4pSAINCe0L/RgNC10LTQtdC70LjRgtGMINGC0LjQvyDQt9Cw0L/RgNC+0YHQsCDQv9C+INGC0LXQutGB0YLRgyDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKZXhwb3J0IGZ1bmN0aW9uIGRldGVjdERvY1Rhc2tUeXBlKHRleHQpIHsKICBjb25zdCB0ID0gdGV4dC50b0xvd2VyQ2FzZSgpOwogIGlmICh0LmluY2x1ZGVzKCfRgdCx0LrRgtGBJykgfHwgdC5pbmNsdWRlcygn0LHQtdC30L7Qv9Cw0YHQvdC+0YHRgtC4INC60L7QvdGB0YLRgNGD0LrRhtC40LgnKSB8fCB0LmluY2x1ZGVzKCfRgdCy0LjQtNC10YLQtdC70YzRgdGC0LLQviDQsdC10LfQvtC/0LDRgdC9JykpIHJldHVybiBET0NfVEFTS19UWVBFUy5TQktUUzsKICBpZiAodC5pbmNsdWRlcygn0Y3Qv9GC0YEnKSB8fCB0LmluY2x1ZGVzKCfRjdC70LXQutGC0YDQvtC90L3Ri9C5INC/0LDRgdC/0L7RgNGCJykgfHwgdC5pbmNsdWRlcygn0L/RgtGBJykpIHJldHVybiBET0NfVEFTS19UWVBFUy5FUFRTOwogIGlmICh0LmluY2x1ZGVzKCfRgtCw0LzQvtC20L0nKSB8fCB0LmluY2x1ZGVzKCfRgNCw0YHRgtCw0LzQvtC20LonKSB8fCB0LmluY2x1ZGVzKCfQv9C+0YjQu9C40L0nKSkgcmV0dXJuIERPQ19UQVNLX1RZUEVTLkNVU1RRVVNTO' },
+    // ... остальные файлы ...
+];
+
+function log(msg, type = 'normal') {
+    const el = document.getElementById('log');
+    const className = type === 'success' ? 'success' : type === 'error' ? 'error' : '';
+    el.innerHTML += `<span class="${className}">${msg}</span>\n`;
+    el.scrollTop = el.scrollHeight;
+}
+
+async function getSHA(path) {
+    try {
+        const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${path}`, {
+            headers: { 'Authorization': `token ${TOKEN}` }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            return data.sha;
+        }
+    } catch (e) {
+        log(`⚠️ getSHA для ${path}: ${e.message}`, 'error');
+    }
+    return null;
+}
+
+async function pushFile(path, b64, sha = null) {
+    const payload = {
+        message: `feat: ${path} — Jarvis 🤖`,
+        content: b64
+    };
+    if (sha) payload.sha = sha;
+
+    try {
+        const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${path}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `token ${TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            log(`✅ ${path} → ${res.status}`, 'success');
+            return true;
+        } else {
+            const err = await res.json();
+            log(`❌ ${path} → ${res.status}: ${err.message}`, 'error');
+            return false;
+        }
+    } catch (e) {
+        log(`❌ ${path} → ERROR: ${e.message}`, 'error');
+        return false;
+    }
+}
+
+async function startPush() {
+    log('🤖 Начинаю пушить файлы на GitHub...\n');
+    let success = 0;
+
+    for (let i = 0; i < FILES.length; i++) {
+        const f = FILES[i];
+        log(`━━━ ${i + 1}/${FILES.length}: ${f.path} ━━━`);
+
+        let sha = null;
+        if (f.needSHA) {
+            log('  Получаю SHA...');
+            sha = await getSHA(f.path);
+        }
+
+        if (await pushFile(f.path, f.b64, sha)) {
+            success++;
+        }
+    }
+
+    log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    log(`✅ Done! ${success}/${FILES.length} файлов запушено`, 'success');
+}
+    </script>
+</body>
+</html>

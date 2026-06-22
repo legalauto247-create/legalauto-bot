@@ -1,0 +1,35 @@
+# ⛔ НИКОГДА не коммитить секреты
+legalauto-node-bot/.env
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example  # .env.example МОЖНО коммитить как шаблон
+
+# API Keys и токены
+*.key
+*.pem
+.railway/
+
+# Node.js
+node_modules/
+npm-debug.log*
+.npm
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Logs
+*.log
+logs/
+
+# Clasp / GAS
+legalauto-core-fixed/legalauto-core.zip
+.claspignore
+
+# IDE
+.idea/
+.vscode/settings.json
+*.swp

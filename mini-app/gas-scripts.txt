@@ -1,0 +1,1784 @@
+1 Код.gs : 
+
+function doGet(e) {
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheets()[0];
+
+  const rows = sheet
+    .getDataRange()
+    .getValues();
+
+  const headers = rows.shift();
+
+  let products = rows.map(row => {
+    let obj = {};
+
+    headers.forEach((h, i) => {
+      obj[h] = row[i];
+    });
+
+    return obj;
+  });
+
+  products = products.filter(p => {
+    return String(p.miniapp_visible).toUpperCase() !== "FALSE";
+  });
+
+  if (e.parameter.q) {
+    const q = String(e.parameter.q).toLowerCase();
+
+    products = products.filter(p =>
+      String(p.search_text || JSON.stringify(p))
+        .toLowerCase()
+        .includes(q)
+    );
+  }
+
+  if (e.parameter.brand) {
+    products = products.filter(p =>
+      String(p.brand).toLowerCase() === String(e.parameter.brand).toLowerCase()
+    );
+  }
+
+  if (e.parameter.body) {
+    products = products.filter(p =>
+      String(p.body).toLowerCase().includes(String(e.parameter.body).toLowerCase())
+    );
+  }
+
+  if (e.parameter.category) {
+    products = products.filter(p =>
+      String(p.category).toLowerCase() === String(e.parameter.category).toLowerCase()
+    );
+  }
+
+  const brands = [...new Set(products.map(p => p.brand).filter(Boolean))];
+  const bodies = [...new Set(products.map(p => p.body).filter(Boolean))];
+  const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
+  const conditions = [...new Set(products.map(p => p.condition).filter(Boolean))];
+
+  return ContentService
+    .createTextOutput(JSON.stringify({
+      products,
+      filters: {
+        brands,
+        bodies,
+        categories,
+        conditions
+      }
+    }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+2 TelegramPublisher:
+
+ const BOT_TOKEN = "8649857181:AAFnlZ4GkpAle7vZXP8_7iAUY1Zl6Xub1uM";
+const CHANNEL_ID = "-1003877661204";
+const CHANNEL_USERNAME = "LegalAutoParts24";
+
+function publishOnePart() {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+    const rows = sheet.getDataRange().getValues();
+    const headers = rows[0];
+
+    const col = name => headers.indexOf(name);
+
+    const iPublished = col("published");
+    const iPublishedAt = col("published_at");
+    const iTelegramPost = col("telegram_post");
+    const iTelegramMessageId = col("telegram_message_id");
+    const iPostHash = col("post_hash");
+
+    for (let i = 1; i < rows.length; i++) {
+      const published = String(rows[i][iPublished] || "").trim().toUpperCase();
+
+      if (published === "TRUE" || published === "SKIP" || published === "DUPLICATE") {
+        continue;
+      }
+
+      const displayCar = rows[i][col("display_car")] || `${rows[i][col("brand")]} ${rows[i][col("model")]}`;
+      const name = rows[i][col("name")] || "";
+      const oem = rows[i][col("oem")] || "";
+      const category = rows[i][col("category")] || "Запчасти";
+      const condition = rows[i][col("condition")] || "Оригинал Б/У";
+      const price = rows[i][col("price")] || 0;
+      const qty = rows[i][col("qty")] || 1;
+      const photo = rows[i][col("photo_cover")] || rows[i][col("photo_1")] || rows[i][col("photo")];
+
+      const postHash = rows[i][iPostHash] || `${displayCar}|${oem}`;
+
+      const duplicate = rows.some((row, index) => {
+        if (index === 0 || index === i) return false;
+        return String(row[iPostHash] || "") === String(postHash) &&
+               String(row[iPublished] || "").toUpperCase() === "TRUE";
+      });
+
+      if (duplicate) {
+        sheet.getRange(i + 1, iPublished + 1).setValue("DUPLICATE");
+        continue;
+      }
+
+      const text = `🔥 НОВОЕ ПОСТУПЛЕНИЕ
+
+🚘 ${displayCar}
+
+📦 ${name}
+
+🏷 Категория: ${category}
+
+⚙️ Состояние: ${condition}
+
+🔧 OEM: ${oem}
+
+💰 Цена: ${Number(price).toLocaleString("ru-RU")} ₽
+
+📦 Остаток: ${qty} шт.
+
+🚚 Отправка по всей России
+
+📲 @${CHANNEL_USERNAME}`;
+
+      const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`;
+
+      const payload = {
+        chat_id: CHANNEL_ID,
+        photo: photo,
+        caption: text
+      };
+
+      const response = UrlFetchApp.fetch(url, {
+        method: "post",
+        contentType: "application/json",
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      });
+
+      const result = JSON.parse(response.getContentText());
+
+      if (!result.ok) {
+        sheet.getRange(i + 1, iPublished + 1).setValue("ERROR");
+        continue;
+      }
+
+      const messageId = result.result.message_id;
+      const postLink = `https://t.me/${CHANNEL_USERNAME}/${messageId}`;
+
+      sheet.getRange(i + 1, iPublished + 1).setValue("TRUE");
+      sheet.getRange(i + 1, iPublishedAt + 1).setValue(new Date());
+      sheet.getRange(i + 1, iTelegramPost + 1).setValue(postLink);
+      sheet.getRange(i + 1, iTelegramMessageId + 1).setValue(messageId);
+      sheet.getRange(i + 1, iPostHash + 1).setValue(postHash);
+
+      break;
+    }
+
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+
+3  MigrateV6.gs :
+
+function migrateToV6() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+
+  const headers = sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];
+
+  const add = [
+    "supplier","series","display_car","compatibility","condition","in_stock","stock_location",
+    "photo_cover","photo_1","photo_2","photo_3","photo_4","photo_5",
+    "search_text","priority","featured","miniapp_visible",
+    "published_at","telegram_post","telegram_message_id","post_hash",
+    "views","leads","favorite","source","sort_order"
+  ];
+
+  let col = headers.length;
+
+  add.forEach(name => {
+    if (!headers.includes(name)) {
+      col++;
+      sheet.getRange(1,col).setValue(name);
+    }
+  });
+
+  const data = sheet.getDataRange().getValues();
+  const h = data[0];
+  const ix = name => h.indexOf(name);
+
+  function detectCar(modelRaw, bodyRaw, textRaw) {
+    const model = String(modelRaw || "").trim().toUpperCase();
+    const body = String(bodyRaw || "").trim().toUpperCase();
+    const text = String(textRaw || "").toUpperCase();
+
+    const knownBodies = ["G05","G06","G07","G30","G11","F15","F16"];
+    const bodyToSeries = {
+      G05:"X5",
+      G06:"X6",
+      G07:"X7",
+      G30:"5 Series",
+      G11:"7 Series",
+      F15:"X5",
+      F16:"X6"
+    };
+
+    let detectedBody = "";
+
+    for (const b of knownBodies) {
+      if (model === b || body === b || text.includes(b)) {
+        detectedBody = b;
+        break;
+      }
+    }
+
+    let series = "";
+
+    if (detectedBody) {
+      series = bodyToSeries[detectedBody] || "";
+    }
+
+    if (!series && model.startsWith("X")) {
+      series = model;
+    }
+
+    if (!detectedBody && body.startsWith("G")) {
+      detectedBody = body;
+    }
+
+    return {
+      series,
+      body: detectedBody || body || model
+    };
+  }
+
+  for (let r = 1; r < data.length; r++) {
+    const brand = data[r][ix("brand")] || "";
+    const model = data[r][ix("model")] || "";
+    const bodyOld = data[r][ix("body")] || "";
+    const name = data[r][ix("name")] || "";
+    const description = data[r][ix("description")] || "";
+    const oem = data[r][ix("oem")] || "";
+    const qty = Number(data[r][ix("qty")] || 0);
+    const photo = data[r][ix("photo")] || "";
+
+    const detected = detectCar(model, bodyOld, `${name} ${description}`);
+
+    sheet.getRange(r+1, ix("series")+1).setValue(detected.series);
+    sheet.getRange(r+1, ix("body")+1).setValue(detected.body);
+
+    sheet.getRange(r+1, ix("display_car")+1)
+      .setValue(`${brand} ${detected.series} ${detected.body}`.trim());
+
+    sheet.getRange(r+1, ix("supplier")+1).setValue("Own");
+    sheet.getRange(r+1, ix("condition")+1).setValue("Оригинал Б/У");
+    sheet.getRange(r+1, ix("in_stock")+1).setValue(qty > 0);
+    sheet.getRange(r+1, ix("stock_location")+1).setValue("Москва");
+    sheet.getRange(r+1, ix("photo_cover")+1).setValue(photo);
+    sheet.getRange(r+1, ix("photo_1")+1).setValue(photo);
+
+    sheet.getRange(r+1, ix("search_text")+1)
+      .setValue(`${brand} ${detected.series} ${detected.body} ${name} ${oem}`);
+
+    sheet.getRange(r+1, ix("priority")+1).setValue("NORMAL");
+    sheet.getRange(r+1, ix("featured")+1).setValue("FALSE");
+    sheet.getRange(r+1, ix("miniapp_visible")+1).setValue(true);
+    sheet.getRange(r+1, ix("post_hash")+1).setValue(`${brand}|${oem}`);
+    sheet.getRange(r+1, ix("views")+1).setValue(0);
+    sheet.getRange(r+1, ix("leads")+1).setValue(0);
+    sheet.getRange(r+1, ix("favorite")+1).setValue(0);
+    sheet.getRange(r+1, ix("source")+1).setValue("Telegram");
+    sheet.getRange(r+1, ix("sort_order")+1).setValue(0);
+  }
+
+  SpreadsheetApp.getUi().alert("V6 обновлена корректно");
+}
+
+
+4. CleanCars.gs :
+
+function cleanCarDisplay() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  const data = sheet.getDataRange().getValues();
+  const h = data[0];
+  const ix = name => h.indexOf(name);
+
+  const bodyToSeries = {
+    G01: "X3",
+    G05: "X5",
+    G06: "X6",
+    G07: "X7",
+    G30: "5 Series",
+    G11: "7 Series",
+    F15: "X5",
+    F16: "X6"
+  };
+
+  const knownBodies = Object.keys(bodyToSeries);
+
+  for (let r = 1; r < data.length; r++) {
+    const brand = String(data[r][ix("brand")] || "").trim();
+    const model = String(data[r][ix("model")] || "").trim().toUpperCase();
+    const bodyOld = String(data[r][ix("body")] || "").trim().toUpperCase();
+    const name = String(data[r][ix("name")] || "").toUpperCase();
+    const desc = String(data[r][ix("description")] || "").toUpperCase();
+
+    const text = `${model} ${bodyOld} ${name} ${desc}`;
+
+    let body = "";
+    let series = "";
+
+    for (const b of knownBodies) {
+      if (text.includes(b)) {
+        body = b;
+        series = bodyToSeries[b];
+        break;
+      }
+    }
+
+    if (!series) {
+      if (["X3","X5","X6","X7"].includes(model)) series = model;
+      else if (["X3","X5","X6","X7"].includes(bodyOld)) series = bodyOld;
+      else if (model) series = model;
+      else if (bodyOld) series = bodyOld;
+    }
+
+    let display = "";
+
+    if (body && series) {
+      display = `${brand} ${series} ${body}`.trim();
+    } else if (series) {
+      display = `${brand} ${series}`.trim();
+    } else {
+      display = brand;
+    }
+
+    sheet.getRange(r + 1, ix("series") + 1).setValue(series);
+    sheet.getRange(r + 1, ix("body") + 1).setValue(body || "");
+    sheet.getRange(r + 1, ix("display_car") + 1).setValue(display);
+
+    sheet.getRange(r + 1, ix("search_text") + 1).setValue(
+      `${brand} ${series} ${body} ${data[r][ix("name")] || ""} ${data[r][ix("oem")] || ""}`
+    );
+  }
+
+  SpreadsheetApp.getUi().alert("Авто очищены корректно");
+}
+
+5. FixCompatibility.gs : 
+
+function fixCompatibility() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  const data = sheet.getDataRange().getValues();
+  const h = data[0];
+  const ix = name => h.indexOf(name);
+
+  const modelToBody = {
+    "X3": "G01",
+    "X5": "G05",
+    "X6": "G06",
+    "X7": "G07",
+    "5 SERIES": "G30"
+  };
+
+  for (let r = 1; r < data.length; r++) {
+    const brand = String(data[r][ix("brand")] || "").trim();
+    const name = String(data[r][ix("name")] || "");
+    const desc = String(data[r][ix("description")] || "");
+    const oem = String(data[r][ix("oem")] || "");
+
+    const text = `${name} ${desc}`.toUpperCase();
+
+    let foundSeries = [];
+    let foundBodies = [];
+
+    Object.keys(modelToBody).forEach(model => {
+      if (text.includes(model)) {
+        foundSeries.push(model === "5 SERIES" ? "5 Series" : model);
+        foundBodies.push(modelToBody[model]);
+      }
+    });
+
+    ["G01","G05","G06","G07","G30"].forEach(body => {
+      if (text.includes(body) && !foundBodies.includes(body)) {
+        foundBodies.push(body);
+      }
+    });
+
+    if (foundSeries.length === 0) {
+      const oldSeries = String(data[r][ix("series")] || "").trim();
+      if (oldSeries) foundSeries.push(oldSeries);
+    }
+
+    if (foundBodies.length === 0) {
+      const oldBody = String(data[r][ix("body")] || "").trim();
+      if (oldBody && oldBody !== foundSeries[0]) foundBodies.push(oldBody);
+    }
+
+    const series = [...new Set(foundSeries)].join("|");
+    const bodies = [...new Set(foundBodies)].join("|");
+
+    const displayCar = series
+      ? `${brand} ${series.replaceAll("|", " • ")}`
+      : brand;
+
+    const compatibility = [...new Set(foundSeries)].map(s => {
+      const b = modelToBody[String(s).toUpperCase()] || "";
+      return `${brand} ${s}${b ? " " + b : ""}`;
+    }).join("; ");
+
+    const searchText = [
+      brand,
+      series.replaceAll("|", " "),
+      bodies.replaceAll("|", " "),
+      compatibility,
+      name,
+      oem
+    ].join(" ");
+
+    sheet.getRange(r + 1, ix("series") + 1).setValue(series);
+    sheet.getRange(r + 1, ix("body") + 1).setValue(bodies);
+    sheet.getRange(r + 1, ix("display_car") + 1).setValue(displayCar);
+    sheet.getRange(r + 1, ix("compatibility") + 1).setValue(compatibility);
+    sheet.getRange(r + 1, ix("search_text") + 1).setValue(searchText);
+  }
+
+  SpreadsheetApp.getUi().alert("Совместимость исправлена");
+}
+
+6 DriveImport.gs : 
+
+function importPhotosFromDrive() {
+
+  const ROOT_FOLDER_ID = "1jJ9Dkv2tvJJmwomEm6_IpSeD3-Xwarez";
+  const MAX_PHOTOS_PER_PART = 5;
+  const LOG_EVERY_FOLDERS = 20;
+  const LOG_EVERY_UPDATED_ROWS = 10;
+
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheets()[0];
+
+  const rows = sheet
+    .getDataRange()
+    .getValues();
+
+  const headers = rows[0];
+
+  const ix = name => headers.indexOf(name);
+
+  const requiredColumns = [
+    "oem",
+    "photo_cover",
+    "photo_1",
+    "photo_2",
+    "photo_3",
+    "photo_4",
+    "photo_5"
+  ];
+
+  requiredColumns.forEach(col => {
+    if (ix(col) === -1) {
+      throw new Error("Нет колонки в таблице: " + col);
+    }
+  });
+
+  const stats = {
+    foldersChecked: 0,
+    matchedFolders: 0,
+    rowsUpdated: 0,
+    photosAdded: 0,
+    skippedNoPhotos: 0,
+    skippedNoOemInSheet: 0,
+    duplicateOemFolders: 0,
+    startedAt: new Date()
+  };
+
+  const oemToRow = {};
+  const importedOems = {};
+
+  for (let r = 1; r < rows.length; r++) {
+    const oem = normalizeOem(rows[r][ix("oem")]);
+
+    if (oem) {
+      oemToRow[oem] = r + 1;
+    }
+  }
+
+  logProgress("СТАРТ ИМПОРТА");
+
+  const root = DriveApp.getFolderById(ROOT_FOLDER_ID);
+
+  scanFolder(root);
+
+  SpreadsheetApp.flush();
+
+  logProgress("ИМПОРТ ЗАВЕРШЕН");
+
+  return stats;
+
+  function scanFolder(folder) {
+    const folders = folder.getFolders();
+
+    while (folders.hasNext()) {
+      const currentFolder = folders.next();
+
+      stats.foldersChecked++;
+
+      const folderName = currentFolder.getName();
+      const oem = extractOemFromFolderName(folderName);
+
+      if (stats.foldersChecked % LOG_EVERY_FOLDERS === 0) {
+        logProgress("Проверяю папки Drive...");
+      }
+
+      if (oem) {
+        if (oemToRow[oem]) {
+
+          if (importedOems[oem]) {
+            stats.duplicateOemFolders++;
+            console.log(
+              "⚠️ Дубль OEM в Drive: " +
+              oem +
+              " | папка: " +
+              folderName
+            );
+          }
+
+          importedOems[oem] = true;
+
+          stats.matchedFolders++;
+
+          console.log(
+            "✅ Найден OEM: " +
+            oem +
+            " | строка: " +
+            oemToRow[oem] +
+            " | папка: " +
+            folderName
+          );
+
+          importPhotosFromPartFolder(
+            currentFolder,
+            oemToRow[oem],
+            oem
+          );
+
+        } else {
+          stats.skippedNoOemInSheet++;
+
+          console.log(
+            "⏭ OEM есть в Drive, но нет в таблице: " +
+            oem +
+            " | папка: " +
+            folderName
+          );
+        }
+      }
+
+      scanFolder(currentFolder);
+    }
+  }
+
+  function importPhotosFromPartFolder(folder, rowNumber, oem) {
+    const files = folder.getFiles();
+
+    const photos = [];
+
+    while (files.hasNext()) {
+      const file = files.next();
+
+      const mime = file.getMimeType();
+
+      if (!mime || !mime.startsWith("image/")) {
+        continue;
+      }
+
+      const fileId = file.getId();
+
+      photos.push({
+        name: file.getName(),
+        url:
+          "https://drive.google.com/thumbnail?id=" +
+          fileId +
+          "&sz=w1200"
+      });
+    }
+
+    photos.sort((a, b) =>
+      naturalSort(a.name, b.name)
+    );
+
+    const selectedPhotos =
+      photos.slice(0, MAX_PHOTOS_PER_PART);
+
+    if (selectedPhotos.length === 0) {
+      stats.skippedNoPhotos++;
+
+      console.log(
+        "⚠️ Фото не найдены: " +
+        oem +
+        " | строка: " +
+        rowNumber
+      );
+
+      return;
+    }
+
+    sheet
+      .getRange(rowNumber, ix("photo_cover") + 1)
+      .setValue(selectedPhotos[0].url);
+
+    for (let i = 0; i < MAX_PHOTOS_PER_PART; i++) {
+      const colName = "photo_" + (i + 1);
+      const url = selectedPhotos[i]
+        ? selectedPhotos[i].url
+        : "";
+
+      sheet
+        .getRange(rowNumber, ix(colName) + 1)
+        .setValue(url);
+    }
+
+    stats.rowsUpdated++;
+    stats.photosAdded += selectedPhotos.length;
+
+    console.log(
+      "📸 Записано фото: " +
+      selectedPhotos.length +
+      " | OEM: " +
+      oem +
+      " | строка: " +
+      rowNumber
+    );
+
+    if (stats.rowsUpdated % LOG_EVERY_UPDATED_ROWS === 0) {
+      SpreadsheetApp.flush();
+      logProgress("Промежуточный прогресс");
+    }
+  }
+
+  function extractOemFromFolderName(name) {
+    const normalized = String(name || "")
+      .trim()
+      .toUpperCase();
+
+    const match = normalized.match(/[A-Z0-9]{7,}/);
+
+    return match ? match[0] : "";
+  }
+
+  function normalizeOem(value) {
+    return String(value || "")
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, "");
+  }
+
+  function naturalSort(a, b) {
+    return String(a).localeCompare(
+      String(b),
+      "ru",
+      {
+        numeric: true,
+        sensitivity: "base"
+      }
+    );
+  }
+
+  function logProgress(stage) {
+    const seconds = Math.round(
+      (new Date() - stats.startedAt) / 1000
+    );
+
+    console.log(
+      "\n" +
+      "==============================\n" +
+      stage + "\n" +
+      "Папок проверено: " + stats.foldersChecked + "\n" +
+      "OEM найдено в таблице: " + stats.matchedFolders + "\n" +
+      "Строк обновлено: " + stats.rowsUpdated + "\n" +
+      "Фото записано: " + stats.photosAdded + "\n" +
+      "Без фото: " + stats.skippedNoPhotos + "\n" +
+      "OEM нет в таблице: " + stats.skippedNoOemInSheet + "\n" +
+      "Дубли OEM в Drive: " + stats.duplicateOemFolders + "\n" +
+      "Время: " + seconds + " сек.\n" +
+      "=============================="
+    );
+  }
+}
+
+7 DriveImportPRO.gs : 
+
+function resetDriveImportProgress() {
+  PropertiesService.getScriptProperties().deleteAllProperties();
+  console.log("✅ Прогресс DriveImport PRO сброшен. Теперь запускай importPhotosFromDrivePROBatch");
+}
+
+function importPhotosFromDrivePROBatch() {
+
+  const CONFIG = {
+    ROOT_FOLDER_ID: "1jJ9Dkv2tvJJmwomEm6_IpSeD3-Xwarez",
+    MAX_PHOTOS: 5,
+    BATCH_LIMIT: 80,
+    OVERWRITE_PHOTOS: true,
+    AUTO_HIDE_BAD_CARDS: true,
+    MIN_VISIBLE_SCORE: 60
+  };
+
+  const props = PropertiesService.getScriptProperties();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheets()[0];
+
+  const EXTRA_COLUMNS = [
+    "photo_count",
+    "photo_status",
+    "photos_updated_at",
+    "drive_folder",
+    "catalog_score",
+    "ready_score",
+    "quality_status",
+    "status",
+    "task_note"
+  ];
+
+  ensureColumns(sheet, EXTRA_COLUMNS);
+
+  let data = sheet.getDataRange().getValues();
+  let headers = data[0];
+  let ix = name => headers.indexOf(name);
+
+  const required = [
+    "oem",
+    "brand",
+    "series",
+    "body",
+    "name",
+    "price",
+    "description",
+    "compatibility",
+    "miniapp_visible",
+    "photo_cover",
+    "photo_1",
+    "photo_2",
+    "photo_3",
+    "photo_4",
+    "photo_5"
+  ];
+
+  required.forEach(col => {
+    if (ix(col) === -1) {
+      throw new Error("Нет колонки: " + col);
+    }
+  });
+
+  let allFolders = JSON.parse(props.getProperty("ALL_FOLDERS") || "[]");
+  let currentIndex = Number(props.getProperty("CURRENT_INDEX") || 0);
+
+  let stats = JSON.parse(props.getProperty("STATS") || JSON.stringify({
+    foldersChecked: 0,
+    matchedFolders: 0,
+    rowsUpdated: 0,
+    photosAdded: 0,
+    noPhotos: 0,
+    driveOnly: 0,
+    duplicateOemFolders: 0,
+    ambiguousMatches: 0,
+    tasksCreated: 0,
+    startedAt: new Date().toISOString()
+  }));
+
+  if (!allFolders.length) {
+    console.log("🔍 Первый запуск: собираю список всех папок Drive...");
+
+    allFolders = collectFolders(
+      DriveApp.getFolderById(CONFIG.ROOT_FOLDER_ID),
+      ""
+    );
+
+    props.setProperty("ALL_FOLDERS", JSON.stringify(allFolders));
+    props.setProperty("CURRENT_INDEX", "0");
+
+    console.log("✅ Найдено папок всего: " + allFolders.length);
+  }
+
+  const rowsByOem = buildRowsByOem();
+  const reportRows = [];
+  const newPartsRows = [];
+  const tasksRows = [];
+
+  const endIndex = Math.min(
+    currentIndex + CONFIG.BATCH_LIMIT,
+    allFolders.length
+  );
+
+  console.log(
+    "\n==============================\n" +
+    "🚀 DRIVEIMPORT PRO BATCH\n" +
+    "Обрабатываю папки: " + (currentIndex + 1) + "–" + endIndex + " из " + allFolders.length + "\n" +
+    "=============================="
+  );
+
+  for (let i = currentIndex; i < endIndex; i++) {
+    const item = allFolders[i];
+
+    stats.foldersChecked++;
+
+    console.log("🔎 #" + (i + 1) + " " + item.path);
+
+    const folder = DriveApp.getFolderById(item.id);
+    const parsed = parsePartFolder(item.name, item.path);
+    const oem = parsed.oem;
+
+    if (!oem) {
+      continue;
+    }
+
+    console.log("🔧 OEM найден: " + oem);
+
+    const photos = getPhotoLinks(folder);
+
+    console.log("📷 Фото найдено: " + photos.length);
+
+    if (!photos.length) {
+      stats.noPhotos++;
+
+      reportRows.push([
+        "NO_PHOTOS",
+        oem,
+        item.path,
+        "",
+        0,
+        "Папка есть, но фото внутри нет",
+        folder.getUrl()
+      ]);
+    }
+
+    const rows = rowsByOem[oem] || [];
+
+    if (!rows.length) {
+      stats.driveOnly++;
+
+      console.log("🆕 OEM есть в Drive, но нет в таблице: " + oem);
+
+      newPartsRows.push([
+        oem,
+        parsed.name,
+        parsed.brand,
+        parsed.series,
+        parsed.body,
+        item.path,
+        photos.length,
+        folder.getUrl()
+      ]);
+
+      reportRows.push([
+        "DRIVE_ONLY",
+        oem,
+        item.path,
+        "",
+        photos.length,
+        "OEM есть в Drive, но нет в таблице",
+        folder.getUrl()
+      ]);
+
+      continue;
+    }
+
+    const matchedRows = chooseBestRows(rows, item.path);
+
+    if (!matchedRows.length) {
+      stats.ambiguousMatches++;
+
+      console.log("⚠️ Неоднозначное совпадение: " + oem);
+
+      reportRows.push([
+        "AMBIGUOUS_MATCH",
+        oem,
+        item.path,
+        rows.join(", "),
+        photos.length,
+        "OEM есть в нескольких строках, но авто/кузов не определён точно",
+        folder.getUrl()
+      ]);
+
+      continue;
+    }
+
+    matchedRows.forEach(rowNumber => {
+      importPhotosToRow(rowNumber, photos, folder.getUrl(), oem);
+      stats.matchedFolders++;
+    });
+  }
+
+  props.setProperty("CURRENT_INDEX", String(endIndex));
+  props.setProperty("STATS", JSON.stringify(stats));
+
+  appendRows(ss, "PHOTO_IMPORT_REPORT", [
+    "type", "oem", "folder", "row", "photos", "message", "folder_url"
+  ], reportRows);
+
+  appendRows(ss, "NEW_PARTS_FROM_DRIVE", [
+    "oem", "name_from_folder", "brand_guess", "series_guess", "body_guess", "folder", "photos", "folder_url"
+  ], newPartsRows);
+
+  updateCatalogQuality(tasksRows, stats);
+
+  appendRows(ss, "TASKS_FOR_MANAGER", [
+    "priority", "task", "oem", "row", "reason"
+  ], tasksRows);
+
+  SpreadsheetApp.flush();
+
+  if (endIndex >= allFolders.length) {
+    appendHistory(ss, stats);
+
+    props.setProperty("FINISHED", "TRUE");
+
+    console.log(
+      "\n==============================\n" +
+      "✅ FINISHED — ИМПОРТ ПОЛНОСТЬЮ ЗАВЕРШЁН\n" +
+      "Папок проверено: " + stats.foldersChecked + "\n" +
+      "OEM найдено: " + stats.matchedFolders + "\n" +
+      "Строк обновлено: " + stats.rowsUpdated + "\n" +
+      "Фото записано: " + stats.photosAdded + "\n" +
+      "Без фото: " + stats.noPhotos + "\n" +
+      "Есть в Drive, нет в таблице: " + stats.driveOnly + "\n" +
+      "Неоднозначные совпадения: " + stats.ambiguousMatches + "\n" +
+      "Задач создано: " + stats.tasksCreated + "\n" +
+      "=============================="
+    );
+
+  } else {
+    console.log(
+      "\n==============================\n" +
+      "⏸ ПАКЕТ ЗАВЕРШЁН\n" +
+      "Готово: " + endIndex + " из " + allFolders.length + "\n" +
+      "Следующий запуск продолжит с папки: " + (endIndex + 1) + "\n" +
+      "Запусти importPhotosFromDrivePROBatch ещё раз.\n" +
+      "=============================="
+    );
+  }
+
+  function collectFolders(folder, path) {
+    const result = [];
+    const folders = folder.getFolders();
+
+    while (folders.hasNext()) {
+      const f = folders.next();
+
+      const currentPath = path
+        ? path + " / " + f.getName()
+        : f.getName();
+
+      result.push({
+        id: f.getId(),
+        name: f.getName(),
+        path: currentPath
+      });
+
+      result.push(...collectFolders(f, currentPath));
+    }
+
+    return result;
+  }
+
+  function buildRowsByOem() {
+    const map = {};
+
+    for (let r = 1; r < data.length; r++) {
+      const oem = normalize(data[r][ix("oem")]);
+
+      if (!oem) continue;
+
+      if (!map[oem]) map[oem] = [];
+
+      map[oem].push(r + 1);
+    }
+
+    return map;
+  }
+
+  function importPhotosToRow(rowNumber, photos, folderUrl, oem) {
+    if (!photos.length) return;
+
+    const selected = photos.slice(0, CONFIG.MAX_PHOTOS);
+
+    sheet.getRange(rowNumber, ix("photo_cover") + 1).setValue(selected[0].url);
+
+    for (let i = 0; i < CONFIG.MAX_PHOTOS; i++) {
+      const col = "photo_" + (i + 1);
+      sheet.getRange(rowNumber, ix(col) + 1).setValue(selected[i] ? selected[i].url : "");
+    }
+
+    setCell(rowNumber, "photo_count", selected.length);
+    setCell(rowNumber, "photo_status", "OK");
+    setCell(rowNumber, "photos_updated_at", new Date());
+    setCell(rowNumber, "drive_folder", folderUrl);
+
+    stats.rowsUpdated++;
+    stats.photosAdded += selected.length;
+
+    console.log("📸 Записано фото: " + selected.length + " | строка: " + rowNumber + " | OEM: " + oem);
+  }
+
+  function updateCatalogQuality(tasksRows, stats) {
+    data = sheet.getDataRange().getValues();
+    headers = data[0];
+    ix = name => headers.indexOf(name);
+
+    for (let r = 1; r < data.length; r++) {
+      const rowNumber = r + 1;
+
+      const oem = data[r][ix("oem")];
+      const name = data[r][ix("name")];
+      const price = Number(data[r][ix("price")] || 0);
+      const description = data[r][ix("description")];
+      const compatibility = data[r][ix("compatibility")];
+      const photoCover = data[r][ix("photo_cover")];
+
+      let score = 0;
+      const taskList = [];
+
+      if (photoCover) score += 20;
+      else taskList.push("Добавить фото");
+
+      if (price > 0) score += 20;
+      else taskList.push("Добавить цену");
+
+      if (oem) score += 20;
+      else taskList.push("Добавить OEM");
+
+      if (name && String(name).length > 2) score += 20;
+      else taskList.push("Проверить название");
+
+      if (compatibility || description) score += 20;
+      else taskList.push("Добавить совместимость/описание");
+
+      let status = "READY";
+
+      if (score < 60) status = "DRAFT";
+      else if (score < 100) status = "NEED_FIX";
+
+      setCell(rowNumber, "catalog_score", score);
+      setCell(rowNumber, "ready_score", score);
+      setCell(rowNumber, "quality_status", status);
+      setCell(rowNumber, "status", status);
+      setCell(rowNumber, "task_note", taskList.join("; "));
+
+      if (!photoCover) setCell(rowNumber, "photo_status", "NO_PHOTO");
+
+      if (CONFIG.AUTO_HIDE_BAD_CARDS && score < CONFIG.MIN_VISIBLE_SCORE) {
+        setCell(rowNumber, "miniapp_visible", false);
+      }
+
+      if (taskList.length) {
+        stats.tasksCreated++;
+
+        tasksRows.push([
+          score < 60 ? "HIGH" : "NORMAL",
+          taskList.join("; "),
+          oem,
+          rowNumber,
+          "catalog_score = " + score
+        ]);
+      }
+    }
+  }
+
+  function chooseBestRows(rows, folderPath) {
+    if (rows.length === 1) return rows;
+
+    const path = String(folderPath || "").toUpperCase();
+
+    const scored = rows.map(rowNumber => {
+      const row = sheet.getRange(rowNumber, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+      let score = 0;
+
+      const brand = String(row[ix("brand")] || "").toUpperCase();
+      const series = String(row[ix("series")] || "").toUpperCase();
+      const body = String(row[ix("body")] || "").toUpperCase();
+
+      if (brand && path.includes(brand)) score += 2;
+
+      splitTokens(series).forEach(x => {
+        if (path.includes(x)) score += 4;
+      });
+
+      splitTokens(body).forEach(x => {
+        if (path.includes(x)) score += 5;
+      });
+
+      return { rowNumber, score };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+
+    if (scored[0].score === 0) return [];
+
+    return scored
+      .filter(x => x.score === scored[0].score)
+      .map(x => x.rowNumber);
+  }
+
+  function getPhotoLinks(folder) {
+    const files = folder.getFiles();
+    const photos = [];
+
+    while (files.hasNext()) {
+      const file = files.next();
+      const mime = file.getMimeType();
+
+      if (!mime || !mime.startsWith("image/")) continue;
+
+      photos.push({
+        name: file.getName(),
+        url: "https://drive.google.com/thumbnail?id=" + file.getId() + "&sz=w1200"
+      });
+    }
+
+    photos.sort((a, b) =>
+      String(a.name).localeCompare(String(b.name), "ru", {
+        numeric: true,
+        sensitivity: "base"
+      })
+    );
+
+    return photos;
+  }
+
+  function parsePartFolder(folderName, path) {
+    const normalized = String(folderName || "").trim();
+    const upper = normalized.toUpperCase();
+
+    const match = upper.match(/[A-Z0-9]{7,}/);
+    const oem = match ? match[0] : "";
+
+    const name = oem
+      ? normalized.replace(new RegExp(oem, "i"), "").trim()
+      : normalized;
+
+    return {
+      oem,
+      name,
+      brand: detectBrand(path),
+      series: detectSeries(path),
+      body: detectBody(path)
+    };
+  }
+
+  function detectBrand(text) {
+    const t = String(text || "").toUpperCase();
+
+    if (t.includes("BMW")) return "BMW";
+    if (t.includes("GEELY")) return "Geely";
+    if (t.includes("LI AUTO") || t.includes("LIXIANG")) return "Li Auto";
+    if (t.includes("MERCEDES")) return "Mercedes";
+    if (t.includes("AUDI")) return "Audi";
+
+    return "";
+  }
+
+  function detectSeries(text) {
+    const t = String(text || "").toUpperCase();
+    const map = ["X3", "X5", "X6", "X7", "5 SERIES", "7 SERIES", "COOLRAY", "MONJARO", "TUGELLA", "ATLAS", "L6", "L7", "L8", "L9"];
+
+    for (const m of map) {
+      if (t.includes(m)) return m;
+    }
+
+    return "";
+  }
+
+  function detectBody(text) {
+    const t = String(text || "").toUpperCase();
+    const match = t.match(/\b(G01|G05|G06|G07|G30|G11|F15|F16|F95|F96)\b/);
+    return match ? match[1] : "";
+  }
+
+  function splitTokens(value) {
+    return String(value || "")
+      .toUpperCase()
+      .split("|")
+      .map(x => x.trim())
+      .filter(Boolean);
+  }
+
+  function normalize(value) {
+    return String(value || "")
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, "");
+  }
+
+  function setCell(rowNumber, colName, value) {
+    const col = ix(colName);
+    if (col >= 0) {
+      sheet.getRange(rowNumber, col + 1).setValue(value);
+    }
+  }
+
+  function ensureColumns(sheet, columns) {
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+    let col = headers.length;
+
+    columns.forEach(name => {
+      if (!headers.includes(name)) {
+        col++;
+        sheet.getRange(1, col).setValue(name);
+      }
+    });
+  }
+
+  function appendRows(ss, sheetName, headers, rows) {
+    let sh = ss.getSheetByName(sheetName);
+
+    if (!sh) {
+      sh = ss.insertSheet(sheetName);
+      sh.appendRow(headers);
+    }
+
+    if (rows.length) {
+      sh.getRange(sh.getLastRow() + 1, 1, rows.length, headers.length).setValues(rows);
+    }
+  }
+
+  function appendHistory(ss, stats) {
+    appendRows(ss, "IMPORT_HISTORY", [
+      "date",
+      "folders_checked",
+      "matched_folders",
+      "rows_updated",
+      "photos_added",
+      "no_photos",
+      "drive_only",
+      "ambiguous_matches",
+      "tasks_created"
+    ], [[
+      new Date(),
+      stats.foldersChecked,
+      stats.matchedFolders,
+      stats.rowsUpdated,
+      stats.photosAdded,
+      stats.noPhotos,
+      stats.driveOnly,
+      stats.ambiguousMatches,
+      stats.tasksCreated
+    ]]);
+  }
+}
+
+8 CatalogAdminPRO.gs:
+
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu("LEGAL AUTO PARTS")
+    .addItem("1. Создать черновики из Drive", "createDraftPartsFromDrive")
+    .addItem("2. Обновить русские отчеты", "createRussianReports")
+    .addToUi();
+}
+
+function createDraftPartsFromDrive() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const main = ss.getSheets()[0];
+  const source = ss.getSheetByName("NEW_PARTS_FROM_DRIVE");
+
+  if (!source) {
+    throw new Error("Нет листа NEW_PARTS_FROM_DRIVE");
+  }
+
+  const rows = source.getDataRange().getValues();
+  const sourceHeaders = rows[0];
+
+  const sx = name => sourceHeaders.indexOf(name);
+
+  const requiredSource = [
+    "oem",
+    "name_from_folder",
+    "brand_guess",
+    "series_guess",
+    "body_guess",
+    "folder",
+    "photos",
+    "folder_url"
+  ];
+
+  requiredSource.forEach(col => {
+    if (sx(col) === -1) throw new Error("Нет колонки в NEW_PARTS_FROM_DRIVE: " + col);
+  });
+
+  ensureMainColumns(main);
+
+  const data = main.getDataRange().getValues();
+  const headers = data[0];
+  const ix = name => headers.indexOf(name);
+
+  const existingKeys = {};
+
+  for (let r = 1; r < data.length; r++) {
+const key = buildKey(
+  data[r][ix("oem")],
+  data[r][ix("name")]
+);
+
+    if (key) existingKeys[key] = true;
+  }
+
+  let created = 0;
+  let skipped = 0;
+
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+
+    const oem = clean(row[sx("oem")]);
+    const name = clean(row[sx("name_from_folder")]) || "Запчасть";
+    const brand = clean(row[sx("brand_guess")]);
+    const series = clean(row[sx("series_guess")]);
+    const body = clean(row[sx("body_guess")]);
+    const folderUrl = clean(row[sx("folder_url")]);
+    const folderPath = clean(row[sx("folder")]);
+
+    if (!oem) continue;
+
+  const key = buildKey(
+
+  oem,
+
+  name
+
+);
+
+    if (existingKeys[key]) {
+      skipped++;
+      continue;
+    }
+
+    const photos = getPhotosFromFolderUrl(folderUrl, 5);
+
+    const newRow = new Array(headers.length).fill("");
+
+    set(newRow, ix, "id", getNextId(main, ix));
+    set(newRow, ix, "brand", brand);
+    set(newRow, ix, "model", body || series);
+    set(newRow, ix, "body", body);
+    set(newRow, ix, "name", name);
+    set(newRow, ix, "oem", oem);
+    set(newRow, ix, "price", "");
+    set(newRow, ix, "qty", 1);
+    set(newRow, ix, "description", name + " " + brand + " " + series + " " + body);
+    set(newRow, ix, "published", false);
+    set(newRow, ix, "category", guessCategory(name));
+    set(newRow, ix, "featured", false);
+    set(newRow, ix, "supplier", "Drive");
+    set(newRow, ix, "series", series);
+    set(newRow, ix, "display_car", buildDisplayCar(brand, series, body));
+    set(newRow, ix, "compatibility", buildCompatibility(brand, series, body));
+    set(newRow, ix, "condition", "Оригинал Б/У");
+    set(newRow, ix, "in_stock", true);
+    set(newRow, ix, "stock_location", "Москва");
+
+    if (photos[0]) {
+      set(newRow, ix, "photo", photos[0]);
+      set(newRow, ix, "photo_cover", photos[0]);
+    }
+
+    for (let i = 0; i < 5; i++) {
+      set(newRow, ix, "photo_" + (i + 1), photos[i] || "");
+    }
+
+    set(newRow, ix, "photo_count", photos.length);
+    set(newRow, ix, "photo_status", photos.length ? "OK" : "NO_PHOTO");
+    set(newRow, ix, "photos_updated_at", new Date());
+    set(newRow, ix, "drive_folder", folderUrl);
+    set(newRow, ix, "miniapp_visible", false);
+    set(newRow, ix, "source", "Drive");
+    set(newRow, ix, "status", "NEED_REVIEW");
+    set(newRow, ix, "quality_status", "NEED_REVIEW");
+    set(newRow, ix, "catalog_score", calculateScore(oem, name, "", photos.length, brand, series, body));
+    set(newRow, ix, "ready_score", calculateScore(oem, name, "", photos.length, brand, series, body));
+    set(newRow, ix, "task_note", "Проверить цену, название, совместимость и включить miniapp_visible");
+    set(newRow, ix, "search_text", [
+      brand,
+      series,
+      body,
+      name,
+      oem,
+      folderPath
+    ].join(" "));
+
+    main.appendRow(newRow);
+    existingKeys[key] = true;
+    created++;
+  }
+
+  createRussianReports();
+
+console.log(
+  "\n==============================\n" +
+  "ГОТОВО\n" +
+  "Создано черновиков: " + created + "\n" +
+  "Пропущено дублей: " + skipped + "\n" +
+  "Новые товары скрыты от Mini App до проверки.\n" +
+  "=============================="
+);
+
+return {
+  created: created,
+  skipped: skipped
+};
+}
+
+function createRussianReports() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  translateSheet(
+    ss,
+    "NEW_PARTS_FROM_DRIVE",
+    "НОВЫЕ_ДЕТАЛИ_ИЗ_DRIVE",
+    {
+      "oem": "OEM / Артикул",
+      "name_from_folder": "Название из папки",
+      "brand_guess": "Марка",
+      "series_guess": "Модель / серия",
+      "body_guess": "Кузов",
+      "folder": "Путь папки",
+      "photos": "Кол-во фото",
+      "folder_url": "Ссылка на папку"
+    }
+  );
+
+  translateSheet(
+    ss,
+    "PHOTO_IMPORT_REPORT",
+    "ОТЧЕТ_ПО_ФОТО",
+    {
+      "type": "Тип проблемы",
+      "oem": "OEM / Артикул",
+      "folder": "Папка",
+      "row": "Строка",
+      "photos": "Фото",
+      "message": "Комментарий",
+      "folder_url": "Ссылка на папку"
+    }
+  );
+
+  translateSheet(
+    ss,
+    "TASKS_FOR_MANAGER",
+    "ЗАДАЧИ_МЕНЕДЖЕРУ",
+    {
+      "priority": "Приоритет",
+      "task": "Задача",
+      "oem": "OEM / Артикул",
+      "row": "Строка",
+      "reason": "Причина"
+    }
+  );
+}
+
+function translateSheet(ss, sourceName, targetName, dict) {
+  const source = ss.getSheetByName(sourceName);
+  if (!source) return;
+
+  let target = ss.getSheetByName(targetName);
+  if (!target) target = ss.insertSheet(targetName);
+
+  target.clear();
+
+  const values = source.getDataRange().getValues();
+  if (!values.length) return;
+
+  const headers = values[0].map(h => dict[h] || h);
+  const output = [headers, ...values.slice(1)];
+
+  target
+    .getRange(1, 1, output.length, output[0].length)
+    .setValues(output);
+
+  target.autoResizeColumns(1, output[0].length);
+}
+
+function ensureMainColumns(sheet) {
+  const required = [
+    "photo_count",
+    "photo_status",
+    "photos_updated_at",
+    "drive_folder",
+    "catalog_score",
+    "ready_score",
+    "quality_status",
+    "status",
+    "task_note",
+    "purchase_price",
+    "margin",
+    "price_updated_at"
+  ];
+
+  const headers = sheet
+    .getRange(1, 1, 1, sheet.getLastColumn())
+    .getValues()[0];
+
+  let col = headers.length;
+
+  required.forEach(name => {
+    if (!headers.includes(name)) {
+      col++;
+      sheet.getRange(1, col).setValue(name);
+    }
+  });
+}
+
+function getPhotosFromFolderUrl(folderUrl, max) {
+  const folderId = extractDriveId(folderUrl);
+  if (!folderId) return [];
+
+  const folder = DriveApp.getFolderById(folderId);
+  const files = folder.getFiles();
+  const photos = [];
+
+  while (files.hasNext()) {
+    const file = files.next();
+    const mime = file.getMimeType();
+
+    if (!mime || !mime.startsWith("image/")) continue;
+
+    photos.push({
+      name: file.getName(),
+      url: "https://drive.google.com/thumbnail?id=" + file.getId() + "&sz=w1200"
+    });
+  }
+
+  photos.sort((a, b) =>
+    String(a.name).localeCompare(String(b.name), "ru", {
+      numeric: true,
+      sensitivity: "base"
+    })
+  );
+
+  return photos.slice(0, max).map(x => x.url);
+}
+
+function extractDriveId(url) {
+  const text = String(url || "");
+  const match = text.match(/folders\/([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : "";
+}
+
+function getNextId(sheet, ix) {
+  const data = sheet.getDataRange().getValues();
+  const idCol = ix("id");
+
+  let maxId = 0;
+
+  if (idCol === -1) return "";
+
+  for (let r = 1; r < data.length; r++) {
+    const id = Number(data[r][idCol] || 0);
+    if (id > maxId) maxId = id;
+  }
+
+  return maxId + 1;
+}
+
+function buildKey(oem, name) {
+
+  return [
+    clean(oem)
+      .toUpperCase(),
+
+    clean(name)
+      .toUpperCase()
+
+  ].join("|");
+
+}
+
+function buildDisplayCar(brand, series, body) {
+  return [brand, series, body]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+}
+
+function buildCompatibility(brand, series, body) {
+  const car = buildDisplayCar(brand, series, body);
+  return car || "";
+}
+
+function calculateScore(oem, name, price, photoCount, brand, series, body) {
+  let score = 0;
+
+  if (photoCount > 0) score += 20;
+  if (Number(price || 0) > 0) score += 20;
+  if (oem) score += 20;
+  if (name && String(name).length > 2) score += 20;
+  if (brand || series || body) score += 20;
+
+  return score;
+}
+
+function guessCategory(name) {
+  const t = String(name || "").toLowerCase();
+
+  if (t.includes("бампер") || t.includes("двер") || t.includes("крыл") || t.includes("капот") || t.includes("молдинг")) {
+    return "Кузов";
+  }
+
+  if (t.includes("фара") || t.includes("фонар") || t.includes("птф")) {
+    return "Оптика";
+  }
+
+  if (t.includes("провод") || t.includes("блок") || t.includes("камера") || t.includes("датчик")) {
+    return "Электрика";
+  }
+
+  if (t.includes("рычаг") || t.includes("стойк") || t.includes("пневмо") || t.includes("амортиз")) {
+    return "Подвеска";
+  }
+
+  return "Прочее";
+}
+
+function set(row, ix, colName, value) {
+  const col = ix(colName);
+  if (col >= 0) row[col] = value;
+}
+
+function clean(value) {
+  return String(value || "").trim();
+}
+
+function analyzeNewPartsDuplicates() {
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  const main = ss.getSheets()[0];
+
+  const source = ss.getSheetByName("NEW_PARTS_FROM_DRIVE");
+
+  if (!source) throw new Error("Нет листа NEW_PARTS_FROM_DRIVE");
+
+  const mainData = main.getDataRange().getValues();
+
+  const mainHeaders = mainData[0];
+
+  const mix = name => mainHeaders.indexOf(name);
+
+  const sourceData = source.getDataRange().getValues();
+
+  const sourceHeaders = sourceData[0];
+
+  const six = name => sourceHeaders.indexOf(name);
+
+  const existing = {};
+
+  const sourceSeen = {};
+
+  const report = [[
+
+    "OEM",
+
+    "Название",
+
+    "Причина",
+
+    "Строка в основном листе",
+
+    "Строка в NEW_PARTS_FROM_DRIVE",
+
+    "Путь папки"
+
+  ]];
+
+  for (let r = 1; r < mainData.length; r++) {
+
+    const key = buildKey(
+
+      mainData[r][mix("oem")],
+
+      mainData[r][mix("name")]
+
+    );
+
+    if (!existing[key]) existing[key] = [];
+
+    existing[key].push(r + 1);
+
+  }
+
+  for (let r = 1; r < sourceData.length; r++) {
+
+    const oem = clean(sourceData[r][six("oem")]);
+
+    const name = clean(sourceData[r][six("name_from_folder")]);
+
+    const folder = clean(sourceData[r][six("folder")]);
+
+    const key = buildKey(oem, name);
+
+    if (sourceSeen[key]) {
+
+      report.push([
+
+        oem,
+
+        name,
+
+        "Дубль внутри NEW_PARTS_FROM_DRIVE",
+
+        "",
+
+        r + 1,
+
+        folder
+
+      ]);
+
+      continue;
+
+    }
+
+    sourceSeen[key] = true;
+
+    if (existing[key]) {
+
+      report.push([
+
+        oem,
+
+        name,
+
+        "Уже есть в основном листе",
+
+        existing[key].join(", "),
+
+        r + 1,
+
+        folder
+
+      ]);
+
+    }
+
+  }
+
+  let sh = ss.getSheetByName("АНАЛИЗ_ДУБЛЕЙ_DRIVE");
+
+  if (!sh) sh = ss.insertSheet("АНАЛИЗ_ДУБЛЕЙ_DRIVE");
+
+  sh.clear();
+
+  sh.getRange(1, 1, report.length, report[0].length).setValues(report);
+
+  sh.autoResizeColumns(1, report[0].length);
+
+  console.log("Готово. Найдено дублей/повторов: " + (report.length - 1));
+
+} 
+
