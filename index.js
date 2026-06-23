@@ -52,6 +52,7 @@ try {
 const {
   ADMIN_BOT_TOKEN,
   CLIENT_BOT_TOKEN,
+  AUTO_STORE_BOT_TOKEN,
 } = process.env;
 
 // ── Валидация ──────────────────────────────────────────────────────────────
@@ -401,10 +402,19 @@ startMarketingScheduler();
 // ── Авто-реклама в Telegram группах ────────────────────────────────────────
 startAdScheduler();
 
-// ── Авто объявления: слушаем партнёрские каналы через clientBot ────────────
-// Добавь clientBot (@LegalAutoAssist_bot) в партнёрские каналы как admin
-// и задай PARTNER_CHANNELS в Railway Variables
-setupAutoAdsListener(clientBot, '@LegalAutoAssist_bot');
+// ── @LegalAutoStore_Bot — авто объявления из партнёрских каналов ───────────
+if (AUTO_STORE_BOT_TOKEN) {
+  const storeBot = new Telegraf(AUTO_STORE_BOT_TOKEN);
+  setupAutoAdsListener(storeBot, '@LegalAutoStore_Bot');
+  storeBot.catch((err, ctx) => {
+    console.error('[StoreBot] Unhandled error:', err.message, 'ctx:', ctx?.updateType);
+  });
+  storeBot.launch({ dropPendingUpdates: true })
+    .catch(e => console.error('[StoreBot] Launch error:', e.message));
+  console.log('✅ Store bot started (@LegalAutoStore_Bot) — слушаю партнёрские каналы');
+} else {
+  console.log('⚠️ AUTO_STORE_BOT_TOKEN не задан — @LegalAutoStore_Bot не запущен');
+}
 
 // ── Review Agent — запрос отзывов через 4 дня после заказа ────────────────
 setupReviewScheduler(clientBot);
