@@ -1,214 +1,184 @@
 /**
- * LegalAuto — Auto Ads Agent
+ * LegalAuto — Auto Ads Agent v2
  *
- * Берёт объявления о продаже авто с drom.ru и auto.ru,
- * переписывает через Claude под аудиторию группы,
- * отправляет на одобрение в adminBot → публикует в AUTO_ADS_CHANNEL.
+ * Читает посты из партнёрских Telegram-каналов, переписывает через Claude
+ * и публикует в твой канал/группу с одобрения Эдо.
+ *
+ * Как работает:
+ *  1. Партнёрский канал публикует объявление об авто
+ *  2. Бот (добавленный в канал) получает channel_post
+ *  3. Claude анализирует — это объявление об авто? Да / нет
+ *  4. Если да — переписывает под твою аудиторию
+ *  5. Отправляет Эдо на одобрение → кнопки ✅/❌
+ *  6. Эдо нажимает ✅ → публикуется в AUTO_ADS_CHANNEL
  *
  * Railway env:
- *   AUTO_ADS_CHANNEL     = ID или @username канала/группы для авто объявлений
- *   AUTO_ADS_ENABLED     = "true"
- *   AUTO_ADS_INTERVAL_H  = "3"  (каждые 3 часа, по умолчанию)
- *   AUTO_ADS_CITIES      = "Москва,Санкт-Петербург,Новосибирск"
- *   AUTO_ADS_BRANDS      = "BMW,Geely,Li Auto,Chery,Mercedes"
+ *   PARTNER_CHANNELS    = "@channel1,@channel2,-1001234567890"  (через запятую)
+ *   AUTO_ADS_CHANNEL    = "@твоя_группа" или ID
+ *   AUTO_ADS_ENABLED    = "true"
+ *
+ * Настройка:
+ *   Добавь бота (@LegalAutoAssist_bot или @LegalAutoPartsBot) в каждый
+ *   партнёрский канал как администратора (права: чтение сообщений).
  */
 
-import fetch     from 'node-fetch';
 import Anthropic from '@anthropic-ai/sdk';
+import fetch     from 'node-fetch';
 
 const {
   CLAUDE_API_KEY,
   ADMIN_BOT_TOKEN,
   ADMIN_CHAT_ID,
   AUTO_ADS_CHANNEL,
+  PARTNER_CHANNELS,
 } = process.env;
 
 const claude = CLAUDE_API_KEY ? new Anthropic({ apiKey: CLAUDE_API_KEY }) : null;
 
-const BRANDS   = (process.env.AUTO_ADS_BRANDS  || 'BMW,Geely,Li Auto,Chery,Mercedes,Audi').split(',').map(s => s.trim());
-const INTERVAL = parseInt(process.env.AUTO_ADS_INTERVAL_H || '3', 10);
-
-// Уже опубликованные URL — не дублируем
-const postedUrls = new Set();
-
-// ── Парсинг объявлений drom.ru ──────────────────────────────────────────────
-async function fetchFromDrom(brand) {
-  // drom.ru/used/list без авторизации — открытый доступ
-  const query = encodeURIComponent(brand);
-  const url   = `https://auto.drom.ru/all/?fuelId=&mileageMax=300000&minprice=300000&maxprice=10000000&unsold=1&q=${query}&ph=1`;
-
-  try {
-    const res = await fetch(url, {
-      signal:  AbortSignal.timeout(15000),
-      headers: {
-        'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept-Language': 'ru-RU,ru;q=0.9',
-        'Accept':          'text/html,application/xhtml+xml',
-      },
-    });
-    if (!res.ok) return [];
-    const html = await res.text();
-    return parseDromListings(html, brand);
-  } catch (e) {
-    console.error(`[AutoAds] drom fetch error (${brand}):`, e.message);
-    return [];
-  }
+// Парсим список партнёрских каналов из env
+function getPartnerChannels() {
+  if (!PARTNER_CHANNELS) return [];
+  return PARTNER_CHANNELS.split(',').map(s => s.trim()).filter(Boolean);
 }
 
-function parseDromListings(html, brand) {
-  const items = [];
-
-  // Ищем блоки объявлений: заголовок, цена, пробег, год, ссылка
-  const cardRegex = /data-bull-id="(\d+)"[\s\S]*?<a[^>]+href="(https:\/\/auto\.drom\.ru[^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?class="[^"]*price[^"]*"[^>]*>([\s\S]*?)<\/span>/gi;
-  let match;
-  while ((match = cardRegex.exec(html)) !== null && items.length < 5) {
-    const id    = match[1];
-    const link  = match[2];
-    const title = match[3].replace(/<[^>]+>/g, '').trim();
-    const price = match[4].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
-    if (title && link && !postedUrls.has(link)) {
-      items.push({ id, link, title, price, brand, source: 'drom' });
-    }
-  }
-
-  // Фолбэк — ищем просто ссылки на объявления
-  if (!items.length) {
-    const linkRegex = /href="(https:\/\/auto\.drom\.ru\/[a-z]+\/used\/\d+\/[^"]+)"/gi;
-    while ((match = linkRegex.exec(html)) !== null && items.length < 3) {
-      const link = match[1];
-      if (!postedUrls.has(link)) {
-        items.push({ link, title: `${brand} на drom.ru`, price: '', brand, source: 'drom' });
-      }
-    }
-  }
-
-  return items;
+// Нормализуем ID канала для сравнения (@username → lowercase, числа → строка)
+function normalizeChannelId(id) {
+  return String(id).toLowerCase().replace(/^@/, '');
 }
 
-// ── Парсинг auto.ru через открытый API ──────────────────────────────────────
-async function fetchFromAutoRu(brand) {
-  // auto.ru имеет полуоткрытый JSON API для листинга
-  const mark = brand.toUpperCase().replace(/\s/g, '_');
-  const url  = `https://auto.ru/-/ajax/desktop/listing/?mark=${mark}&state=USED&price_from=300000&price_to=10000000&page=1&page_size=5`;
+function isPartnerChannel(chatId, chatUsername) {
+  const partners = getPartnerChannels();
+  if (!partners.length) return false;
 
-  try {
-    const res = await fetch(url, {
-      signal:  AbortSignal.timeout(12000),
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept':     'application/json',
-        'x-client-app-version': '1.0.0',
-      },
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return parseAutoRuListings(data, brand);
-  } catch (e) {
-    console.error(`[AutoAds] auto.ru fetch error (${brand}):`, e.message);
-    return [];
-  }
+  const normalizedId       = normalizeChannelId(chatId);
+  const normalizedUsername = chatUsername ? normalizeChannelId(chatUsername) : '';
+
+  return partners.some(p => {
+    const norm = normalizeChannelId(p);
+    return norm === normalizedId || norm === normalizedUsername;
+  });
 }
 
-function parseAutoRuListings(data, brand) {
-  const offers = data?.listing?.offers || data?.offers || [];
-  return offers.slice(0, 5).map(offer => {
-    const title = [
-      offer?.vehicle_info?.mark_info?.name,
-      offer?.vehicle_info?.model_info?.name,
-      offer?.documents?.year,
-    ].filter(Boolean).join(' ') || brand;
+// ── Дедупликация (не переобрабатываем одно и то же) ────────────────────────
+const processedMessageIds = new Set(); // "channelId_messageId"
 
-    const price   = offer?.price_info?.price ? `${offer.price_info.price.toLocaleString('ru-RU')} ₽` : '';
-    const mileage = offer?.state?.mileage     ? `${offer.state.mileage.toLocaleString('ru-RU')} км`  : '';
-    const city    = offer?.seller?.location?.region_info?.name || '';
-    const id      = offer?.id || '';
-    const link    = id ? `https://auto.ru/cars/used/sale/${id}/` : '';
+// ── Ожидающие одобрения объявления ─────────────────────────────────────────
+export const pendingAds = new Map(); // id → { text, originalText, channelName }
 
-    return { link, title, price, mileage, city, brand, source: 'auto.ru', year: offer?.documents?.year };
-  }).filter(item => item.link && !postedUrls.has(item.link));
-}
+export function getPendingAd(id)   { return pendingAds.get(String(id)); }
+export function clearPendingAd(id) { pendingAds.delete(String(id)); }
 
-// ── Переписать объявление через Claude ──────────────────────────────────────
-async function rewriteAd(item) {
-  if (!claude) return buildStaticAd(item);
-
-  const details = [
-    item.title,
-    item.year   ? `Год: ${item.year}`     : '',
-    item.price  ? `Цена: ${item.price}`   : '',
-    item.mileage ? `Пробег: ${item.mileage}` : '',
-    item.city   ? `Город: ${item.city}`   : '',
-  ].filter(Boolean).join(' | ');
+// ── Проверка через Claude — это объявление об авто? ────────────────────────
+async function isCarListing(text) {
+  if (!claude) return isCarListingSimple(text);
+  if (text.length < 30) return false;
 
   try {
     const msg = await claude.messages.create({
       model:      'claude-haiku-4-5-20251001',
-      max_tokens: 300,
+      max_tokens: 5,
       messages: [{
         role: 'user',
         content:
-          `Ты ведёшь Telegram-канал о покупке и продаже авто в России.
-Перепиши это объявление о продаже авто в живой пост для Telegram-канала/группы.
-Стиль: дружелюбный, по делу, как опытный автоэксперт советует другу.
-Эмодзи: 2-3 штуки.
-Длина: 4-5 строк.
-В конце: "🔗 Объявление: ${item.link}" и "💬 Помочь с документами → @LegalAuto247"
+          `Это сообщение из Telegram-канала. Это объявление о продаже/покупке автомобиля?\n\n"${text.substring(0, 400)}"\n\nОтветь ТОЛЬКО: ДА или НЕТ.`,
+      }],
+    });
+    return msg.content[0].text.trim().toUpperCase().startsWith('ДА');
+  } catch {
+    return isCarListingSimple(text);
+  }
+}
 
-Объявление: ${details}
-Источник: ${item.source}
+// Простая проверка без AI (если Claude недоступен)
+function isCarListingSimple(text) {
+  const lower = text.toLowerCase();
+  const keywords = [
+    'продаю', 'продам', 'продаётся', 'продается',
+    'авто', 'автомобиль', 'машина', 'машину',
+    'год выпуска', 'пробег', 'двигатель',
+    'кузов', 'коробка', 'привод',
+    'тыс км', 'т.км', 'л.с', 'литра', 'литр',
+    'bmw', 'mercedes', 'geely', 'li auto', 'chery',
+    'toyota', 'honda', 'hyundai', 'kia', 'audi',
+    'volkswagen', 'volvo', 'lexus',
+  ];
+  return keywords.filter(kw => lower.includes(kw)).length >= 2;
+}
 
-НЕ пиши "на этом сайте", "перейдите по ссылке". Напиши как рекомендацию.`,
+// ── Переписать объявление под свою аудиторию ───────────────────────────────
+async function rewriteForChannel(originalText, channelName) {
+  if (!claude) return buildFallbackPost(originalText, channelName);
+
+  try {
+    const msg = await claude.messages.create({
+      model:      'claude-haiku-4-5-20251001',
+      max_tokens: 350,
+      messages: [{
+        role: 'user',
+        content:
+          `Ты ведёшь Telegram-группу по продаже авто. Перепиши это объявление из партнёрского канала "${channelName}" как пост для своей аудитории.
+
+Исходное объявление:
+"${originalText.substring(0, 600)}"
+
+Требования:
+- Сохрани все технические данные (год, пробег, цена, марка, модель)
+- Добавь 2-3 эмодзи
+- Стиль: живой, как советует друг-автоэксперт
+- Длина: 5-7 строк
+- В конце одна из этих строк (выбери подходящую):
+  "💬 Помощь с документами → @LegalAuto247"
+  "📋 Оформим СБКТС/ЭПТС → @LegalAutoAssist_bot"
+  "🚗 Вопросы по авто → @LegalAuto247"
+- НЕ добавляй "Источник:" или "Из канала"`,
       }],
     });
     return msg.content[0].text.trim();
   } catch (e) {
-    console.error('[AutoAds] Claude error:', e.message);
-    return buildStaticAd(item);
+    console.error('[AutoAds] Claude rewrite error:', e.message);
+    return buildFallbackPost(originalText, channelName);
   }
 }
 
-function buildStaticAd(item) {
-  const parts = [
-    `🚗 ${item.title}`,
-    item.price   ? `💰 Цена: ${item.price}`   : '',
-    item.mileage ? `📍 Пробег: ${item.mileage}` : '',
-    item.city    ? `📍 ${item.city}`            : '',
-    '',
-    `🔗 Объявление: ${item.link}`,
-    `💬 Помочь с документами → @LegalAuto247`,
-  ].filter(l => l !== null).join('\n');
-  return parts;
+function buildFallbackPost(text, channelName) {
+  return `${text.substring(0, 500)}\n\n💬 Помощь с документами → @LegalAuto247`;
 }
 
-// ── Отправить на одобрение в adminBot ───────────────────────────────────────
-async function sendForApproval(text, item) {
+// ── Отправить Эдо на одобрение ─────────────────────────────────────────────
+async function sendForApproval(rewrittenText, originalText, channelName) {
   if (!ADMIN_BOT_TOKEN || !ADMIN_CHAT_ID) {
-    return publishAd(text);
+    console.log('[AutoAds] Нет ADMIN_BOT_TOKEN — публикую напрямую');
+    return publishAd(rewrittenText);
   }
 
   const id = `autoads_${Date.now()}`;
-  pendingAds.set(id, { text, item });
+  pendingAds.set(id, { text: rewrittenText, originalText, channelName });
 
-  const preview = text.length > 300 ? text.substring(0, 300) + '...' : text;
+  const preview = rewrittenText.length > 350
+    ? rewrittenText.substring(0, 350) + '...'
+    : rewrittenText;
 
   try {
     const res = await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id:    ADMIN_CHAT_ID,
-        text:       `🚗 *Объявление авто* [${item.brand} · ${item.source}]\n\n${preview}`,
+        text:       `🚗 *Авто из канала "${channelName}"*\n\n${preview}`,
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [[
             { text: '✅ Опубликовать', callback_data: `autoads_approve_${id}` },
             { text: '❌ Пропустить',   callback_data: `autoads_reject_${id}`  },
+            { text: '📄 Оригинал',     callback_data: `autoads_orig_${id}`    },
           ]],
         },
       }),
     });
     const data = await res.json();
-    if (data.ok) console.log(`[AutoAds] 📨 Отправлено на одобрение: ${item.title?.substring(0, 50)}`);
+    if (data.ok) {
+      console.log(`[AutoAds] 📨 На одобрение: ${rewrittenText.substring(0, 60)}`);
+    }
     return data.ok;
   } catch (e) {
     console.error('[AutoAds] sendForApproval error:', e.message);
@@ -216,20 +186,17 @@ async function sendForApproval(text, item) {
   }
 }
 
-// ── Хранилище объявлений ожидающих одобрения ─────────────────────────────────
-export const pendingAds = new Map();
-
-export function getPendingAd(id)   { return pendingAds.get(String(id)); }
-export function clearPendingAd(id) { pendingAds.delete(String(id)); }
-
-// ── Прямая публикация в канал ────────────────────────────────────────────────
+// ── Прямая публикация в канал/группу ───────────────────────────────────────
 export async function publishAd(text) {
   const channel = AUTO_ADS_CHANNEL;
-  if (!channel || !ADMIN_BOT_TOKEN) return false;
+  if (!channel || !ADMIN_BOT_TOKEN) {
+    console.log('[AutoAds] AUTO_ADS_CHANNEL или ADMIN_BOT_TOKEN не задан');
+    return false;
+  }
 
   try {
     const res = await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id:                  channel,
@@ -239,7 +206,8 @@ export async function publishAd(text) {
       }),
     });
     const data = await res.json();
-    if (data.ok) console.log('[AutoAds] ✅ Объявление опубликовано в канал');
+    if (data.ok) console.log('[AutoAds] ✅ Опубликовано в канал');
+    else         console.error('[AutoAds] ❌ Ошибка публикации:', data.description);
     return data.ok;
   } catch (e) {
     console.error('[AutoAds] publish error:', e.message);
@@ -247,66 +215,73 @@ export async function publishAd(text) {
   }
 }
 
-// ── Основной запуск ──────────────────────────────────────────────────────────
-export async function runAutoAds() {
+// ── ГЛАВНАЯ ФУНКЦИЯ: вызывается из setupAdminBot/setupClientBot ─────────────
+// Подключается к Telegraf боту и слушает channel_post
+export function setupAutoAdsListener(bot, botName = 'bot') {
   if (process.env.AUTO_ADS_ENABLED !== 'true') {
-    console.log('[AutoAds] Выключено. Установи AUTO_ADS_ENABLED=true в Railway');
-    return;
-  }
-  if (!AUTO_ADS_CHANNEL) {
-    console.log('[AutoAds] AUTO_ADS_CHANNEL не задан — пропуск');
+    console.log(`[AutoAds] Выключено (AUTO_ADS_ENABLED≠true). Установи в Railway.`);
     return;
   }
 
-  console.log(`[AutoAds] 🔍 Ищу объявления: ${BRANDS.join(', ')}`);
-
-  const allItems = [];
-
-  // Собираем с обоих источников
-  for (const brand of BRANDS.slice(0, 4)) { // берём первые 4 бренда
-    const [dromItems, autoRuItems] = await Promise.allSettled([
-      fetchFromDrom(brand),
-      fetchFromAutoRu(brand),
-    ]);
-
-    if (dromItems.status === 'fulfilled')   allItems.push(...dromItems.value);
-    if (autoRuItems.status === 'fulfilled') allItems.push(...autoRuItems.value);
-  }
-
-  if (!allItems.length) {
-    console.log('[AutoAds] Новых объявлений не найдено');
+  const partners = getPartnerChannels();
+  if (!partners.length) {
+    console.log('[AutoAds] ⚠️ PARTNER_CHANNELS не задан. Добавь каналы в Railway.');
     return;
   }
 
-  // Берём случайное объявление из найденных
-  const item = allItems[Math.floor(Math.random() * allItems.length)];
-  console.log(`[AutoAds] 📋 Выбрано: ${item.title?.substring(0, 60)} [${item.source}]`);
+  console.log(`[AutoAds] 👂 Слушаю ${partners.length} партнёрских каналов через ${botName}: ${partners.join(', ')}`);
 
-  const text = await rewriteAd(item);
-  const ok   = await sendForApproval(text, item);
+  // Слушаем посты из каналов
+  bot.on('channel_post', async (ctx) => {
+    try {
+      const chat     = ctx.channelPost?.chat;
+      const message  = ctx.channelPost;
+      const text     = message?.text || message?.caption || '';
 
-  if (ok) postedUrls.add(item.link);
+      if (!chat || !text) return;
 
-  console.log(`[AutoAds] Готово. Источник: ${item.source}`);
+      // Проверяем — это партнёрский канал?
+      if (!isPartnerChannel(chat.id, chat.username)) return;
+
+      const msgKey = `${chat.id}_${message.message_id}`;
+      if (processedMessageIds.has(msgKey)) return;
+      processedMessageIds.add(msgKey);
+      // Чистим старые ключи (максимум 500)
+      if (processedMessageIds.size > 500) {
+        const first = processedMessageIds.values().next().value;
+        processedMessageIds.delete(first);
+      }
+
+      const channelName = chat.title || chat.username || String(chat.id);
+      console.log(`[AutoAds] 📩 Пост из "${channelName}": ${text.substring(0, 60)}`);
+
+      // Проверяем — это объявление об авто?
+      const isListing = await isCarListing(text);
+      if (!isListing) {
+        console.log(`[AutoAds] ⏭ Не объявление об авто — пропускаю`);
+        return;
+      }
+
+      console.log(`[AutoAds] 🚗 Объявление найдено — переписываю через Claude`);
+      const rewritten = await rewriteForChannel(text, channelName);
+      await sendForApproval(rewritten, text, channelName);
+
+    } catch (e) {
+      console.error('[AutoAds] channel_post error:', e.message);
+    }
+  });
 }
 
-// ── Планировщик ──────────────────────────────────────────────────────────────
-export function startAutoAdsScheduler() {
-  if (process.env.AUTO_ADS_ENABLED !== 'true') {
-    console.log('⏰ [AutoAds] Выключено (AUTO_ADS_ENABLED≠true). Установи в Railway.');
-    return;
-  }
-
-  console.log(`⏰ [AutoAds] Запуск каждые ${INTERVAL} часа(ов)`);
-
-  // Первый запуск через 5 минут после старта
-  setTimeout(() => {
-    runAutoAds().catch(e => console.error('[AutoAds] Ошибка:', e.message));
-  }, 5 * 60 * 1000);
-
-  setInterval(() => {
-    runAutoAds().catch(e => console.error('[AutoAds] Ошибка:', e.message));
-  }, INTERVAL * 60 * 60 * 1000);
+// ── Статус для adminBot ─────────────────────────────────────────────────────
+export function getAutoAdsStatus() {
+  const partners = getPartnerChannels();
+  return {
+    enabled:  process.env.AUTO_ADS_ENABLED === 'true',
+    channel:  AUTO_ADS_CHANNEL || 'не задан',
+    partners: partners.length,
+    list:     partners,
+    pending:  pendingAds.size,
+  };
 }
 
-console.log('🚗 Auto Ads Agent загружен');
+console.log('🚗 Auto Ads Agent v2 загружен (режим: Telegram партнёрские каналы)');

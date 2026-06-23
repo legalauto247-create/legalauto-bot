@@ -1916,6 +1916,15 @@ export function setupAdminBot(bot) {
       await ctx.editMessageText('❌ Объявление пропущено.');
       return;
     }
+
+    if (data.startsWith('autoads_orig_')) {
+      const id      = data.replace('autoads_orig_', '');
+      const pending = getPendingAd(id);
+      if (!pending) return ctx.answerCbQuery('❌ Не найдено');
+      await ctx.answerCbQuery('📄 Оригинал');
+      await ctx.reply(`📄 *Оригинал из "${pending.channelName}":*\n\n${pending.originalText?.substring(0, 800) || '—'}`, { parse_mode: 'Markdown' });
+      return;
+    }
   });
 
   // Обработка редактирования текста новостного поста (в блоке 'text')

@@ -21,7 +21,7 @@ import { initPartner, runProactiveMonitor } from './agents/partnerAgent.js';
 import { runFollowUp } from './agents/followUpAgent.js';
 import { loadReferrals } from './agents/referralAgent.js';
 import { startAdScheduler } from './agents/adAgent.js';
-import { startAutoAdsScheduler } from './agents/autoAdsAgent.js';
+import { setupAutoAdsListener } from './agents/autoAdsAgent.js';
 import { setupReviewScheduler } from './agents/reviewAgent.js';
 import { setupPriceMonitor } from './agents/priceMonitorAgent.js';
 import { setupTrendingScheduler } from './agents/trendingAgent.js';
@@ -401,8 +401,10 @@ startMarketingScheduler();
 // ── Авто-реклама в Telegram группах ────────────────────────────────────────
 startAdScheduler();
 
-// ── Авто объявления (drom.ru / auto.ru → переписать → канал) ───────────────
-startAutoAdsScheduler();
+// ── Авто объявления: слушаем партнёрские каналы через clientBot ────────────
+// Добавь clientBot (@LegalAutoAssist_bot) в партнёрские каналы как admin
+// и задай PARTNER_CHANNELS в Railway Variables
+setupAutoAdsListener(clientBot, '@LegalAutoAssist_bot');
 
 // ── Review Agent — запрос отзывов через 4 дня после заказа ────────────────
 setupReviewScheduler(clientBot);
