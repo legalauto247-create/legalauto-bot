@@ -7,7 +7,7 @@
 // Может быть мигрирован на Supabase в будущем
 // ============================================================
 
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -68,7 +68,7 @@ function save(mem) {
   try {
     const dir = join(__dirname, '..', 'data');
     if (!existsSync(dir)) {
-      import('fs').then(({ mkdirSync }) => mkdirSync(dir, { recursive: true }));
+      mkdirSync(dir, { recursive: true });
     }
     writeFileSync(MEMORY_FILE, JSON.stringify(mem, null, 2), 'utf-8');
   } catch (e) {
