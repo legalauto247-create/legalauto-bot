@@ -32,11 +32,11 @@ export async function generateImage(prompt, options = {}) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-image-2',
+        model: 'dall-e-3',
         prompt: enhancedPrompt,
         n: 1,
         size: '1024x1024',
-        response_format: { type: 'url' },
+        response_format: 'url',
       }),
     });
 
