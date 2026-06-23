@@ -27,6 +27,21 @@ export async function generateImage(prompt, options = {}) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 сек
 
+    // Разные модели требуют разные параметры
+    // dall-e-3: НЕ поддерживает response_format (всегда URL)
+    // dall-e-2/gpt-image-1/2: поддерживают response_format
+    const requestBody = {
+      model: IMAGE_MODEL,
+      prompt: enhancedPrompt,
+      n: 1,
+      size: '1024x1024',
+    };
+
+    // Добавляем response_format только для моделей которые его поддерживают
+    if (IMAGE_MODEL !== 'dall-e-3') {
+      requestBody.response_format = 'url';
+    }
+
     const res = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       signal: controller.signal,
@@ -34,13 +49,7 @@ export async function generateImage(prompt, options = {}) {
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: IMAGE_MODEL,
-        prompt: enhancedPrompt,
-        n: 1,
-        size: '1024x1024',
-        response_format: 'url',
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     clearTimeout(timeoutId);
