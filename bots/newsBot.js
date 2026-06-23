@@ -11,20 +11,56 @@ import fetch from 'node-fetch';
 import Anthropic from '@anthropic-ai/sdk';
 
 const {
-  ANTHROPIC_API_KEY,
+  CLAUDE_API_KEY,
   ADMIN_BOT_TOKEN,
   NEWS_CHANNEL_ID,   // @LegalAuto24
 } = process.env;
 
-const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
+const anthropic = CLAUDE_API_KEY ? new Anthropic({ apiKey: CLAUDE_API_KEY }) : null;
 
 // ── RSS источники (импорт авто, таможня, авторынок РФ) ───────────────────
 const RSS_FEEDS = [
-  { url: 'https://www.autonews.ru/rss.xml',      topic: 'авторынок импорт Россия' },
-  { url: 'https://auto.ru/mag/rss/',              topic: 'автомобили цены' },
-  { url: 'https://www.zr.ru/rss.xml',             topic: 'запчасти авто' },
-  { url: 'https://www.rbc.ru/v10/rss/auto.rss',   topic: 'авторынок RBC' },
-  { url: 'https://car.ru/rss/',                   topic: 'авто новости' },
+  { url: 'https://www.autonews.ru/rss.xml',               topic: 'авторынок импорт Россия' },
+  { url: 'https://www.rbc.ru/v10/rss/auto.rss',           topic: 'авторынок RBC' },
+  { url: 'https://www.zr.ru/rss.xml',                     topic: 'запчасти авто' },
+  { url: 'https://motor.ru/feed',                         topic: 'автоновости' },
+  { url: 'https://www.drom.ru/rss/news.xml',              topic: 'авторынок Россия' },
+  { url: 'https://kolesa.ru/feed/rss/',                   topic: 'автомобили Россия' },
+  { url: 'https://www.avtovzglyad.ru/rss.xml',            topic: 'авто импорт' },
+];
+
+// ── Веб-скрапинг сайтов без RSS ───────────────────────────────────────────
+// Парсим заголовки и анонсы новостей напрямую с сайтов
+async function scrapeWebsite(url, selector) {
+  try {
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(12000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)' },
+    });
+    if (!res.ok) return [];
+    const html = await res.text();
+
+    const items = [];
+    // Ищем теги <a> с заголовками статей (href + текст)
+    const linkRegex = /<a[^>]+href="([^"]+)"[^>]*>([^<]{20,200})<\/a>/gi;
+    let match;
+    while ((match = linkRegex.exec(html)) !== null && items.length < 10) {
+      const href = match[1].startsWith('http') ? match[1] : new URL(match[1], url).href;
+      const title = match[2].trim().replace(/\s+/g, ' ');
+      if (title.length > 20) items.push({ title, link: href, desc: '' });
+    }
+    return items;
+  } catch (e) {
+    console.error(`[NewsBot] Скрапинг ${url}: ${e.message}`);
+    return [];
+  }
+}
+
+// Дополнительные сайты через скрапинг
+const SCRAPE_SOURCES = [
+  { url: 'https://www.autonews.ru/import/',         topic: 'импорт авто Россия' },
+  { url: 'https://www.rbc.ru/auto/',                topic: 'авторынок RBC' },
+  { url: 'https://dzen.ru/api/v3/feed?channel=auto', topic: 'авто новости Дзен' },
 ];
 
 // Счётчик постов за сутки (сбрасывается при рестарте)
@@ -65,14 +101,15 @@ async function isRelevant(title, desc) {
       max_tokens: 10,
       messages: [{
         role:    'user',
-        content: `Ты фильтр новостей для Telegram-канала LegalAuto (@LegalAuto24).
-Аудитория: импортёры авто, перекупщики, владельцы иномарок из Китая/Европы.
-Темы канала: ввоз авто в Россию, параллельный импорт, СБКТС/ЭПТС, таможенные пошлины, цены на авто, BMW/Geely/Li Auto/Chery.
+        content: `Ты фильтр новостей для Telegram-канала @LegalAuto24.
+Аудитория: люди, которые ввозили авто в Россию и оформляли документы (СБКТС, ЭПТС, таможня, утилизация, ПТС).
+Им интересно: изменения таможенных пошлин, параллельный импорт BMW/Geely/Li Auto/Chery, СБКТС/ЭПТС правила, цены на авто, утилизационный сбор, новые требования при ввозе авто.
+НЕ интересно: гонки, тюнинг, ОСАГО/КАСКО, отечественные авто, городской транспорт.
 
 Новость: "${title}"
 Описание: "${(desc||'').substring(0,150)}"
 
-Ответь ТОЛЬКО одним словом: ДА или НЕТ.`
+Ответь ТОЛЬКО: ДА или НЕТ.`
       }]
     });
     return msg.content[0].text.trim().toUpperCase().includes('ДА');
@@ -85,19 +122,20 @@ async function generatePost(title, link, desc) {
   try {
     const msg = await anthropic.messages.create({
       model:      'claude-haiku-4-5-20251001',
-      max_tokens: 400,
+      max_tokens: 450,
       messages: [{
         role:    'user',
-        content: `Ты ведёшь Telegram-канал @LegalAuto24 для импортёров автомобилей в Россию.
-Стиль: экспертный, живой, полезный. Эмодзи — 2-3 штуки. Без воды.
-Длина: 4-6 строк. В конце — ссылка на источник.
+        content: `Ты ведёшь Telegram-канал @LegalAuto24 для людей, которые оформляли документы на авто (СБКТС, ЭПТС, таможня).
+Это бывшие клиенты LegalAuto — они доверяют каналу как эксперту по импорту авто.
+Стиль: экспертный, по делу, без воды. Эмодзи 2-3 штуки.
+Длина: 5-7 строк. В конце — ссылка на источник и фраза "Вопросы → @LegalAuto247".
 
-Напиши пост на основе этой новости:
+Напиши пост на основе новости:
 Заголовок: ${title}
 Описание: ${(desc||'').substring(0,400)}
 Ссылка: ${link}
 
-Обязательно добавь вывод/совет для импортёров авто.`
+Обязательно: конкретный совет что делать читателям прямо сейчас (оформлять, ждать, торопиться).`
       }]
     });
     return msg.content[0].text.trim();
@@ -105,28 +143,39 @@ async function generatePost(title, link, desc) {
 }
 
 // ── Оригинальный пост (без RSS) — полезный контент ─────────────────────────
+const ORIGINAL_TOPICS = [
+  'Как правильно оформить СБКТС на авто из Китая в 2025 году — пошаговый гайд',
+  'Параллельный импорт BMW: что изменилось и как это работает сейчас',
+  'Топ-5 ошибок при растаможке авто из Китая — не повторяй их',
+  'Geely vs Li Auto vs Chery: что выгоднее везти в Россию в 2025?',
+  'Таможенные пошлины на авто в 2025: актуальные ставки и расчёт на примере',
+  'ЭПТС для параллельного импорта: полный гайд от А до Я',
+  'Как законно сэкономить на ввозе авто из Китая',
+  'Утилизационный сбор в 2025: кто платит и сколько',
+  'СБКТС vs ЭПТС: в чём разница и что нужно именно тебе',
+  'Li Auto L9 в России: сколько стоит растаможить в 2025 году',
+  'Что проверить при покупке параллельного импорта BMW',
+  'Как ускорить оформление документов на авто из Китая',
+  'Черный список ошибок при ввозе Geely: реальные истории клиентов',
+  'Новые правила сертификации авто в России 2025 — что изменилось',
+  'Стоит ли везти авто самому или через агента? Честное сравнение',
+];
+
 async function generateOriginalPost() {
   if (!anthropic) return null;
-  const topics = [
-    'Как правильно оформить СБКТС на авто из Китая в 2024-2025 году — пошаговый гайд',
-    'Параллельный импорт BMW: что изменилось и как это работает сейчас',
-    'Топ-5 ошибок при растаможке авто из Китая',
-    'Geely vs Li Auto vs Chery: что выгоднее везти в Россию в 2025?',
-    'Таможенные пошлины на авто в 2025: актуальные ставки и расчёт',
-    'ЭПТС для параллельного импорта: полный гайд',
-    'Как сэкономить на ввозе авто: легальные способы',
-  ];
-  const topic = topics[Math.floor(Math.random() * topics.length)];
+  const topic = ORIGINAL_TOPICS[Math.floor(Math.random() * ORIGINAL_TOPICS.length)];
   try {
     const msg = await anthropic.messages.create({
       model:      'claude-haiku-4-5-20251001',
-      max_tokens: 500,
+      max_tokens: 550,
       messages: [{
         role:    'user',
-        content: `Ты ведёшь Telegram-канал @LegalAuto24 для импортёров автомобилей.
-Напиши экспертный пост на тему: "${topic}"
-Стиль: практичный, конкретный, с цифрами где уместно. Эмодзи 2-3 штуки.
-Длина: 5-8 строк. В конце призыв написать в @LegalAutoAssist_bot для консультации.`
+        content: `Ты эксперт по оформлению документов на авто и ведёшь канал @LegalAuto24.
+Твоя аудитория — люди, которые уже ввозили авто или планируют это сделать.
+Напиши экспертный пост-совет на тему: "${topic}"
+Стиль: практичный, конкретный, с реальными цифрами и шагами. Эмодзи 2-3 штуки.
+Длина: 6-9 строк.
+В конце: "Остались вопросы? Пиши → @LegalAuto247" или "Оформим документы → @LegalAutoAssist_bot".`
       }]
     });
     return msg.content[0].text.trim();
@@ -235,35 +284,47 @@ export async function runNewsBot() {
     }
   }
 
-  // RSS новости
+  // Собираем статьи из RSS
+  const allItems = [];
   for (const feed of RSS_FEEDS) {
-    if (published >= maxThisRun) break;
     try {
       const res   = await fetch(feed.url, { signal: AbortSignal.timeout(10000) });
       const xml   = await res.text();
       const items = parseRss(xml);
-
-      for (const item of items) {
-        if (published >= maxThisRun) break;
-        if (publishedUrls.has(item.link)) continue;
-
-        const relevant = await isRelevant(item.title, item.desc);
-        if (!relevant) continue;
-
-        const post = await generatePost(item.title, item.link, item.desc);
-        if (!post) continue;
-
-        const ok = await sendForApproval(post, item.link);
-        if (ok) {
-          publishedUrls.add(item.link);
-          dailyCount++;
-          published++;
-          console.log(`[NewsBot] 📨 ${item.title.substring(0, 60)} → ожидает одобрения`);
-          await new Promise(r => setTimeout(r, 3000));
-        }
-      }
+      allItems.push(...items);
     } catch (e) {
       console.error(`[NewsBot] RSS ошибка ${feed.url}: ${e.message}`);
+    }
+  }
+
+  // Собираем статьи через скрапинг (если RSS не хватило)
+  if (allItems.length < 5) {
+    for (const src of SCRAPE_SOURCES) {
+      const items = await scrapeWebsite(src.url);
+      allItems.push(...items);
+    }
+  }
+
+  // Перемешиваем чтобы не публиковать всегда один и тот же источник
+  allItems.sort(() => Math.random() - 0.5);
+
+  for (const item of allItems) {
+    if (published >= maxThisRun) break;
+    if (publishedUrls.has(item.link)) continue;
+
+    const relevant = await isRelevant(item.title, item.desc);
+    if (!relevant) continue;
+
+    const post = await generatePost(item.title, item.link, item.desc);
+    if (!post) continue;
+
+    const ok = await sendForApproval(post, item.link);
+    if (ok) {
+      publishedUrls.add(item.link);
+      dailyCount++;
+      published++;
+      console.log(`[NewsBot] 📨 ${item.title.substring(0, 60)} → ожидает одобрения`);
+      await new Promise(r => setTimeout(r, 3000));
     }
   }
 

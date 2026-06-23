@@ -25,6 +25,7 @@ import {
 } from '../agents/postAgent.js';
 import { qualifyLead, formatLeadQualification, askBrain } from '../agents/brainAgent.js';
 import { getPendingNewsPost, clearPendingNewsPost, publishNewsToChannel } from './newsBot.js';
+import { getPendingAd, clearPendingAd, publishAd } from '../agents/autoAdsAgent.js';
 import { getStats, formatReport } from '../agents/analyticsAgent.js';
 import { askPartner, initPartner } from '../agents/partnerAgent.js';
 
@@ -1887,6 +1888,32 @@ export function setupAdminBot(bot) {
       await ctx.answerCbQuery('✏️ Пришли новый текст');
       setWaiting(ctx.chat.id, { type: 'news_edit_text', newsId: id });
       await ctx.reply('✏️ Напиши новый текст поста для @LegalAuto24. Отправь текст сообщением:');
+      return;
+    }
+
+    // ── Авто объявления: одобрение / отклонение ──────────────────────────────
+    if (data.startsWith('autoads_approve_')) {
+      const id      = data.replace('autoads_approve_', '');
+      const pending = getPendingAd(id);
+      if (!pending) return ctx.answerCbQuery('❌ Объявление не найдено');
+
+      await ctx.answerCbQuery('✅ Публикую...');
+      const ok = await publishAd(pending.text);
+      clearPendingAd(id);
+
+      await ctx.editMessageText(
+        ok
+          ? `✅ Объявление опубликовано!\n\n${pending.text.substring(0, 200)}...`
+          : '❌ Ошибка публикации. Проверь AUTO_ADS_CHANNEL и ADMIN_BOT_TOKEN.'
+      );
+      return;
+    }
+
+    if (data.startsWith('autoads_reject_')) {
+      const id = data.replace('autoads_reject_', '');
+      clearPendingAd(id);
+      await ctx.answerCbQuery('🗑 Пропущено');
+      await ctx.editMessageText('❌ Объявление пропущено.');
       return;
     }
   });
