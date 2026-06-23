@@ -37,7 +37,8 @@ const {
   ANTHROPIC_API_KEY,
 } = process.env;
 
-const claude = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
+const _claudeKey = process.env.CLAUDE_API_KEY || ANTHROPIC_API_KEY;
+const claude = _claudeKey ? new Anthropic({ apiKey: _claudeKey }) : null;
 const POLLING_INTERVAL = 1500; // ms
 
 // ── Состояния ──────────────────────────────────────────────────────────────

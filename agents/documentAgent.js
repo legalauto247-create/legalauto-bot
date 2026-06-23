@@ -75,7 +75,7 @@ ${car         ? `<div class="row"><span class="label">Автомобиль:</spa
     <td>${partName}</td>
     <td>${quantity} шт.</td>
     <td>${priceStr}</td>
-    <td>${priceStr}</td>
+    <td>${totalStr}</td>
   </tr>
   <tr class="total-row">
     <td colspan="4" style="text-align:right">ИТОГО:</td>

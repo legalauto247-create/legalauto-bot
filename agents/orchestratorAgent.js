@@ -12,7 +12,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import fetch from 'node-fetch';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY });
 
 const CHANNELS = {
   legalAuto24:   process.env.NEWS_CHANNEL_ID    || '@LegalAuto24',
@@ -156,7 +156,7 @@ export async function orchestrate(userCommand, reportBack) {
       // Аналитика
       const { getTopBotQueries } = await import('./trendingAgent.js');
       const top = getTopBotQueries(5);
-      const text = `📊 *Топ запросов за неделю:*\n${top.map((q,i) => `${i+1}. ${q.query} — ${q.count} раз`).join('\n') || 'Данных пока нет'}`;
+      const text = `📊 *Топ запросов за неделю:*\n${top.map((q,i) => `${i+1}. ${q.name} — ${q.count} раз`).join('\n') || 'Данных пока нет'}`;
       await reportBack(text);
       return;
     }

@@ -9,7 +9,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import fetch from 'node-fetch';
 import { getMemory } from './memoryAgent.js';
 
-const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const claude = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY });
 
 const GPT_API_URL = 'https://api.openai.com/v1/chat/completions';
 const GPT_MODEL   = 'gpt-4o-mini'; // экономичная но мощная модель

@@ -12,7 +12,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { askClaudeOnly } from './dualBrainAgent.js';
 
-const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const claude = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY });
 
 // ── Типы задач ────────────────────────────────────────────────────────────
 const TASK_TYPES = {
@@ -113,14 +113,14 @@ async function routeToAgent(taskType, request, context = {}) {
     }
 
     case TASK_TYPES.ARBITRAGE: {
-      const { findArbitrageDeals } = await import('./arbitrageAgent.js');
-      const deals = await findArbitrageDeals();
-      return { found: true, data: deals, type: 'arbitrage' };
+      const { runArbitrageCheck } = await import('./arbitrageAgent.js');
+      await runArbitrageCheck();
+      return { found: true, data: { message: 'Арбитраж запущен, результаты отправлены менеджеру' }, type: 'arbitrage' };
     }
 
     case TASK_TYPES.TRENDING: {
-      const { getTrending } = await import('./trendingAgent.js');
-      const trending = await getTrending();
+      const { getTopBotQueries } = await import('./trendingAgent.js');
+      const trending = getTopBotQueries(10);
       return { found: true, data: trending, type: 'trending' };
     }
 

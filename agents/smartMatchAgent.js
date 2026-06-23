@@ -8,10 +8,10 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import ws from 'ws';
 
-const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY, {
-  realtime: { transport: ws }
-});
+const claude = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY });
+const db = (process.env.SUPABASE_URL && process.env.SUPABASE_KEY)
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY, { realtime: { transport: ws } })
+  : null;
 
 // ============================================================
 // Ð¨Ð°Ð³ 1 â Claude Haiku ÑÐ°Ð·Ð±Ð¸ÑÐ°ÐµÑ Ð·Ð°Ð¿ÑÐ¾Ñ ÐºÐ»Ð¸ÐµÐ½ÑÐ°
@@ -55,7 +55,7 @@ JSON ÑÐ¾ÑÐ¼Ð°Ñ:
 // ============================================================
 
 async function searchInDB(parsed) {
-  if (!parsed) return [];
+  if (!parsed || !db) return [];
 
   let query = db
     .from('parts')
@@ -131,8 +131,9 @@ async function formatResponse(userText, parsed, parts) {
 // ============================================================
 
 async function saveLead(telegramId, userText, parsed, matchedParts) {
+  if (!db) return null;
   try {
-    // ÐÐ°ÑÐ¾Ð´Ð¸Ð¼ Ð¸Ð»Ð¸ ÑÐ¾Ð·Ð´Ð°ÑÐ¼ Ð¿Ð¾Ð»ÑÐ·Ð¾Ð²Ð°ÑÐµÐ»Ñ
+    //ÐÐ°ÑÐ¾Ð´Ð¸Ð¼ Ð¸Ð»Ð¸ ÑÐ¾Ð·Ð´Ð°ÑÐ¼ Ð¿Ð¾Ð»ÑÐ·Ð¾Ð²Ð°ÑÐµÐ»Ñ
     let { data: user } = await db.from('users').select('id').eq('telegram_id', telegramId).single();
 
     if (!user) {

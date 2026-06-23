@@ -98,7 +98,8 @@ export async function downloadImage(url) {
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.buffer();
+    const arrayBuf = await res.arrayBuffer();
+    return Buffer.from(arrayBuf);
   } catch (err) {
     console.error('[ImageGen] Download error:', err.message);
     throw new Error(`Download failed: ${err.message}`);

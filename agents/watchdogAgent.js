@@ -43,7 +43,7 @@ const leads = new Map();
  * Вызывать из clientBot.js когда клиент оставляет заявку.
  */
 export function registerLead({ chatId, partName, phone, username }) {
-  if (!process.env.WATCHDOG_ENABLED === 'true') return;
+  if (process.env.WATCHDOG_ENABLED !== 'true') return;
   const key = String(chatId);
   if (leads.has(key)) {
     // Обновляем существующий лид
