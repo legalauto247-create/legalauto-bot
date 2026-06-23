@@ -1,7 +1,10 @@
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const IMAGE_MODEL = process.env.IMAGE_MODEL || 'dall-e-3';          // Быстрый старт
+const IMAGE_ADVANCED_MODEL = process.env.IMAGE_ADVANCED_MODEL || 'gpt-image-1';  // Новое поколение
+const IMAGE_EXPERIMENTAL_MODEL = process.env.IMAGE_EXPERIMENTAL_MODEL || 'gpt-image-2';  // Экспериментальное
 
 // ════════════════════════════════════════════════════════════════════════════
-// ГЕНЕРАЦИЯ ИЗОБРАЖЕНИЙ — РАБОТАЮЩАЯ ВЕРСИЯ
+// ГЕНЕРАЦИЯ ИЗОБРАЖЕНИЙ — ПОДДЕРЖКА DALLE-3 И НОВЫХ МОДЕЛЕЙ
 // ════════════════════════════════════════════════════════════════════════════
 
 export async function generateImage(prompt, options = {}) {
@@ -32,7 +35,7 @@ export async function generateImage(prompt, options = {}) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'dall-e-3',
+        model: IMAGE_MODEL,
         prompt: enhancedPrompt,
         n: 1,
         size: '1024x1024',
@@ -50,18 +53,25 @@ export async function generateImage(prompt, options = {}) {
 
     const data = await res.json();
 
-    // Парсим URL безопасно
-    const url = data?.data?.[0]?.url ||
-                data?.url ||
-                (data?.data?.[0] && typeof data.data[0] === 'string' ? data.data[0] : null);
+    // Поддержка обоих форматов:
+    // 1. DALL-E-3 format: { data: [{ url: "..." }] }
+    // 2. Новые модели (gpt-image-1/2): { data: [{ b64_json: "..." }] }
+    let url = data?.data?.[0]?.url;
+    let b64_json = data?.data?.[0]?.b64_json;
 
-    if (!url) {
-      console.error('[ImageGen] ❌ No URL in response:', JSON.stringify(data).slice(0, 300));
-      throw new Error('No image URL returned');
+    if (url) {
+      console.log('[ImageGen] ✅ Image generated successfully (URL format)');
+      return { url };
     }
 
-    console.log('[ImageGen] ✅ Image generated successfully');
-    return { url };
+    if (b64_json) {
+      // TODO: В будущем конвертировать b64_json в изображение
+      console.warn('[ImageGen] ⚠️ Received b64_json format (новая модель) — требуется обработка');
+      throw new Error('b64_json format not yet supported - use gpt-image-1/2 models when ready');
+    }
+
+    console.error('[ImageGen] ❌ No URL or b64_json in response:', JSON.stringify(data).slice(0, 300));
+    throw new Error('No image data returned');
 
   } catch (err) {
     if (err.name === 'AbortError') {
