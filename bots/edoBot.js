@@ -235,15 +235,19 @@ async function handleImageGen(chatId, topic = '') {
 
     const imageResult = await generatePostImage(topic);
     const elapsed = Date.now() - startTime;
-    console.log(`[ImageGen] ✅ SUCCESS за ${elapsed}ms:`, imageResult.url?.slice(0, 80));
+    console.log(`[ImageGen] ✅ SUCCESS за ${elapsed}ms`);
 
-    const { url } = imageResult;
-    if (!url) throw new Error('URL не получена из API');
-
-    // Скачивание
-    console.log('[ImageGen] 📥 Загружаю изображение...');
-    const buffer = await downloadImage(url);
-    console.log(`[ImageGen] ✅ Загружено: ${buffer.length} bytes`);
+    // gpt-image-1 возвращает buffer напрямую, dall-e-2 возвращает url
+    let buffer;
+    if (imageResult.buffer) {
+      buffer = imageResult.buffer;
+    } else if (imageResult.url) {
+      console.log('[ImageGen] 📥 Загружаю изображение...');
+      buffer = await downloadImage(imageResult.url);
+    } else {
+      throw new Error('Нет изображения в ответе API');
+    }
+    console.log(`[ImageGen] ✅ Готово: ${buffer.length} bytes`);
 
     // Отправка в Telegram
     const form = new FormData();

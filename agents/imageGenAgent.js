@@ -1,7 +1,7 @@
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const IMAGE_MODEL = process.env.IMAGE_MODEL || 'dall-e-3';          // Быстрый старт
-const IMAGE_ADVANCED_MODEL = process.env.IMAGE_ADVANCED_MODEL || 'gpt-image-1';  // Новое поколение
-const IMAGE_EXPERIMENTAL_MODEL = process.env.IMAGE_EXPERIMENTAL_MODEL || 'gpt-image-2';  // Экспериментальное
+const IMAGE_MODEL = process.env.IMAGE_MODEL || 'gpt-image-1';
+const IMAGE_ADVANCED_MODEL = process.env.IMAGE_ADVANCED_MODEL || 'gpt-image-1';
+const IMAGE_EXPERIMENTAL_MODEL = process.env.IMAGE_EXPERIMENTAL_MODEL || 'gpt-image-1';
 
 // ════════════════════════════════════════════════════════════════════════════
 // ГЕНЕРАЦИЯ ИЗОБРАЖЕНИЙ — ПОДДЕРЖКА DALLE-3 И НОВЫХ МОДЕЛЕЙ
@@ -37,8 +37,9 @@ export async function generateImage(prompt, options = {}) {
       size: '1024x1024',
     };
 
-    // Добавляем response_format только для моделей которые его поддерживают
-    if (IMAGE_MODEL !== 'dall-e-3') {
+    // gpt-image-1 не поддерживает response_format (всегда b64_json)
+    // dall-e-2 поддерживает response_format: 'url'
+    if (IMAGE_MODEL === 'dall-e-2') {
       requestBody.response_format = 'url';
     }
 
@@ -74,9 +75,8 @@ export async function generateImage(prompt, options = {}) {
     }
 
     if (b64_json) {
-      // TODO: В будущем конвертировать b64_json в изображение
-      console.warn('[ImageGen] ⚠️ Received b64_json format (новая модель) — требуется обработка');
-      throw new Error('b64_json format not yet supported - use gpt-image-1/2 models when ready');
+      console.log('[ImageGen] ✅ Image generated successfully (b64_json format)');
+      return { buffer: Buffer.from(b64_json, 'base64') };
     }
 
     console.error('[ImageGen] ❌ No URL or b64_json in response:', JSON.stringify(data).slice(0, 300));
