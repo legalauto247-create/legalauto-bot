@@ -112,43 +112,90 @@ function isCarListingSimple(text) {
   return keywords.filter(kw => lower.includes(kw)).length >= 2;
 }
 
-// ── Переписать объявление под свою аудиторию ───────────────────────────────
+// ── Брендинг LegalAutoStore (зашит, не от AI — чужие контакты не просочатся) ─
+const BRAND_MANAGER  = process.env.STORE_MANAGER  || '@LegalAuto247';
+const BRAND_PHONE    = process.env.STORE_PHONE    || '+79385152429';
+const BRAND_WHATSAPP = process.env.STORE_WHATSAPP || '+79385152429';
+
+const BRAND_FOOTER =
+  `🎯 LegalAutoStore — гарантированная легальность и надёжность каждого автомобиля! ✅\n\n` +
+  `━━━━━━━━━━━━━━━\n` +
+  `✅ Менеджер: ${BRAND_MANAGER}\n` +
+  `📞 Телефон: ${BRAND_PHONE}\n` +
+  `💬 WhatsApp: ${BRAND_WHATSAPP}`;
+
+// Вырезаем ВСЕ чужие контакты из исходника/AI-вывода:
+// чужие @юзернеймы, телефоны, ссылки, строки "Заказать/Связаться" партнёра.
+function stripForeignContacts(text) {
+  const OURS = /^(legalauto|legalautostore|legalauto247|legalautoassist|legalautoparts|legalauto24|legalautopartsbot)/i;
+  return text
+    .split('\n')
+    .map(line => {
+      // строки с телефоном / WhatsApp / «Заказать» / «Связаться» источника — убираем целиком
+      if (/(\+?\d[\d\s\-()]{8,}\d)/.test(line)) return '';
+      if (/заказать|связаться|звоните|пишите|менеджер|контакт|whatsapp|ватсап|телефон/i.test(line) &&
+          /@|\d{6,}|t\.me|wa\.me/i.test(line)) return '';
+      // вырезаем чужие @юзернеймы и ссылки внутри строки
+      let l = line
+        .replace(/@([a-z0-9_]+)/gi, (m, u) => OURS.test(u) ? m : '')
+        .replace(/https?:\/\/\S+/gi, '')
+        .replace(/t\.me\/\S+/gi, '')
+        .replace(/wa\.me\/\S+/gi, '');
+      return l;
+    })
+    .filter((l, i, arr) => !(l.trim() === '' && arr[i - 1]?.trim() === '')) // схлопываем пустые
+    .join('\n')
+    .trim();
+}
+
+// ── Переписать объявление под свой бренд (твои контакты, без конкурента) ─────
 async function rewriteForChannel(originalText, channelName) {
-  if (!claude) return buildFallbackPost(originalText, channelName);
+  const clean = stripForeignContacts(originalText);
+  if (!claude) return buildFallbackPost(clean, channelName);
 
   try {
     const msg = await claude.messages.create({
       model:      'claude-haiku-4-5-20251001',
-      max_tokens: 350,
+      max_tokens: 450,
       messages: [{
         role: 'user',
         content:
-          `Ты ведёшь Telegram-группу по продаже авто. Перепиши это объявление из партнёрского канала "${channelName}" как пост для своей аудитории.
+`Перепиши объявление об авто в фирменный пост канала LegalAutoStore. Строго по шаблону ниже.
+
+ЖЁСТКИЕ ЗАПРЕТЫ:
+- НЕ упоминай другие магазины, каналы, @юзернеймы, телефоны, ссылки, имена продавцов из исходника. Только LegalAutoStore.
+- НЕ пиши про СБКТС, ЭПТС, "оформим документы", "помощь с документами". Это пост о ПРОДАЖЕ авто, не об услугах.
+- НЕ добавляй блок контактов — его добавят автоматически.
+
+ШАБЛОН (заполни данными из исходника, что нет — пропусти строку):
+🚗 Автомобиль в продаже
+
+✨ {Марка Модель} — {краткий цепляющий эпитет}!
+
+📋 Технические характеристики:
+📅 Год выпуска: {год}
+🛣 Пробег: {пробег} км
+⛽ Двигатель: {топливо}, {объём} ({л.с} л.с)
+🔄 Привод: {привод}
+
+💰 Цена под ключ: {цена}
+🌍 Доставка в РФ: 6-8 недель
 
 Исходное объявление:
-"${originalText.substring(0, 600)}"
-
-Требования:
-- Сохрани все технические данные (год, пробег, цена, марка, модель)
-- Добавь 2-3 эмодзи
-- Стиль: живой, как советует друг-автоэксперт
-- Длина: 5-7 строк
-- В конце одна из этих строк (выбери подходящую):
-  "💬 Помощь с документами → @LegalAuto247"
-  "📋 Оформим СБКТС/ЭПТС → @LegalAutoAssist_bot"
-  "🚗 Вопросы по авто → @LegalAuto247"
-- НЕ добавляй "Источник:" или "Из канала"`,
+"${clean.substring(0, 700)}"`,
       }],
     });
-    return msg.content[0].text.trim();
+    const body = stripForeignContacts(msg.content[0].text.trim());
+    return `${body}\n\n${BRAND_FOOTER}`;
   } catch (e) {
     console.error('[AutoAds] Claude rewrite error:', e.message);
-    return buildFallbackPost(originalText, channelName);
+    return buildFallbackPost(clean, channelName);
   }
 }
 
 function buildFallbackPost(text, channelName) {
-  return `${text.substring(0, 500)}\n\n💬 Помощь с документами → @LegalAuto247`;
+  const body = stripForeignContacts(text).substring(0, 600);
+  return `🚗 Автомобиль в продаже\n\n${body}\n\n${BRAND_FOOTER}`;
 }
 
 // ── Отправить Эдо на одобрение ─────────────────────────────────────────────
