@@ -65,6 +65,24 @@ if (errors.length) {
   process.exit(1);
 }
 
+// ── Запуск бота с ретраем при 409 ──────────────────────────────────────────
+// При редеплое Railway старый контейнер ещё дренируется и держит getUpdates.
+// Telegraf .launch() при этом падает 409 и НЕ повторяет — бот остаётся мёртвым.
+// Повторяем запуск с бэкоффом, пока старый экземпляр не отпустит лок.
+function launchWithRetry(bot, name, opts = {}, attempt = 1) {
+  const MAX = 8;            // ~8 попыток
+  const DELAY = 6_000;      // каждые 6 сек → до ~48 сек на дренаж старого деплоя
+  bot.launch(opts).catch(e => {
+    const is409 = /409/.test(e.message) || /Conflict/i.test(e.message);
+    if (is409 && attempt < MAX) {
+      console.warn(`[${name}] 409 при старте (попытка ${attempt}/${MAX}) — повтор через ${DELAY / 1000}с`);
+      setTimeout(() => launchWithRetry(bot, name, opts, attempt + 1), DELAY);
+    } else {
+      console.error(`[${name}] Launch error:`, e.message);
+    }
+  });
+}
+
 // ── Admin Bot ──────────────────────────────────────────────────────────────
 const adminBot = new Telegraf(ADMIN_BOT_TOKEN);
 setupAdminBot(adminBot);
@@ -82,12 +100,10 @@ clientBot.catch((err, ctx) => {
 });
 
 // ── Запуск (без await — launch() никогда не завершается) ───────────────────
-adminBot.launch({ dropPendingUpdates: true })
-  .catch(e => console.error('[AdminBot] Launch error:', e.message));
+launchWithRetry(adminBot, 'AdminBot', { dropPendingUpdates: true });
 console.log('✅ Admin bot started (@LegalAutoAgentUprav_Bot)');
 
-clientBot.launch({ dropPendingUpdates: true })
-  .catch(e => console.error('[ClientBot] Launch error:', e.message));
+launchWithRetry(clientBot, 'ClientBot', { dropPendingUpdates: true });
 console.log('✅ Client bot started (@LegalAutoAssist_bot)');
 
 // ── Alert subscriptions — восстановить из GAS ─────────────────────────────
@@ -410,8 +426,7 @@ if (AUTO_STORE_BOT_TOKEN) {
   storeBot.catch((err, ctx) => {
     console.error('[StoreBot] Unhandled error:', err.message, 'ctx:', ctx?.updateType);
   });
-  storeBot.launch({ dropPendingUpdates: true })
-    .catch(e => console.error('[StoreBot] Launch error:', e.message));
+  launchWithRetry(storeBot, 'StoreBot', { dropPendingUpdates: true });
   console.log('✅ Store bot started (@LegalAutoStore_Bot) — слушаю партнёрские каналы');
 } else {
   console.log('⚠️ AUTO_STORE_BOT_TOKEN не задан — @LegalAutoStore_Bot не запущен');
