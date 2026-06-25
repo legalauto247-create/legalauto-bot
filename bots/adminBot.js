@@ -1976,7 +1976,7 @@ export function setupAdminBot(bot) {
       if (!pending) return ctx.answerCbQuery('❌ Объявление не найдено');
 
       await ctx.answerCbQuery('✅ Публикую...');
-      const ok = await publishAd(pending.text);
+      const ok = await publishAd(pending.text, pending.photos);
       clearPendingAd(id);
 
       await ctx.editMessageText(

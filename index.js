@@ -21,7 +21,7 @@ import { initPartner, runProactiveMonitor } from './agents/partnerAgent.js';
 import { runFollowUp } from './agents/followUpAgent.js';
 import { loadReferrals } from './agents/referralAgent.js';
 import { startAdScheduler } from './agents/adAgent.js';
-import { setupAutoAdsListener } from './agents/autoAdsAgent.js';
+import { setupAutoAdsListener, startPublicChannelPoller } from './agents/autoAdsAgent.js';
 import { setupReviewScheduler } from './agents/reviewAgent.js';
 import { setupPriceMonitor } from './agents/priceMonitorAgent.js';
 import { setupTrendingScheduler } from './agents/trendingAgent.js';
@@ -431,6 +431,11 @@ if (AUTO_STORE_BOT_TOKEN) {
 } else {
   console.log('⚠️ AUTO_STORE_BOT_TOKEN не задан — @LegalAutoStore_Bot не запущен');
 }
+
+// ── Публичный поллер партнёрских каналов (без бота-админа) ─────────────────
+// Читает t.me/s/<канал> — работает для любых ПУБЛИЧНЫХ каналов (@username),
+// доступ к каналу не нужен. Дополняет channel_post-листенер выше.
+startPublicChannelPoller(10);
 
 // ── Review Agent — запрос отзывов через 4 дня после заказа ────────────────
 setupReviewScheduler(clientBot);
