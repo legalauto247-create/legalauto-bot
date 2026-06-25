@@ -48,3 +48,10 @@ memory/
 
 # Локальный MCP-конфиг с ключами — не коммитить
 .mcp.json
+
+# Брендовые исходники (тяжёлые) — локально, не в git
+brand/inbox/*.png
+brand/inbox/*.jpg
+brand/inbox/*.jpeg
+brand/inbox/*.mp4
+brand/inbox/*.PNG

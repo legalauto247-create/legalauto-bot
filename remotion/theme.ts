@@ -6,10 +6,12 @@ export const WIDTH = 1080;
 export const HEIGHT = 1920;
 
 export const theme = {
-  car:  { accent: '#3b82f6', accent2: '#1d4ed8', glow: 'rgba(59,130,246,0.45)' },
-  part: { accent: '#10b981', accent2: '#047857', glow: 'rgba(16,185,129,0.45)' },
-  bg: '#070b12',
-  bg2: '#0d1422',
+  // Цвета направлений по брендбуку LegalAuto: авто=золото, запчасти=красный, документы=синий
+  car:  { accent: '#c8a24c', accent2: '#8a6d2f', glow: 'rgba(200,162,76,0.45)' },
+  part: { accent: '#c02531', accent2: '#7a1820', glow: 'rgba(192,37,49,0.45)' },
+  docs: { accent: '#1c7fd6', accent2: '#0e4f8a', glow: 'rgba(28,127,214,0.45)' },
+  bg: '#0a0e15',
+  bg2: '#121826',
   text: '#ffffff',
   muted: '#9fb0c5',
 };
