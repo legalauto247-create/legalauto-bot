@@ -240,59 +240,98 @@ async function sendForApproval(rewrittenText, originalText, channelName, photos 
   }
 }
 
+// Скачиваем фото сами (с таймаутом). Возвращаем Buffer или null, если битое.
+async function fetchPhotoBuffer(url) {
+  try {
+    const ctrl = AbortController ? new AbortController() : null;
+    const t = ctrl ? setTimeout(() => ctrl.abort(), 8000) : null;
+    const res = await fetch(url, {
+      signal: ctrl?.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+    });
+    if (t) clearTimeout(t);
+    if (!res.ok) return null;
+    const ct = res.headers.get('content-type') || '';
+    if (!/image\//i.test(ct)) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    // Telegram: фото ≤ 10 МБ; отсекаем пустые/гиганты
+    if (buf.length < 1024 || buf.length > 10 * 1024 * 1024) return null;
+    return buf;
+  } catch {
+    return null;
+  }
+}
+
 // ── Прямая публикация в канал/группу ───────────────────────────────────────
+// Фото скачиваем сами и заливаем БАЙТАМИ (multipart) — Telegram не тянет ссылки,
+// поэтому WEBPAGE_CURL_FAILED невозможен. Битые ссылки тихо отсеиваются.
 export async function publishAd(text, photos = []) {
   const channel = AUTO_ADS_CHANNEL;
   if (!channel || !PUBLISH_TOKEN) {
     console.log('[AutoAds] AUTO_ADS_CHANNEL или токен публикации не задан');
     return false;
   }
-  const api = (method, body) =>
+  const caption = text.substring(0, 1024);
+
+  const apiJson = (method, body) =>
     fetch(`https://api.telegram.org/bot${PUBLISH_TOKEN}/${method}`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(body),
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
     }).then(r => r.json());
 
+  // Нативный fetch Node — корректно собирает multipart из нативного FormData/Blob
+  const apiForm = (method, form) =>
+    globalThis.fetch(`https://api.telegram.org/bot${PUBLISH_TOKEN}/${method}`, {
+      method: 'POST', body: form,
+    }).then(r => r.json());
+
+  const sendText = async () => {
+    const data = await apiJson('sendMessage', {
+      chat_id: channel, text, parse_mode: 'Markdown', disable_web_page_preview: true,
+    });
+    if (data.ok) console.log('[AutoAds] ✅ Опубликовано в канал (текст)');
+    else         console.error('[AutoAds] ❌ Ошибка публикации:', data.description);
+    return data.ok;
+  };
+
   try {
-    // С фото: одно → sendPhoto с подписью, несколько → sendMediaGroup + текст
-    const pics = (photos || []).filter(Boolean).slice(0, 10);
+    const urls = (photos || []).filter(Boolean).slice(0, 10);
 
-    const sendText = async () => {
-      const data = await api('sendMessage', {
-        chat_id: channel, text, parse_mode: 'Markdown', disable_web_page_preview: true,
-      });
-      if (data.ok) console.log('[AutoAds] ✅ Опубликовано в канал (текст)');
-      else         console.error('[AutoAds] ❌ Ошибка публикации:', data.description);
-      return data.ok;
-    };
+    // Скачиваем все фото параллельно, оставляем только рабочие
+    const buffers = (await Promise.all(urls.map(fetchPhotoBuffer))).filter(Boolean);
+    const dropped = urls.length - buffers.length;
+    if (dropped > 0) console.log(`[AutoAds] отсеяно битых фото: ${dropped}/${urls.length}`);
 
-    if (pics.length === 1) {
-      const data = await api('sendPhoto', {
-        chat_id: channel, photo: pics[0],
-        caption: text.substring(0, 1024), parse_mode: 'Markdown',
-      });
+    if (buffers.length === 0) return sendText();
+
+    if (buffers.length === 1) {
+      const fd = new FormData();
+      fd.append('chat_id', channel);
+      fd.append('caption', caption);
+      fd.append('parse_mode', 'Markdown');
+      fd.append('photo', new Blob([buffers[0]], { type: 'image/jpeg' }), 'p.jpg');
+      const data = await apiForm('sendPhoto', fd);
       if (data.ok) { console.log('[AutoAds] ✅ Опубликовано с фото'); return true; }
       console.error('[AutoAds] ❌ sendPhoto:', data.description, '— откат на текст');
       return sendText();
     }
 
-    if (pics.length > 1) {
-      const media = pics.map((url, i) => ({
-        type: 'photo', media: url,
-        ...(i === 0 ? { caption: text.substring(0, 1024), parse_mode: 'Markdown' } : {}),
-      }));
-      const data = await api('sendMediaGroup', { chat_id: channel, media });
-      if (data.ok) { console.log(`[AutoAds] ✅ Опубликовано с ${pics.length} фото`); return true; }
-      console.error('[AutoAds] ❌ sendMediaGroup:', data.description, '— откат на текст');
-      return sendText();
-    }
-
-    // Без фото — обычный текст
+    const fd = new FormData();
+    fd.append('chat_id', channel);
+    const media = buffers.map((b, i) => ({
+      type: 'photo', media: `attach://p${i}`,
+      ...(i === 0 ? { caption, parse_mode: 'Markdown' } : {}),
+    }));
+    fd.append('media', JSON.stringify(media));
+    buffers.forEach((b, i) =>
+      fd.append(`p${i}`, new Blob([b], { type: 'image/jpeg' }), `p${i}.jpg`));
+    const data = await apiForm('sendMediaGroup', fd);
+    if (data.ok) { console.log(`[AutoAds] ✅ Опубликовано с ${buffers.length} фото`); return true; }
+    console.error('[AutoAds] ❌ sendMediaGroup:', data.description, '— откат на текст');
     return sendText();
   } catch (e) {
     console.error('[AutoAds] publish error:', e.message);
-    return false;
+    return sendText();
   }
 }
 
