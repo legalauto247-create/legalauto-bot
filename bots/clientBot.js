@@ -1306,6 +1306,18 @@ export function setupClientBot(bot) {
         return;
       }
 
+      // ── Fallback: route complex queries through orchestrator ─────────────
+      if (text.length > 15) {
+        try {
+          const orchResult = await orchestrate(text, { telegramId: ctx.chat.id, telegram: ctx.telegram });
+          const replyText = orchResult?.result?.text || orchResult?.result?.message;
+          if (replyText) {
+            return ctx.reply(replyText, { parse_mode: 'Markdown' });
+          }
+        } catch (e) {
+          console.error('[ClientBot] orchestrate fallback error:', e.message);
+        }
+      }
       return ctx.reply('Выберите раздел:', KB_MAIN);
     }
 

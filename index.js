@@ -28,6 +28,7 @@ import { setupTrendingScheduler } from './agents/trendingAgent.js';
 import { setupArbitrageMonitor } from './agents/arbitrageAgent.js';
 import { setupWatchdog } from './agents/watchdogAgent.js';
 import { initEdoBot, sendMorningBriefing } from './bots/edoBot.js';
+import { initJarvisBot } from './bots/jarvisBot.js';
 import { execSync } from 'child_process';
 
 // ── Диагностика Chromium при старте ───────────────────────────────────────────
@@ -434,6 +435,18 @@ setupWatchdog(clientBot);
 // ── Edo Bot — личный AI-ассистент Эдо (полный автопилот) ──────────────────
 initEdoBot().catch(e => console.error('[EdoBot] Init error:', e.message));
 console.log('🤖 Edo personal assistant initializing...');
+
+// ── Jarvis Bot — личный Telegraf-бот Эдо (@LegalAuto247_bot) ──────────────
+initJarvisBot()
+  .then(bot => {
+    if (bot) {
+      console.log('✅ Jarvis bot started (@LegalAuto247_bot)');
+      // Graceful shutdown for jarvis
+      process.once('SIGINT',  () => bot.stop('SIGINT'));
+      process.once('SIGTERM', () => bot.stop('SIGTERM'));
+    }
+  })
+  .catch(e => console.error('[JarvisBot] Init error:', e.message));
 
 // ── Graceful shutdown ──────────────────────────────────────────────────────
 function shutdown(signal) {

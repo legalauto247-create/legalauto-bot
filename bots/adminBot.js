@@ -1585,6 +1585,84 @@ export function setupAdminBot(bot) {
     });
   }
 
+  // ── /addmanager <telegram_id> — выдать доступ менеджеру ─────────────────
+  bot.command('addmanager', async (ctx) => {
+    if (!(await guard(ctx))) return;
+    const arg = ctx.message.text.replace('/addmanager', '').trim();
+    if (!arg || !/^\d+$/.test(arg)) {
+      return ctx.reply(
+        `Использование: \`/addmanager 123456789\`\n\nUкажите числовой Telegram ID менеджера.`,
+        { parse_mode: 'Markdown' }
+      );
+    }
+    const current = (process.env.MANAGER_CHAT_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
+    if (current.includes(arg)) {
+      return ctx.reply(`⚠️ Менеджер \`${arg}\` уже добавлен.`, { parse_mode: 'Markdown' });
+    }
+    current.push(arg);
+    process.env.MANAGER_CHAT_IDS = current.join(',');
+    console.log(`[AdminBot] /addmanager — добавлен менеджер ${arg}. Текущий список: ${process.env.MANAGER_CHAT_IDS}`);
+    await ctx.reply(
+      `✅ *Менеджер добавлен!*\n\n` +
+      `ID: \`${arg}\`\n` +
+      `Теперь у него есть доступ к просмотру заявок и обновлению статусов.\n\n` +
+      `⚠️ Важно: это изменение сбросится при перезапуске Railway. Добавьте \`${arg}\` в переменную окружения \`MANAGER_CHAT_IDS\` в Railway → Variables для постоянного сохранения.`,
+      { parse_mode: 'Markdown' }
+    );
+    // Уведомить нового менеджера
+    const clientToken = process.env.CLIENT_BOT_TOKEN || process.env.ADMIN_BOT_TOKEN;
+    if (clientToken) {
+      await fetch(`https://api.telegram.org/bot${clientToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: arg,
+          text: `👋 Вас добавили как менеджера платформы *LegalAuto*.\n\nНовые заявки от клиентов будут приходить сюда.\n\nНапишите /start в боте @LegalAutoAgentUprav_Bot для начала работы.`,
+          parse_mode: 'Markdown',
+        }),
+      }).catch(() => {});
+    }
+  });
+
+  // ── /managers — список текущих менеджеров ────────────────────────────────
+  bot.command('managers', async (ctx) => {
+    if (!(await guard(ctx))) return;
+    const ids = (process.env.MANAGER_CHAT_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
+    if (!ids.length) {
+      return ctx.reply(
+        `📋 *Менеджеры не добавлены.*\n\nДобавить: \`/addmanager <telegram_id>\``,
+        { parse_mode: 'Markdown' }
+      );
+    }
+    const lines = ids.map((id, i) => `${i + 1}. \`${id}\``).join('\n');
+    await ctx.reply(
+      `👥 *Текущие менеджеры (${ids.length}):*\n\n${lines}\n\n` +
+      `Добавить: \`/addmanager <id>\`\n` +
+      `Удалить: \`/removemanager <id>\``,
+      { parse_mode: 'Markdown' }
+    );
+  });
+
+  // ── /removemanager <telegram_id> — снять доступ менеджера ────────────────
+  bot.command('removemanager', async (ctx) => {
+    if (!(await guard(ctx))) return;
+    const arg = ctx.message.text.replace('/removemanager', '').trim();
+    if (!arg || !/^\d+$/.test(arg)) {
+      return ctx.reply('Использование: `/removemanager 123456789`', { parse_mode: 'Markdown' });
+    }
+    const current = (process.env.MANAGER_CHAT_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
+    const filtered = current.filter(id => id !== arg);
+    if (filtered.length === current.length) {
+      return ctx.reply(`⚠️ Менеджер \`${arg}\` не найден в списке.`, { parse_mode: 'Markdown' });
+    }
+    process.env.MANAGER_CHAT_IDS = filtered.join(',');
+    console.log(`[AdminBot] /removemanager — удалён менеджер ${arg}`);
+    await ctx.reply(
+      `✅ Менеджер \`${arg}\` удалён.\n\nОстались: ${filtered.length > 0 ? filtered.join(', ') : 'нет'}`,
+      { parse_mode: 'Markdown' }
+    );
+  });
+
   // ══════════════════════════════════════════════════════════════════════
   //  ТЕКСТОВЫЕ СООБЩЕНИЯ — обработка ожидающего ввода + свободный диалог
   // ══════════════════════════════════════════════════════════════════════

@@ -1,205 +1,262 @@
 /**
- * LegalAuto — Orchestrator Agent
- * Принимает команду от Эдо → понимает задачу → раздаёт агентам → возвращает результат
+ * LegalAuto — Orchestrator Agent (v2)
  *
- * Пример команд:
- *  "сделай пост про импорт Geely в @LegalAuto24"
- *  "опубликуй объявление на авто в @LegalAutoStore"
- *  "дай статистику за неделю"
- *  "сделай пост с картинкой про СБКТС"
+ * Master brain that accepts structured tasks from JarvisBot or any other source,
+ * routes them to the correct agent, and returns results back to Edo via adminBot.
+ *
+ * Export:  async function orchestrate(task, source)
+ *   task   = { type: string, payload: object }
+ *   source = 'jarvis' | 'admin' | 'scheduler' | 'client'
+ *
+ * Task types:
+ *   'post_part'        — publish next part to @LegalAutoParts24
+ *   'post_news'        — run newsBot cycle immediately
+ *   'get_leads'        — fetch and summarise today's leads
+ *   'get_stats'        — analytics from GAS
+ *   'send_broadcast'   — send message to all clients via clientBot
+ *   'find_cars'        — show latest cars in @LegalAutoStore
+ *   'generate_content' — generate post text for a given topic/channel
  */
 
 import Anthropic from '@anthropic-ai/sdk';
 import fetch from 'node-fetch';
+import https from 'https';
 
-const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY });
+const TAG = '[OrchestratorAgent]';
 
-const CHANNELS = {
-  legalAuto24:   process.env.NEWS_CHANNEL_ID    || '@LegalAuto24',
-  parts24:       process.env.PARTS_CHANNEL_ID   || '@LegalAutoParts24',
-  store:         process.env.STORE_CHANNEL_ID   || '@LegalAutoStore',
-};
+// ── Clients ───────────────────────────────────────────────────────────────
+const getClaudeClient = () =>
+  new Anthropic({ apiKey: process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY });
 
-const BRAND = {
-  colors: 'тёмно-зелёный #003b42, золотой #d4af37, белый',
-  style:  'экспертный, лаконичный, с эмодзи, без воды',
-  name:   'LegalAuto',
-  tagline: 'Запчасти и импорт авто — честно и быстро',
-};
+// ── Task queue (in-memory, max 50) ────────────────────────────────────────
+const taskQueue = [];
+const MAX_QUEUE = 50;
 
-// ── 1. Понять задачу (Claude Sonnet — "мозг") ────────────────────────────
-async function parseIntent(userCommand) {
-  const msg = await anthropic.messages.create({
-    model:      'claude-sonnet-4-6',
-    max_tokens: 500,
-    messages: [{
-      role:    'user',
-      content: `Ты оркестратор платформы LegalAuto. Разбери команду и верни JSON.
-
-Доступные действия:
-- "news_post"     — новостной пост для @LegalAuto24 (импорт авто, таможня, СБКТС)
-- "parts_post"    — пост о запчастях для @LegalAutoParts24
-- "store_post"    — объявление об авто для @LegalAutoStore
-- "image_post"    — пост с картинкой (указать канал)
-- "analytics"     — статистика платформы
-- "broadcast"     — рассылка во все каналы
-- "custom"        — другое
-
-Команда: "${userCommand}"
-
-Верни ТОЛЬКО JSON без markdown:
-{
-  "action": "news_post",
-  "channel": "@LegalAuto24",
-  "topic": "о чём писать",
-  "withImage": false,
-  "urgent": false,
-  "explanation": "что я буду делать"
-}`
-    }]
-  });
-
-  try {
-    return JSON.parse(msg.content[0].text.trim());
-  } catch {
-    return { action: 'custom', channel: null, topic: userCommand, withImage: false, explanation: 'Выполняю задачу' };
-  }
-}
-
-// ── 2. Генерация текста поста (Claude Haiku — быстро) ────────────────────
-async function generatePostText(topic, channel, style = '') {
-  const channelContext = {
-    '@LegalAuto24':      'канал для импортёров авто. Тема: ввоз авто, таможня, СБКТС, параллельный импорт',
-    '@LegalAutoParts24': 'канал о запчастях BMW, Geely, Li Auto. Тема: запчасти, цены, наличие',
-    '@LegalAutoStore':   'канал продажи авто. Тема: конкретные автомобили на продажу',
+function enqueue(task, source) {
+  const entry = {
+    id:        `task_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    type:      task.type,
+    payload:   task.payload || {},
+    source:    source || 'unknown',
+    status:    'queued',
+    createdAt: new Date().toISOString(),
+    result:    null,
+    error:     null,
   };
+  taskQueue.unshift(entry);
+  if (taskQueue.length > MAX_QUEUE) taskQueue.length = MAX_QUEUE;
+  return entry;
+}
 
-  const ctx = channelContext[channel] || 'общий канал LegalAuto';
+function updateTask(id, patch) {
+  const idx = taskQueue.findIndex(t => t.id === id);
+  if (idx !== -1) Object.assign(taskQueue[idx], patch);
+}
 
-  const msg = await anthropic.messages.create({
-    model:      'claude-haiku-4-5-20251001',
-    max_tokens: 600,
-    messages: [{
-      role:    'user',
-      content: `Ты копирайтер Telegram-канала LegalAuto.
-Бренд: ${BRAND.name} — ${BRAND.tagline}
-Стиль: ${BRAND.style}
-Контекст канала: ${ctx}
-${style ? 'Особые указания: ' + style : ''}
+export function getTaskQueue() { return [...taskQueue]; }
 
-Напиши Telegram-пост на тему: "${topic}"
-- 4-7 строк
-- 2-3 эмодзи уместно по тексту
-- в конце призыв: написать @LegalAutoAssist_bot или ссылка на legalauto.online
-- НЕ добавляй хэштеги`
-    }]
+// ── GAS API helper ────────────────────────────────────────────────────────
+async function gasGet(action, params = {}) {
+  const url = new URL(process.env.APPS_SCRIPT_API_URL || '');
+  url.searchParams.set('action', action);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
+  const res = await fetch(url.toString(), {
+    redirect: 'follow',
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LegalAutoOrchestrator/2.0)' },
+    signal: AbortSignal.timeout(20000),
   });
-
-  return msg.content[0].text.trim();
+  return res.json();
 }
 
-// ── 3. Генерация картинки (DALL-E 3, если есть ключ) ────────────────────
-async function generateImage(topic) {
-  const openaiKey = process.env.OPENAI_API_KEY;
-  if (!openaiKey) return null;
-
-  try {
-    const res = await fetch('https://api.openai.com/v1/images/generations', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openaiKey}` },
-      body:    JSON.stringify({
-        model:   'dall-e-3',
-        prompt:  `Professional automotive business image for "${topic}". Dark teal background #003b42, gold accents #d4af37. Modern, clean, no text. Premium brand aesthetic for LegalAuto car import company.`,
-        n:       1,
-        size:    '1024x1024',
-        quality: 'standard',
-      })
-    });
-    const data = await res.json();
-    return data.data?.[0]?.url || null;
-  } catch { return null; }
-}
-
-// ── 4. Публикация в Telegram ─────────────────────────────────────────────
-async function publishText(token, chatId, text) {
+// ── Telegram send helper ───────────────────────────────────────────────────
+async function tgSend(token, chatId, text) {
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown', disable_web_page_preview: false })
+    body: JSON.stringify({ chat_id: String(chatId), text, parse_mode: 'Markdown', disable_web_page_preview: true }),
   });
   return (await res.json()).ok;
 }
 
-async function publishPhoto(token, chatId, photoUrl, caption) {
-  const res = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ chat_id: chatId, photo: photoUrl, caption, parse_mode: 'Markdown' })
-  });
-  return (await res.json()).ok;
-}
+// ── Individual task handlers ───────────────────────────────────────────────
 
-// ── 5. Главная функция ────────────────────────────────────────────────────
-export async function orchestrate(userCommand, reportBack) {
+async function handlePostPart(payload) {
+  const { prepareAutoPost, publishToChannel } = await import('./postAgent.js');
+  const result = await prepareAutoPost(payload.requestedBy || 'orchestrator');
+  if (!result.ok) return { ok: false, message: `Пропуск: ${result.error}` };
+
+  // publishToChannel needs a telegram client object — we use the raw Telegram Bot API instead
   const token = process.env.ADMIN_BOT_TOKEN;
+  const channelId = process.env.PARTS_CHANNEL || '@LegalAutoParts24';
+  const p = result.post?.part;
+  if (!p) return { ok: false, message: 'Нет данных о запчасти' };
 
-  try {
-    // Шаг 1: понять задачу
-    await reportBack(`🧠 Анализирую задачу...`);
-    const intent = await parseIntent(userCommand);
-    await reportBack(`📋 План: ${intent.explanation}`);
+  const price = Number(p.price || 0).toLocaleString('ru-RU');
+  const text = result.post?.text ||
+    `🔩 *${p.brand} — ${p.name}*\n\n💰 Цена: ${price} ₽\n📦 Состояние: ${p.condition || 'б/у'}\n🚗 Авто: ${p.car || '—'}\n\n📲 Заказать → @LegalAutoAssist_bot`;
 
-    // Шаг 2: выполнить
-    let result = { ok: false, message: '' };
-
-    if (intent.action === 'analytics') {
-      // Аналитика
-      const { getTopBotQueries } = await import('./trendingAgent.js');
-      const top = getTopBotQueries(5);
-      const text = `📊 *Топ запросов за неделю:*\n${top.map((q,i) => `${i+1}. ${q.name} — ${q.count} раз`).join('\n') || 'Данных пока нет'}`;
-      await reportBack(text);
-      return;
-    }
-
-    if (intent.action === 'broadcast') {
-      // Рассылка во все каналы
-      await reportBack(`📡 Готовлю рассылку...`);
-      const text = await generatePostText(intent.topic, '@LegalAuto24', 'для всех каналов');
-      for (const ch of Object.values(CHANNELS)) {
-        await publishText(token, ch, text);
-        await new Promise(r => setTimeout(r, 2000));
-      }
-      result = { ok: true, message: `✅ Опубликовано во все 3 канала!` };
-
-    } else {
-      // Один канал
-      const channel = intent.channel || CHANNELS.legalAuto24;
-
-      await reportBack(`✍️ Генерирую пост...`);
-      const text = await generatePostText(intent.topic, channel);
-
-      if (intent.withImage) {
-        await reportBack(`🎨 Генерирую картинку...`);
-        const imageUrl = await generateImage(intent.topic);
-
-        if (imageUrl) {
-          const ok = await publishPhoto(token, channel, imageUrl, text);
-          result = { ok, message: ok ? `✅ Пост с картинкой опубликован в ${channel}` : `❌ Ошибка публикации` };
-        } else {
-          // Нет OpenAI ключа — публикуем только текст
-          const ok = await publishText(token, channel, text);
-          result = { ok, message: ok ? `✅ Текстовый пост опубликован в ${channel}\n_(картинки: добавь OPENAI_API_KEY)_` : `❌ Ошибка` };
-        }
-      } else {
-        const ok = await publishText(token, channel, text);
-        result = { ok, message: ok ? `✅ Пост опубликован в ${channel}` : `❌ Ошибка публикации` };
-      }
-    }
-
-    await reportBack(result.message);
-
-  } catch (e) {
-    await reportBack(`❌ Ошибка: ${e.message}`);
-    console.error('[Orchestrator]', e);
+  let photoOk = false;
+  if (p.photo_url) {
+    const photoRes = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: channelId, photo: p.photo_url, caption: text, parse_mode: 'Markdown' }),
+    });
+    photoOk = (await photoRes.json()).ok;
   }
+  if (!photoOk) {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: channelId, text, parse_mode: 'Markdown' }),
+    });
+  }
+
+  // mark published in GAS
+  if (p.id) {
+    await gasGet('mark_published', { id: p.id }).catch(() => {});
+  }
+
+  return { ok: true, message: `Опубликовано: ${p.brand} ${p.name} (${price} ₽)` };
+}
+
+async function handlePostNews() {
+  const { runNewsBot } = await import('../bots/newsBot.js');
+  await runNewsBot();
+  return { ok: true, message: 'Цикл newsBot запущен. Посты ожидают одобрения.' };
+}
+
+async function handleGetLeads(payload) {
+  const data = await gasGet('leads');
+  const leads = data?.leads || [];
+  const today = new Date().toDateString();
+  const todayLeads = leads.filter(l => l.created_at && new Date(l.created_at).toDateString() === today);
+  const statuses = { new: 0, processing: 0, done: 0, cancelled: 0, other: 0 };
+  for (const l of todayLeads) {
+    const st = (l.status || 'other').toLowerCase();
+    if (st in statuses) statuses[st]++;
+    else statuses.other++;
+  }
+  const text =
+    `📋 *Заявки за сегодня: ${todayLeads.length}*\n` +
+    `🆕 Новые: ${statuses.new}\n` +
+    `⚙️ В работе: ${statuses.processing}\n` +
+    `✅ Закрыты: ${statuses.done}\n` +
+    `❌ Отменены: ${statuses.cancelled}\n\n` +
+    `Всего в системе: ${leads.length}`;
+  return { ok: true, message: text, data: { todayLeads, total: leads.length } };
+}
+
+async function handleGetStats() {
+  const { getStats, formatReport } = await import('./analyticsAgent.js');
+  const stats = await getStats('today');
+  return { ok: true, message: formatReport(stats, 'today'), data: stats };
+}
+
+async function handleSendBroadcast(payload) {
+  const { text } = payload;
+  if (!text) return { ok: false, message: 'Текст рассылки не указан' };
+
+  const data = await gasGet('leads');
+  const leads = data?.leads || [];
+  const clientToken = process.env.CLIENT_BOT_TOKEN;
+  if (!clientToken) return { ok: false, message: 'CLIENT_BOT_TOKEN не задан' };
+
+  // Unique active chat IDs from leads
+  const chatIds = [...new Set(
+    leads.filter(l => l.chat_id || l.telegram_id).map(l => l.chat_id || l.telegram_id)
+  )];
+
+  let sent = 0, failed = 0;
+  for (const chatId of chatIds) {
+    const ok = await tgSend(clientToken, chatId, text);
+    if (ok) sent++; else failed++;
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  return { ok: true, message: `Рассылка завершена: отправлено ${sent}, ошибок ${failed}` };
+}
+
+async function handleFindCars() {
+  const data = await gasGet('cars', { limit: '5' }).catch(() => ({ cars: [] }));
+  const cars = data?.cars || [];
+  if (!cars.length) return { ok: true, message: 'Нет авто в базе @LegalAutoStore.' };
+
+  const lines = cars.slice(0, 5).map(c => {
+    const price = c.price ? `${Number(c.price).toLocaleString('ru-RU')} ₽` : 'по запросу';
+    return `🚗 *${c.brand || ''} ${c.model || ''}* ${c.year || ''} — ${price}`;
+  });
+  return { ok: true, message: `*Последние авто в @LegalAutoStore:*\n\n${lines.join('\n')}`, data: cars };
+}
+
+async function handleGenerateContent(payload) {
+  const { topic, channel = '@LegalAuto24', style = '' } = payload;
+  if (!topic) return { ok: false, message: 'Тема не указана' };
+
+  const claude = getClaudeClient();
+  const channelCtx = {
+    '@LegalAuto24':      'канал для импортёров авто. Аудитория: люди, которые сами ввозят авто в РФ. Нужны: таможня, СБКТС/ЭПТС, утильсбор, параллельный импорт.',
+    '@LegalAutoParts24': 'канал запчастей BMW, Geely, Li Auto. Аудитория: автовладельцы и механики.',
+    '@LegalAutoStore':   'канал продажи авто. Аудитория: покупатели авто. Конкретные объявления.',
+  };
+  const ctx = channelCtx[channel] || 'канал LegalAuto';
+
+  const msg = await claude.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 600,
+    messages: [{
+      role: 'user',
+      content: `Ты копирайтер Telegram-канала LegalAuto.
+Контекст канала ${channel}: ${ctx}
+${style ? 'Особые указания: ' + style : ''}
+Стиль: экспертный, лаконичный, 2-3 эмодзи, без хэштегов.
+В конце CTA: написать @LegalAuto247 или @LegalAutoAssist_bot.
+
+Напиши пост на тему: "${topic}"
+Длина: 4-7 строк.`,
+    }],
+  });
+
+  const text = msg.content[0].text.trim();
+  return { ok: true, message: text, data: { text, topic, channel } };
+}
+
+// ── Main orchestrate() ─────────────────────────────────────────────────────
+/**
+ * @param {{ type: string, payload?: object }} task
+ * @param {string} [source]
+ * @returns {Promise<{ ok: boolean, message: string, data?: any, taskId: string }>}
+ */
+export async function orchestrate(task, source = 'unknown') {
+  const entry = enqueue(task, source);
+  const startedAt = Date.now();
+
+  console.log(`${TAG} [${entry.id}] type=${task.type} source=${source}`);
+  updateTask(entry.id, { status: 'running', startedAt: new Date().toISOString() });
+
+  let result;
+  try {
+    switch (task.type) {
+      case 'post_part':        result = await handlePostPart(task.payload || {}); break;
+      case 'post_news':        result = await handlePostNews(); break;
+      case 'get_leads':        result = await handleGetLeads(task.payload || {}); break;
+      case 'get_stats':        result = await handleGetStats(); break;
+      case 'send_broadcast':   result = await handleSendBroadcast(task.payload || {}); break;
+      case 'find_cars':        result = await handleFindCars(); break;
+      case 'generate_content': result = await handleGenerateContent(task.payload || {}); break;
+      default:
+        result = { ok: false, message: `Неизвестный тип задачи: ${task.type}` };
+    }
+  } catch (err) {
+    console.error(`${TAG} [${entry.id}] error:`, err.message);
+    result = { ok: false, message: `Ошибка: ${err.message}` };
+    updateTask(entry.id, { status: 'error', error: err.message, completedAt: new Date().toISOString() });
+    return { ...result, taskId: entry.id };
+  }
+
+  const elapsed = Date.now() - startedAt;
+  updateTask(entry.id, { status: 'done', result, completedAt: new Date().toISOString(), elapsedMs: elapsed });
+  console.log(`${TAG} [${entry.id}] done in ${elapsed}ms — ok=${result.ok}`);
+
+  return { ...result, taskId: entry.id };
 }
