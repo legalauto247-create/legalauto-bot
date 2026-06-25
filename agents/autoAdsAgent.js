@@ -357,9 +357,9 @@ function parsePublicFeed(html, channel) {
     let pm;
     while ((pm = pre.exec(block)) !== null) {
       const url = pm[1];
-      // только фото-CDN, без аватарок канала (у них /a/ в пути), без дублей
-      if (!/cdn|telesco|telegram/i.test(url)) continue;
-      if (/\/file\/.*?\/a[a-z]?\//i.test(url)) continue; // аватарки
+      // Только настоящие фото с CDN Telegram (https://cdn*.telesco.pe/file/...).
+      // Эмодзи (//telegram.org/img/emoji/...) и protocol-relative — отсекаем.
+      if (!/^https:\/\/[^/]*telesco\.pe\/file\//i.test(url)) continue;
       if (seenUrls.has(url)) continue;
       seenUrls.add(url);
       photos.push(url);

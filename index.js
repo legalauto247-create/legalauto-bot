@@ -70,8 +70,8 @@ if (errors.length) {
 // Telegraf .launch() при этом падает 409 и НЕ повторяет — бот остаётся мёртвым.
 // Повторяем запуск с бэкоффом, пока старый экземпляр не отпустит лок.
 function launchWithRetry(bot, name, opts = {}, attempt = 1) {
-  const MAX = 8;            // ~8 попыток
-  const DELAY = 6_000;      // каждые 6 сек → до ~48 сек на дренаж старого деплоя
+  const MAX = 20;           // ~20 попыток
+  const DELAY = 8_000;      // каждые 8 сек → до ~160 сек на дренаж старого деплоя
   bot.launch(opts).catch(e => {
     const is409 = /409/.test(e.message) || /Conflict/i.test(e.message);
     if (is409 && attempt < MAX) {
