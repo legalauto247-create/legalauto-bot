@@ -26,6 +26,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import fetch     from 'node-fetch';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
+import { extractPriceFromText } from './priceUtil.js';
 
 const {
   CLAUDE_API_KEY,
@@ -149,9 +150,19 @@ function stripForeignContacts(text) {
 }
 
 // ── Переписать объявление под свой бренд (твои контакты, без конкурента) ─────
+// Подставляем/чиним строку цены в готовом посте на точную из источника
+function enforcePrice(body, price) {
+  if (!price) return body;
+  if (/Цена под ключ:/i.test(body)) {
+    return body.replace(/Цена под ключ:.*/i, `💰 Цена под ключ: ${price}`);
+  }
+  return `${body}\n💰 Цена под ключ: ${price}`;
+}
+
 async function rewriteForChannel(originalText, channelName) {
   const clean = stripForeignContacts(originalText);
-  if (!claude) return buildFallbackPost(clean, channelName);
+  const price = extractPriceFromText(originalText);   // точная цена из источника
+  if (!claude) return enforcePrice(buildFallbackPost(clean, channelName), price);
 
   try {
     const msg = await claude.messages.create({
@@ -178,18 +189,20 @@ async function rewriteForChannel(originalText, channelName) {
 ⛽ Двигатель: {топливо}, {объём} ({л.с} л.с)
 🔄 Привод: {привод}
 
-💰 Цена под ключ: {цена}
+💰 Цена под ключ: ${price || '{цена}'}
 🌍 Доставка в РФ: 6-8 недель
+
+ЦЕНА: впиши РОВНО «${price || 'как в исходнике'}», не меняй цифры.
 
 Исходное объявление:
 "${clean.substring(0, 700)}"`,
       }],
     });
-    const body = stripForeignContacts(msg.content[0].text.trim());
+    const body = enforcePrice(stripForeignContacts(msg.content[0].text.trim()), price);
     return `${body}\n\n${BRAND_FOOTER}`;
   } catch (e) {
     console.error('[AutoAds] Claude rewrite error:', e.message);
-    return buildFallbackPost(clean, channelName);
+    return enforcePrice(buildFallbackPost(clean, channelName), price);
   }
 }
 

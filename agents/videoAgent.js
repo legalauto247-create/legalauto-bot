@@ -21,7 +21,11 @@ import { bundle } from '@remotion/bundler';
 import { selectComposition, renderMedia, ensureBrowser } from '@remotion/renderer';
 import Anthropic from '@anthropic-ai/sdk';
 
+import { extractPriceFromText } from './priceUtil.js';
+
 const claude = process.env.CLAUDE_API_KEY ? new Anthropic({ apiKey: process.env.CLAUDE_API_KEY }) : null;
+
+export { extractPriceFromText };
 
 // Извлекаем СТРОГО из текста поста чистые данные для ролика (без выдумок).
 // Гарантирует, что текст совпадает с фото того же объявления.
@@ -44,13 +48,15 @@ export async function extractReelData(text, kind = 'car') {
     });
     const raw = msg.content[0].text.trim().replace(/^```json?\s*|\s*```$/g, '');
     const d = JSON.parse(raw);
+    // Цена — только детерминированно из текста; Claude к ней не прикасается
+    const price = extractPriceFromText(text) || String(d.price || '');
     return {
       kind,
       brand: String(d.brand || '').toUpperCase(),
       model: String(d.model || ''),
       tagline: String(d.tagline || ''),
       specs: Array.isArray(d.specs) ? d.specs.filter(s => s && s.label && s.value).slice(0, 4) : [],
-      price: String(d.price || ''),
+      price,
       priceLabel: 'под ключ в России',
       location: d.location ? `${d.location} · доставка 6-8 недель` : '',
       cta: kind === 'part' ? 'Заказ → @LegalAutoAssist_bot' : 'Заказ авто → @LegalAuto247',
