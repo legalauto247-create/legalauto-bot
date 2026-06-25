@@ -6,14 +6,18 @@ export const WIDTH = 1080;
 export const HEIGHT = 1920;
 
 export const theme = {
-  // Цвета направлений по брендбуку LegalAuto: авто=золото, запчасти=красный, документы=синий
-  car:  { accent: '#c8a24c', accent2: '#8a6d2f', glow: 'rgba(200,162,76,0.45)' },
+  // Официальный фирстиль LegalAuto: золото #D4AF37 + серебро на чёрном.
+  // Направления: авто=золото, запчасти=красный, документы=синий.
+  car:  { accent: '#D4AF37', accent2: '#B9972E', glow: 'rgba(212,175,55,0.45)' },
   part: { accent: '#c02531', accent2: '#7a1820', glow: 'rgba(192,37,49,0.45)' },
   docs: { accent: '#1c7fd6', accent2: '#0e4f8a', glow: 'rgba(28,127,214,0.45)' },
-  bg: '#0a0e15',
-  bg2: '#121826',
+  gold: '#D4AF37',
+  goldLight: '#F2E6B1',
+  silver: '#C0C0C0',
+  bg: '#05070b',
+  bg2: '#0e1118',
   text: '#ffffff',
-  muted: '#9fb0c5',
+  muted: '#A6A6A6',
 };
 
 export type SpecChip = { label: string; value: string };
