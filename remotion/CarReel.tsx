@@ -4,6 +4,7 @@ import {
   interpolate, spring, Easing,
 } from 'remotion';
 import { theme, FONT, ensureFonts, ReelProps } from './theme';
+import { LOGO_MASTER_URI } from './logoData';
 
 const INTRO = 55;
 const PHOTO = 68;
@@ -45,13 +46,14 @@ const PhotoFill: React.FC<{ src: string; frame: number }> = ({ src, frame }) => 
   );
 };
 
-const Watermark: React.FC<{ accent: string }> = ({ accent }) => (
+const Watermark: React.FC<{ accent: string }> = () => (
   <div style={{
     position: 'absolute', top: 56, left: 56, fontFamily: FONT, fontWeight: 700,
-    fontSize: 44, color: '#fff', letterSpacing: -1, textShadow: '0 2px 16px rgba(0,0,0,0.6)',
-    display: 'flex', alignItems: 'center', gap: 0,
+    fontSize: 42, letterSpacing: 0.5, textShadow: '0 2px 16px rgba(0,0,0,0.7)',
+    display: 'flex', alignItems: 'center', gap: 8,
   }}>
-    Legal<span style={{ color: accent }}>Auto</span>
+    <span style={{ color: theme.silver }}>LEGAL</span>
+    <span style={{ color: theme.gold }}>AUTO</span>
   </div>
 );
 
@@ -87,23 +89,29 @@ const IntroScene: React.FC<{ p: ReelProps; accent: string; accent2: string }> = 
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const s = spring({ frame, fps, config: { damping: 16, stiffness: 90 } });
+  const logoS = spring({ frame, fps, config: { damping: 18, stiffness: 70 } });
   const y = interpolate(s, [0, 1], [60, 0]);
   return (
     <AbsoluteFill style={{
-      background: `radial-gradient(120% 80% at 50% 18%, ${accent2} -40%, ${theme.bg2} 45%, ${theme.bg} 100%)`,
-      justifyContent: 'center', alignItems: 'center', padding: 90, textAlign: 'center',
+      background: `radial-gradient(130% 70% at 50% 22%, ${accent2}33 -30%, ${theme.bg2} 50%, ${theme.bg} 100%)`,
+      justifyContent: 'center', alignItems: 'center', padding: 80, textAlign: 'center',
     }}>
+      <Img src={LOGO_MASTER_URI} style={{
+        width: 820, marginTop: -60, marginBottom: 30,
+        transform: `scale(${interpolate(logoS, [0, 1], [0.82, 1])})`, opacity: logoS,
+        filter: 'drop-shadow(0 12px 40px rgba(0,0,0,0.6))',
+      }} />
       <div style={{ transform: `translateY(${y}px)`, opacity: s }}>
         <div style={{
-          display: 'inline-block', fontFamily: FONT, fontWeight: 700, fontSize: 30,
-          color: '#fff', background: accent, padding: '14px 34px', borderRadius: 100,
-          letterSpacing: 2, marginBottom: 50,
+          display: 'inline-block', fontFamily: FONT, fontWeight: 700, fontSize: 28,
+          color: theme.bg, background: accent, padding: '12px 32px', borderRadius: 100,
+          letterSpacing: 2, marginBottom: 30,
         }}>
           {p.kind === 'part' ? 'ЗАПЧАСТЬ В НАЛИЧИИ' : 'АВТО ПОД КЛЮЧ'}
         </div>
-        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 120, color: '#fff', lineHeight: 1.02, letterSpacing: -2 }}>{p.brand}</div>
-        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 72, color: accent, lineHeight: 1.1, marginTop: 6 }}>{p.model}</div>
-        {p.tagline ? <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 40, color: theme.muted, marginTop: 44, lineHeight: 1.3 }}>{p.tagline}</div> : null}
+        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 84, color: '#fff', lineHeight: 1.02, letterSpacing: -1 }}>
+          {p.brand} <span style={{ color: accent }}>{p.model}</span>
+        </div>
       </div>
     </AbsoluteFill>
   );
@@ -132,13 +140,11 @@ const CtaScene: React.FC<{ p: ReelProps; accent: string }> = ({ p, accent }) => 
   const s = spring({ frame, fps, config: { damping: 14 } });
   return (
     <AbsoluteFill style={{ background: theme.bg, justifyContent: 'center', alignItems: 'center', padding: 90, textAlign: 'center' }}>
-      <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 56, color: '#fff', marginBottom: 50, opacity: s }}>
-        Legal<span style={{ color: accent }}>Auto</span>
-      </div>
+      <Img src={LOGO_MASTER_URI} style={{ width: 720, marginBottom: 40, opacity: s, transform: `scale(${interpolate(s, [0, 1], [0.85, 1])})` }} />
       <div style={{
         transform: `scale(${interpolate(s, [0, 1], [0.85, 1])})`, opacity: s,
-        fontFamily: FONT, fontWeight: 700, fontSize: 50, color: '#fff',
-        background: accent, padding: '34px 56px', borderRadius: 28, lineHeight: 1.2,
+        fontFamily: FONT, fontWeight: 700, fontSize: 48, color: theme.bg,
+        background: accent, padding: '32px 54px', borderRadius: 28, lineHeight: 1.2,
       }}>{p.cta}</div>
     </AbsoluteFill>
   );
