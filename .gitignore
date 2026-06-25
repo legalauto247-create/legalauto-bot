@@ -45,3 +45,6 @@ JARVIS_PERSONAL_BOT_ARCHITECTURE.md
 JARVIS_ULTIMATE_PROMPT.md
 RUSSIA_MARKET_DOMINATION_STRATEGY.md
 memory/
+
+# Локальный MCP-конфиг с ключами — не коммитить
+.mcp.json
