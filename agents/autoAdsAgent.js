@@ -32,8 +32,13 @@ const {
   ADMIN_BOT_TOKEN,
   ADMIN_CHAT_ID,
   AUTO_ADS_CHANNEL,
+  AUTO_STORE_BOT_TOKEN,
   PARTNER_CHANNELS,
 } = process.env;
+
+// Публикуем в @LegalAutoStore через его собственный бот (он там админ),
+// а не через admin-бот, который в канал не добавлен.
+const PUBLISH_TOKEN = AUTO_STORE_BOT_TOKEN || ADMIN_BOT_TOKEN;
 
 const claude = CLAUDE_API_KEY ? new Anthropic({ apiKey: CLAUDE_API_KEY }) : null;
 
@@ -191,12 +196,12 @@ async function sendForApproval(rewrittenText, originalText, channelName, photos 
 // ── Прямая публикация в канал/группу ───────────────────────────────────────
 export async function publishAd(text, photos = []) {
   const channel = AUTO_ADS_CHANNEL;
-  if (!channel || !ADMIN_BOT_TOKEN) {
-    console.log('[AutoAds] AUTO_ADS_CHANNEL или ADMIN_BOT_TOKEN не задан');
+  if (!channel || !PUBLISH_TOKEN) {
+    console.log('[AutoAds] AUTO_ADS_CHANNEL или токен публикации не задан');
     return false;
   }
   const api = (method, body) =>
-    fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/${method}`, {
+    fetch(`https://api.telegram.org/bot${PUBLISH_TOKEN}/${method}`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(body),

@@ -419,22 +419,11 @@ startMarketingScheduler();
 // ── Авто-реклама в Telegram группах ────────────────────────────────────────
 startAdScheduler();
 
-// ── @LegalAutoStore_Bot — авто объявления из партнёрских каналов ───────────
-if (AUTO_STORE_BOT_TOKEN) {
-  const storeBot = new Telegraf(AUTO_STORE_BOT_TOKEN);
-  setupAutoAdsListener(storeBot, '@LegalAutoStore_Bot');
-  storeBot.catch((err, ctx) => {
-    console.error('[StoreBot] Unhandled error:', err.message, 'ctx:', ctx?.updateType);
-  });
-  launchWithRetry(storeBot, 'StoreBot', { dropPendingUpdates: true });
-  console.log('✅ Store bot started (@LegalAutoStore_Bot) — слушаю партнёрские каналы');
-} else {
-  console.log('⚠️ AUTO_STORE_BOT_TOKEN не задан — @LegalAutoStore_Bot не запущен');
-}
-
-// ── Публичный поллер партнёрских каналов (без бота-админа) ─────────────────
-// Читает t.me/s/<канал> — работает для любых ПУБЛИЧНЫХ каналов (@username),
-// доступ к каналу не нужен. Дополняет channel_post-листенер выше.
+// ── Авто-объявления из партнёрских каналов ────────────────────────────────
+// @LegalAutoStore_Bot (id 8646781791) уже поллит отдельный Python-сервис
+// "auto-bot" — запускать здесь второй getUpdates-листенер НЕЛЬЗЯ (вечный 409).
+// Поэтому читаем партнёрские каналы через публичную ленту t.me/s/ (токен не
+// нужен), а публикуем одиночным sendMessage/sendPhoto (с getUpdates не конфликтует).
 startPublicChannelPoller(10);
 
 // ── Review Agent — запрос отзывов через 4 дня после заказа ────────────────
