@@ -1,0 +1,40 @@
+import React from 'react';
+import { Composition } from 'remotion';
+import { CarReel, reelDuration } from './CarReel';
+import { FPS, WIDTH, HEIGHT, ReelProps } from './theme';
+
+const defaultProps: ReelProps = {
+  kind: 'car',
+  brand: 'BMW',
+  model: '3 Series 2023',
+  tagline: '320Li Sport · из Китая',
+  specs: [
+    { label: 'Год', value: '2023' },
+    { label: 'Пробег', value: '85 000 км' },
+    { label: 'Двигатель', value: '2.0T' },
+    { label: 'Привод', value: 'Задний' },
+  ],
+  price: '2 859 000 ₽',
+  priceLabel: 'цена под ключ',
+  location: 'из Китая · доставка 6-8 недель',
+  cta: 'Заказ авто → @LegalAuto247',
+  photos: [],
+};
+
+export const RemotionRoot: React.FC = () => {
+  return (
+    <Composition
+      id="CarReel"
+      component={CarReel as React.FC<Record<string, unknown>>}
+      durationInFrames={reelDuration(5)}
+      fps={FPS}
+      width={WIDTH}
+      height={HEIGHT}
+      defaultProps={defaultProps as unknown as Record<string, unknown>}
+      calculateMetadata={({ props }) => {
+        const p = props as unknown as ReelProps;
+        return { durationInFrames: reelDuration((p.photos || []).slice(0, 5).length || 1) };
+      }}
+    />
+  );
+};
