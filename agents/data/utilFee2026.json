@@ -1,0 +1,1088 @@
+[
+ {
+  "engine": "Электродвигатели и гибриды последовательного типа",
+  "rows": [
+   {
+    "hp": "не выше 80 л.с.",
+    "commercial": {
+     "new": 800800,
+     "old": 1408800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "80,013 - 100,00 л.с.",
+    "commercial": {
+     "new": 991200,
+     "old": 1641600
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "100,01 - 129,99 л.с.",
+    "commercial": {
+     "new": 1317600,
+     "old": 1912800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "130,00 - 160,00 л.с.",
+    "commercial": {
+     "new": 1560000,
+     "old": 2227200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "160,01 - 190,00 л.с.",
+    "commercial": {
+     "new": 1848000,
+     "old": 2594400
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "190,02 - 220,00 л.с.",
+    "commercial": {
+     "new": 2193600,
+     "old": 3024000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "220,01 - 250,00 л.с.",
+    "commercial": {
+     "new": 2599200,
+     "old": 3523200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "250,02 - 280,00 л.с.",
+    "commercial": {
+     "new": 3079200,
+     "old": 4104000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "280,01 - 309,99 л.с.",
+    "commercial": {
+     "new": 3648000,
+     "old": 4780800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "310,00 - 340,00 л.с.",
+    "commercial": {
+     "new": 3648000,
+     "old": 4780800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "340,01 - 369,99 л.с.",
+    "commercial": {
+     "new": 3648000,
+     "old": 4780800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "370,00 - 400,00 л.с.",
+    "commercial": {
+     "new": 3648000,
+     "old": 4780800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "400,01 - 429,99 л.с.",
+    "commercial": {
+     "new": 3648000,
+     "old": 4780800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "430,00 - 460,00 л.с.",
+    "commercial": {
+     "new": 3648000,
+     "old": 4780800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "460,01 - 500,00 л.с.",
+    "commercial": {
+     "new": 3648000,
+     "old": 4780800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "500,01 л.с. и более",
+    "commercial": {
+     "new": 3648000,
+     "old": 4780800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   }
+  ]
+ },
+ {
+  "engine": "Двигатель внутреннего сгорания с рабочим объемом не более 1000 куб. см.",
+  "rows": [
+   {
+    "hp": "не выше 69,99 л.с.",
+    "commercial": {
+     "new": 297600,
+     "old": 552000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "70,00 - 100,00 л.с.",
+    "commercial": {
+     "new": 297600,
+     "old": 552000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "100,01 - 129,99 л.с.",
+    "commercial": {
+     "new": 297600,
+     "old": 552000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "130,00 - 160,00 л.с.",
+    "commercial": {
+     "new": 297600,
+     "old": 552000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "160,01 - 190,00 л.с.",
+    "commercial": {
+     "new": 307200,
+     "old": 568600
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "190,02 - 220,00 л.с.",
+    "commercial": {
+     "new": 316800,
+     "old": 585600
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "220,01 - 250,00 л.с.",
+    "commercial": {
+     "new": 324000,
+     "old": 602400
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "250,02 - 280,00 л.с.",
+    "commercial": {
+     "new": 345600,
+     "old": 602400
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "280,01 - 309,99 л.с.",
+    "commercial": {
+     "new": 345600,
+     "old": 602400
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "310,00 - 340,00 л.с.",
+    "commercial": {
+     "new": 345600,
+     "old": 602400
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "340,01 - 369,99 л.с.",
+    "commercial": {
+     "new": 345600,
+     "old": 602400
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "370,00 - 400,00 л.с.",
+    "commercial": {
+     "new": 345600,
+     "old": 602400
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "400,01 - 429,99 л.с.",
+    "commercial": {
+     "new": 345600,
+     "old": 602400
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "430,00 - 460,00 л.с.",
+    "commercial": {
+     "new": 345600,
+     "old": 602400
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "460,01 - 500,00 л.с.",
+    "commercial": {
+     "new": 345600,
+     "old": 602400
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "500,01 л.с. и более",
+    "commercial": {
+     "new": 345600,
+     "old": 602400
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   }
+  ]
+ },
+ {
+  "engine": "Двигатель внутреннего сгорания с рабочим объемом свыше 1000 куб. см., но не более 2000 куб. см.",
+  "rows": [
+   {
+    "hp": "не выше 69,99 л.с.",
+    "commercial": {
+     "new": 800800,
+     "old": 1408800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "70,00 - 100,00 л.с.",
+    "commercial": {
+     "new": 800800,
+     "old": 1408800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "100,01 - 129,99 л.с.",
+    "commercial": {
+     "new": 800800,
+     "old": 1408800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "130,00 - 160,00 л.с.",
+    "commercial": {
+     "new": 800800,
+     "old": 1408800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "160,01 - 190,00 л.с.",
+    "commercial": {
+     "new": 900000,
+     "old": 1492800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "190,02 - 220,00 л.с.",
+    "commercial": {
+     "new": 952800,
+     "old": 1584000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "220,01 - 250,00 л.с.",
+    "commercial": {
+     "new": 1010400,
+     "old": 1677600
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "250,02 - 280,00 л.с.",
+    "commercial": {
+     "new": 1142400,
+     "old": 1838400
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "280,01 - 309,99 л.с.",
+    "commercial": {
+     "new": 1291200,
+     "old": 2011200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "310,00 - 340,00 л.с.",
+    "commercial": {
+     "new": 1459200,
+     "old": 2203200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "340,01 - 369,99 л.с.",
+    "commercial": {
+     "new": 1663200,
+     "old": 2412000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "370,00 - 400,00 л.с.",
+    "commercial": {
+     "new": 1896000,
+     "old": 2640000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "400,01 - 429,99 л.с.",
+    "commercial": {
+     "new": 2160000,
+     "old": 2892000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "430,00 - 460,00 л.с.",
+    "commercial": {
+     "new": 2464800,
+     "old": 3168000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "460,01 - 500,00 л.с.",
+    "commercial": {
+     "new": 2808000,
+     "old": 3468000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "500,01 л.с. и более",
+    "commercial": {
+     "new": 3201600,
+     "old": 3796800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   }
+  ]
+ },
+ {
+  "engine": "Двигатель внутреннего сгорания с рабочим объемом свыше 2000 куб. см., но не более 3000 куб. см.",
+  "rows": [
+   {
+    "hp": "не выше 69,99 л.с.",
+    "commercial": {
+     "new": 2250400,
+     "old": 3407200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "70,00 - 100,00 л.с.",
+    "commercial": {
+     "new": 2250400,
+     "old": 3407200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "100,01 - 129,99 л.с.",
+    "commercial": {
+     "new": 2250400,
+     "old": 3407200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "130,00 - 160,00 л.с.",
+    "commercial": {
+     "new": 2250400,
+     "old": 3407200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "160,01 - 190,00 л.с.",
+    "commercial": {
+     "new": 2306800,
+     "old": 3456000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "190,02 - 220,00 л.с.",
+    "commercial": {
+     "new": 2364000,
+     "old": 3501600
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "220,01 - 250,00 л.с.",
+    "commercial": {
+     "new": 2402400,
+     "old": 3552000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "250,02 - 280,00 л.с.",
+    "commercial": {
+     "new": 2520000,
+     "old": 3660000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "280,01 - 309,99 л.с.",
+    "commercial": {
+     "new": 2620800,
+     "old": 3770400
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "310,00 - 340,00 л.с.",
+    "commercial": {
+     "new": 2726400,
+     "old": 3873600
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "340,01 - 369,99 л.с.",
+    "commercial": {
+     "new": 2834400,
+     "old": 3981600
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "370,00 - 400,00 л.с.",
+    "commercial": {
+     "new": 2949600,
+     "old": 4094400
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "400,01 - 429,99 л.с.",
+    "commercial": {
+     "new": 3067200,
+     "old": 4209600
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "430,00 - 460,00 л.с.",
+    "commercial": {
+     "new": 3189600,
+     "old": 4327200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "460,01 - 500,00 л.с.",
+    "commercial": {
+     "new": 3316800,
+     "old": 4447200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "500,01 л.с. и более",
+    "commercial": {
+     "new": 3448800,
+     "old": 4572000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   }
+  ]
+ },
+ {
+  "engine": "Двигатель внутреннего сгорания с рабочим объемом свыше 3000 куб. см., но не более 3500 куб. см.",
+  "rows": [
+   {
+    "hp": "не выше 69,99 л.с.",
+    "commercial": {
+     "new": 2584000,
+     "old": 3956200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "70,00 - 100,00 л.с.",
+    "commercial": {
+     "new": 2584000,
+     "old": 3956200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "100,01 - 129,99 л.с.",
+    "commercial": {
+     "new": 2584000,
+     "old": 3956200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "130,00 - 160,00 л.с.",
+    "commercial": {
+     "new": 2584000,
+     "old": 3956200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "160,01 - 190,00 л.с.",
+    "commercial": {
+     "new": 2635200,
+     "old": 4000800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "190,02 - 220,00 л.с.",
+    "commercial": {
+     "new": 2688000,
+     "old": 4044000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "220,01 - 250,00 л.с.",
+    "commercial": {
+     "new": 2743200,
+     "old": 4087200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "250,02 - 280,00 л.с.",
+    "commercial": {
+     "new": 2810400,
+     "old": 4144800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "280,01 - 309,99 л.с.",
+    "commercial": {
+     "new": 2880000,
+     "old": 4248000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "310,00 - 340,00 л.с.",
+    "commercial": {
+     "new": 3038400,
+     "old": 4356000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "340,01 - 369,99 л.с.",
+    "commercial": {
+     "new": 3206400,
+     "old": 4485600
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "370,00 - 400,00 л.с.",
+    "commercial": {
+     "new": 3384000,
+     "old": 4620000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "400,01 - 429,99 л.с.",
+    "commercial": {
+     "new": 3568800,
+     "old": 4759200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "430,00 - 460,00 л.с.",
+    "commercial": {
+     "new": 3765600,
+     "old": 4900800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "460,01 - 500,00 л.с.",
+    "commercial": {
+     "new": 3972000,
+     "old": 5049600
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "500,01 л.с. и более",
+    "commercial": {
+     "new": 4190400,
+     "old": 5200800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   }
+  ]
+ },
+ {
+  "engine": "Двигатель внутреннего сгорания с рабочим объемом свыше 3500 куб. см.",
+  "rows": [
+   {
+    "hp": "не выше 69,99 л.с.",
+    "commercial": {
+     "new": 3290600,
+     "old": 4325800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "70,00 - 100,00 л.с.",
+    "commercial": {
+     "new": 3290600,
+     "old": 4325800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "100,01 - 129,99 л.с.",
+    "commercial": {
+     "new": 3290600,
+     "old": 4325800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "130,00 - 160,00 л.с.",
+    "commercial": {
+     "new": 3290600,
+     "old": 4325800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "160,01 - 190,00 л.с.",
+    "commercial": {
+     "new": 3345600,
+     "old": 4389600
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "190,02 - 220,00 л.с.",
+    "commercial": {
+     "new": 3403200,
+     "old": 4456800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "220,01 - 250,00 л.с.",
+    "commercial": {
+     "new": 3460800,
+     "old": 4524000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "250,02 - 280,00 л.с.",
+    "commercial": {
+     "new": 3530400,
+     "old": 4627200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "280,01 - 309,99 л.с.",
+    "commercial": {
+     "new": 3600000,
+     "old": 4732800
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "310,00 - 340,00 л.с.",
+    "commercial": {
+     "new": 3727200,
+     "old": 4992000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "340,01 - 369,99 л.с.",
+    "commercial": {
+     "new": 3857600,
+     "old": 5268000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "370,00 - 400,00 л.с.",
+    "commercial": {
+     "new": 3993600,
+     "old": 5558400
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "400,01 - 429,99 л.с.",
+    "commercial": {
+     "new": 4132800,
+     "old": 5863200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "430,00 - 460,00 л.с.",
+    "commercial": {
+     "new": 4276800,
+     "old": 6187200
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "460,01 - 500,00 л.с.",
+    "commercial": {
+     "new": 4425600,
+     "old": 6528000
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   },
+   {
+    "hp": "500,01 л.с. и более",
+    "commercial": {
+     "new": 4581600,
+     "old": 6885600
+    },
+    "personal": {
+     "new": null,
+     "old": null
+    }
+   }
+  ]
+ }
+]
