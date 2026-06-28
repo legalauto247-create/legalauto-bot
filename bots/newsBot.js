@@ -209,22 +209,42 @@ export function getPendingNewsPost(id)        { return pendingNewsPosts.get(Stri
 export function clearPendingNewsPost(id)       { pendingNewsPosts.delete(String(id)); }
 
 // ── Прямая публикация в канал (вызывается после одобрения) ────────────────
+// Генерим брендовую картинку-новость и постим фото с подписью; если не вышло — текстом.
 export async function publishNewsToChannel(text) {
   if (!ADMIN_BOT_TOKEN || !NEWS_CHANNEL_ID) return false;
+
+  const sendText = async () => {
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          chat_id: NEWS_CHANNEL_ID, text, parse_mode: 'Markdown', disable_web_page_preview: false,
+        })
+      });
+      return (await res.json()).ok;
+    } catch { return false; }
+  };
+
   try {
-    const res = await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        chat_id:                  NEWS_CHANNEL_ID,
-        text,
-        parse_mode:               'Markdown',
-        disable_web_page_preview: false,
-      })
-    });
+    const { renderNewsCard } = await import('../agents/newsImageAgent.js');
+    const img = await renderNewsCard(text);
+    if (!img) return sendText();
+    const caption = text.length > 1024 ? text.slice(0, 1021) + '…' : text;
+    const fd = new FormData();
+    fd.append('chat_id', String(NEWS_CHANNEL_ID));
+    fd.append('caption', caption);
+    fd.append('parse_mode', 'Markdown');
+    fd.append('photo', new Blob([img], { type: 'image/png' }), 'news.png');
+    const res = await globalThis.fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendPhoto`, { method: 'POST', body: fd });
     const data = await res.json();
-    return data.ok;
-  } catch { return false; }
+    if (data.ok) { console.log('[NewsBot] ✅ Опубликовано с картинкой'); return true; }
+    console.error('[NewsBot] sendPhoto:', data.description, '— откат на текст');
+    return sendText();
+  } catch (e) {
+    console.error('[NewsBot] publish image error:', e.message);
+    return sendText();
+  }
 }
 
 // ── Отправка поста на согласование в adminBot ──────────────────────────────
