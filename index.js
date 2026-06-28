@@ -186,22 +186,23 @@ function startScheduler() {
     const times = POST_SCHEDULE_TIMES.split(',').map(t => t.trim());
     console.log(`⏰ Auto post по расписанию МСК: ${times.join(', ')}`);
 
+    let lastFired = '';   // защита от повторного поста в ту же минуту (рестарты/дрифт таймера)
+
     function checkSchedule() {
       const now  = new Date();
       // МСК = UTC+3
       const msk  = new Date(now.getTime() + 3 * 60 * 60 * 1000);
       const hhmm = `${String(msk.getUTCHours()).padStart(2,'0')}:${String(msk.getUTCMinutes()).padStart(2,'0')}`;
-      if (times.includes(hhmm)) {
+      const tag  = `${msk.getUTCFullYear()}-${msk.getUTCMonth()}-${msk.getUTCDate()} ${hhmm}`;
+      if (times.includes(hhmm) && tag !== lastFired) {
+        lastFired = tag;
         console.log(`[AutoPost] Triggered by schedule at ${hhmm} МСК`);
         runAutoPost().catch(e => console.error('[AutoPost] Error:', e.message));
       }
     }
 
-    // Проверяем каждую минуту
+    // Проверяем каждую минуту. НЕ постим при старте (иначе рестарт = лишний рандомный пост).
     setInterval(checkSchedule, 60_000);
-
-    // Первый пост через 1 мин после старта (чтобы Railway успел развернуться)
-    setTimeout(runAutoPost, 60_000);
 
   } else {
     // ── Режии: интервал ───────────────────────────────────────────────────
