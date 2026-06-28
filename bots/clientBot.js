@@ -1273,16 +1273,13 @@ export function setupClientBot(bot) {
             return;
           }
 
-          // Ничего в Supabase — fallback на Sales Agent
+          // Ничего в Supabase — fallback на Sales Agent.
+          // ВАЖНО: один запрос = ОДНО сообщение клиенту (без спама).
           const salesResult = await handleSalesMessage(ctx.chat.id, text);
-          if (salesResult?.text) {
-            await ctx.reply(salesResult.text, {
-              parse_mode: 'Markdown',
-              ...salesKeyboard(ctx.chat.id),
-            });
-          }
+          let clientText = salesResult?.text || 'Уточните, что именно ищете — проверю наличие.';
           if (salesResult?.lead_created) {
-            // Классифицируем лид — горячий или нет
+            clientText += `\n\n✅ Заявка создана — менеджер свяжется в течение 30 минут.`;
+            // Классифицируем лид — горячий или нет (уведомление менеджеру, не клиенту)
             classifyLead(text).then(hotness => {
               if (hotness === 'HOT' && ADMIN_BOT_TOKEN && ADMIN_CHAT_ID) {
                 const who = ctx.from?.username ? `@${ctx.from.username}` : `id:${ctx.chat.id}`;
@@ -1292,12 +1289,11 @@ export function setupClientBot(bot) {
                 }).catch(() => {});
               }
             }).catch(() => {});
-
-            await ctx.reply(
-              `✅ Заявка создана — менеджер свяжется в течение 30 минут.\nЕсли срочно: @${MGR}`,
-              { reply_markup: { inline_keyboard: [[{ text: '📲 Написать сейчас', url: `https://t.me/${MGR}` }]] }}
-            );
           }
+          await ctx.reply(clientText, {
+            parse_mode: 'Markdown',
+            ...salesKeyboard(ctx.chat.id),
+          });
         } catch (e) {
           console.error('[ClientBot] SmartMatch/SalesAgent error:', e.message);
           await ctx.telegram.deleteMessage(ctx.chat.id, thinkMsg.message_id).catch(() => {});
