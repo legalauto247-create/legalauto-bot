@@ -35,12 +35,19 @@ function utilFee({ engineCc, hp, ageYears, fuel, commercial }) {
   const sec = utilSection(engineCc, fuel);
   const row = sec.rows.find(r => { const [a, b] = hpRange(r.hp); return hp >= a && hp <= b; })
             || sec.rows[sec.rows.length - 1];
-  const kind = commercial ? row.commercial : row.personal;
-  let fee = ageYears < 3 ? kind.new : kind.old;
-  // У физлиц для личного пользования действует льготный утильсбор 3400/5200,
-  // если в таблице льготная ячейка пустая (объём >1000 см³)
-  if (fee == null) fee = ageYears < 3 ? 3400 : 5200;
-  return fee;
+  // Правила 2026 (Пост. № 1713, методика с 01.12.2025): льгота физлица
+  // (3400/5200) действует ТОЛЬКО при мощности ≤160 л.с. Свыше — полный тариф.
+  if (commercial) {
+    return ageYears < 3 ? row.commercial.new : row.commercial.old;
+  }
+  // физлицо / личное пользование
+  if (row.personal && row.personal.new != null) {
+    // таблица уже знает льготу/тариф (электро ≤80 л.с., ДВС ≤1000 см³)
+    return ageYears < 3 ? row.personal.new : row.personal.old;
+  }
+  // секции >1000 см³ без данных льготы: ≤160 л.с. → льгота, иначе полный тариф
+  if (hp <= 160) return ageYears < 3 ? 3400 : 5200;
+  return ageYears < 3 ? row.commercial.new : row.commercial.old;
 }
 
 // Пошлина для физлица (ЕТП), евро на см³ или % от стоимости
