@@ -503,23 +503,30 @@ export async function pollPublicChannels() {
       }
 
       const lastSeen = seen[handle] || 0;
-      // Первый запуск: не заваливаем одобрениями — берём только самый свежий пост
-      const fresh = posts.filter(p => p.num > lastSeen);
-      const toProcess = lastSeen === 0 ? fresh.slice(-1) : fresh;
+      // Новые посты (которых ещё не присылали), по возрастанию
+      const fresh = posts.filter(p => p.num > lastSeen).sort((a, b) => a.num - b.num);
+      // Первый запуск — 5 самых свежих; дальше — тоже не больше 5 за прогон
+      const batch = lastSeen === 0 ? fresh.slice(-5) : fresh;
 
-      if (!toProcess.length) { seen[handle] = Math.max(lastSeen, ...posts.map(p => p.num), 0); continue; }
+      if (!batch.length) { seen[handle] = Math.max(lastSeen, ...posts.map(p => p.num), 0); continue; }
 
-      for (const post of toProcess) {
+      const MAX_PER_RUN = 5;       // присылаем не больше 5 авто за прогон
+      let sent = 0, maxProcessed = lastSeen;
+      for (const post of batch) {
+        if (sent >= MAX_PER_RUN) break;   // остальные подтянем следующим прогоном
+        maxProcessed = Math.max(maxProcessed, post.num);
         if (!post.text || post.text.length < 30) continue;
         const isListing = await isCarListing(post.text);
         if (!isListing) { console.log(`[AutoAds] ⏭ ${post.id} не авто`); continue; }
 
-        console.log(`[AutoAds] 🚗 ${post.id} — переписываю`);
+        console.log(`[AutoAds] 🚗 ${post.id} — переписываю (${sent + 1}/${MAX_PER_RUN})`);
         const rewritten = await rewriteForChannel(post.text, ch);
         await sendForApproval(rewritten, post.text, ch, post.photos);
+        sent++;
       }
-
-      seen[handle] = Math.max(lastSeen, ...posts.map(p => p.num), 0);
+      // seen двигаем только до реально просмотренных — непросмотренные останутся на след. прогон
+      seen[handle] = Math.max(lastSeen, maxProcessed);
+      console.log(`[AutoAds] ${handle}: отправлено ${sent} авто на одобрение`);
     }
 
     saveSeen(seen);
