@@ -9,7 +9,27 @@
  */
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { readFileSync, existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { HEAVY } from './models.js';
+
+const __d = dirname(fileURLToPath(import.meta.url));
+const ROOT = join(__d, '..');
+
+// Дизайн-память: спека, извлечённая из шаблонов Эдо (brand/templates-spec.md) + токены
+function loadDesignMemory() {
+  let spec = '', style = '';
+  try { if (existsSync(join(ROOT, 'brand', 'templates-spec.md'))) spec = readFileSync(join(ROOT, 'brand', 'templates-spec.md'), 'utf8').slice(0, 1800); } catch {}
+  try {
+    const t = JSON.parse(readFileSync(join(ROOT, 'brand', 'tokens.json'), 'utf8'));
+    style = `Фирстиль: чёрный фон ${t.color?.bg}, золото ${t.color?.gold}, серебро ${t.color?.silver}, шрифт ${t.font?.display?.family}. Эмблема — щит LA.`;
+  } catch {}
+  return { spec, style };
+}
+const DESIGN = loadDesignMemory();
+// Префикс стиля для gpt-image — чтобы картинки выходили как в шаблонах Эдо
+const IMG_STYLE = `Premium LegalAuto brand style: deep black background, gold (#D4AF37) and silver accents, elegant cinematic, matches LegalAuto premium templates. `;
 import { getStats, formatReport } from './analyticsAgent.js';
 import { calcImport, fmt } from './customsCalc.js';
 import { generateImage } from './imageGenAgent.js';
@@ -47,7 +67,9 @@ async function runTool(name, input, ctx) {
         return `Растаможка+утиль:\n- Пошлина: ${fmt(r.duty)}\n- Утильсбор: ${fmt(r.util)}\n- Сбор: ${fmt(r.clearance)}\n- ИТОГО: ${fmt(r.totalRub)}`;
       }
       case 'generate_image': {
-        const img = await generateImage(input.prompt, { size: '1024x1536' });
+        // Всегда рисуем в фирменном стиле LegalAuto (по шаблонам Эдо)
+        const styledPrompt = `${IMG_STYLE}${input.prompt}. No text, no words, no letters.`;
+        const img = await generateImage(styledPrompt, { size: '1024x1536' });
         const buf = img?.buffer || (img?.url ? null : null);
         if (buf && ctx?.telegram && ctx?.chatId) {
           await ctx.telegram.sendPhoto(ctx.chatId, { source: buf }, { caption: '🎨 Готово' }).catch(() => {});
@@ -92,7 +114,8 @@ const PERSONA =
 
 export async function jarvisThink(userText, ctx = {}) {
   if (!claude) return 'Мозг недоступен: не задан CLAUDE_API_KEY.';
-  const system = `${PERSONA}\n\n${(() => { try { return buildSystemPrompt(); } catch { return ''; } })()}`;
+  const designBlock = `\n\n## Дизайн (бери из шаблонов Эдо, не выдумывай свой)\n${DESIGN.style}\nКогда делаешь картинку/пост — следуй фирстилю и структуре шаблонов:\n${DESIGN.spec}`;
+  const system = `${PERSONA}${designBlock}\n\n${(() => { try { return buildSystemPrompt(); } catch { return ''; } })()}`;
   let messages = [{ role: 'user', content: userText }];
 
   try {
