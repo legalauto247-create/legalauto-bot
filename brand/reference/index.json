@@ -1,66 +1,73 @@
 {
-  "_comment": "Карта эталонных шаблонов LegalAuto. Мозг (vision-API) смотрит эти картинки и строит по ним новые посты/шаблоны. Деплоится с ботом на Railway.",
-  "templates": [
-    {
-      "file": "brandbook-sketch.png",
-      "type": "brandbook",
-      "purpose": "Набросок брендбука: 3 направления (LEGAL AUTO / STORE / PARTS), сетки сторис, цвета по направлениям",
-      "use": "эталон фирстиля и структуры контента для всех направлений"
-    },
-    {
-      "file": "logo-store.png",
-      "type": "logo",
-      "purpose": "Логотип LegalAuto Store",
-      "use": "брендинг карточек авто"
-    },
-    {
-      "file": "tpl-car-sale.png",
-      "type": "card_car_sale",
-      "direction": "store",
-      "purpose": "Карточка ПРОДАЖА авто: эмблема, марка+модель золотом, чипы (год/пробег/город), фото, плашка цены, превью, характеристики 2 колонки, гарантия, футер",
-      "use": "эталон постов о продаже/пригоне авто → @LegalAutoStore"
-    },
-    {
-      "file": "tpl-services.png",
-      "type": "card_services",
-      "direction": "docs",
-      "purpose": "Карточка услуг (документы/СБКТС/ЭПТС/растаможка)",
-      "use": "эталон постов об услугах оформления"
-    },
-    {
-      "file": "tpl-cities-price.png",
-      "type": "card_cities_price",
-      "direction": "store",
-      "purpose": "Города и прайс — таблица направлений/стоимости доставки",
-      "use": "эталон постов с прайсом/географией"
-    },
-    {
-      "file": "tpl-rate.png",
-      "type": "card_rate",
-      "direction": "news",
-      "purpose": "Курс валют / ставка на дату",
-      "use": "эталон ежедневных постов про курс/утильсбор для @LegalAuto24"
-    },
-    {
-      "file": "tpl-parts.jpg",
-      "type": "card_parts",
-      "direction": "parts",
-      "purpose": "Карточка запчасти LegalAuto Parts",
-      "use": "эталон постов о запчастях → @LegalAutoParts24"
-    },
-    {
-      "file": "tpl-news.png",
-      "type": "card_news",
-      "direction": "news",
-      "purpose": "Карточка важной новости/анонса",
-      "use": "эталон новостных постов → @LegalAuto24"
-    },
-    {
-      "file": "tpl-cities-list.jpg",
-      "type": "card_cities_list",
-      "direction": "store",
-      "purpose": "Перечень городов доставки",
-      "use": "эталон постов с географией доставки"
-    }
-  ]
+ "_comment": "Карта эталонных шаблонов LegalAuto. Мозг (vision-API) смотрит эти картинки и строит по ним новые посты/шаблоны. Деплоится с ботом на Railway.",
+ "templates": [
+  {
+   "file": "brandbook-sketch.png",
+   "type": "brandbook",
+   "purpose": "Набросок брендбука: 3 направления (LEGAL AUTO / STORE / PARTS), сетки сторис, цвета по направлениям",
+   "use": "эталон фирстиля и структуры контента для всех направлений"
+  },
+  {
+   "file": "logo-store.png",
+   "type": "logo",
+   "purpose": "Логотип LegalAuto Store",
+   "use": "брендинг карточек авто"
+  },
+  {
+   "file": "tpl-car-sale.png",
+   "type": "card_car_sale",
+   "direction": "store",
+   "purpose": "Карточка ПРОДАЖА авто: эмблема, марка+модель золотом, чипы (год/пробег/город), фото, плашка цены, превью, характеристики 2 колонки, гарантия, футер",
+   "use": "эталон постов о продаже/пригоне авто → @LegalAutoStore"
+  },
+  {
+   "file": "tpl-services.png",
+   "type": "card_services",
+   "direction": "docs",
+   "purpose": "Карточка услуг (документы/СБКТС/ЭПТС/растаможка)",
+   "use": "эталон постов об услугах оформления"
+  },
+  {
+   "file": "tpl-cities-price.png",
+   "type": "card_cities_price",
+   "direction": "store",
+   "purpose": "Города и прайс — таблица направлений/стоимости доставки",
+   "use": "эталон постов с прайсом/географией"
+  },
+  {
+   "file": "tpl-rate.png",
+   "type": "card_rate",
+   "direction": "news",
+   "purpose": "Курс валют / ставка на дату",
+   "use": "эталон ежедневных постов про курс/утильсбор для @LegalAuto24"
+  },
+  {
+   "file": "tpl-parts.jpg",
+   "type": "card_parts",
+   "direction": "parts",
+   "purpose": "Карточка запчасти LegalAuto Parts",
+   "use": "эталон постов о запчастях → @LegalAutoParts24"
+  },
+  {
+   "file": "tpl-news.png",
+   "type": "card_news",
+   "direction": "news",
+   "purpose": "Карточка важной новости/анонса",
+   "use": "эталон новостных постов → @LegalAuto24"
+  },
+  {
+   "file": "tpl-cities-list.jpg",
+   "type": "card_cities_list",
+   "direction": "store",
+   "purpose": "Перечень городов доставки",
+   "use": "эталон постов с географией доставки"
+  },
+  {
+   "file": "tpl-greeting.png",
+   "type": "card_greeting",
+   "direction": "all",
+   "purpose": "Поздравление/праздничный пост",
+   "use": "эталон праздничных постов (9 Мая и т.п.)"
+  }
+ ]
 }
