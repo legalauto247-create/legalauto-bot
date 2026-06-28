@@ -40,6 +40,27 @@
       "direction": "news",
       "purpose": "Курс валют / ставка на дату",
       "use": "эталон ежедневных постов про курс/утильсбор для @LegalAuto24"
+    },
+    {
+      "file": "tpl-parts.jpg",
+      "type": "card_parts",
+      "direction": "parts",
+      "purpose": "Карточка запчасти LegalAuto Parts",
+      "use": "эталон постов о запчастях → @LegalAutoParts24"
+    },
+    {
+      "file": "tpl-news.png",
+      "type": "card_news",
+      "direction": "news",
+      "purpose": "Карточка важной новости/анонса",
+      "use": "эталон новостных постов → @LegalAuto24"
+    },
+    {
+      "file": "tpl-cities-list.jpg",
+      "type": "card_cities_list",
+      "direction": "store",
+      "purpose": "Перечень городов доставки",
+      "use": "эталон постов с географией доставки"
     }
   ]
 }
