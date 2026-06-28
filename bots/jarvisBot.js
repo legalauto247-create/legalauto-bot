@@ -23,6 +23,7 @@ import {
   getMemory, buildSystemPrompt, addConversation, getRecentConversations, learnFact,
 } from '../agents/memoryAgent.js';
 import { orchestrate } from '../agents/orchestratorAgent.js';
+import { jarvisThink } from '../agents/jarvisBrain.js';
 
 const TAG = '[JarvisBot]';
 
@@ -264,11 +265,13 @@ export function setupJarvisBot(bot) {
     if (text.startsWith('/')) return;
 
     try {
-      const reply = await withThinking(ctx, () => askJarvis(ctx.chat.id, text));
-      await ctx.reply(reply, { parse_mode: 'Markdown' });
+      // Агент-мозг: Claude Opus сам вызывает инструменты (аналитика, картинки, расчёты, постинг)
+      const reply = await withThinking(ctx, () =>
+        jarvisThink(text, { telegram: ctx.telegram, chatId: ctx.chat.id }));
+      await ctx.reply(reply, { parse_mode: 'Markdown' }).catch(() => ctx.reply(reply));
     } catch (e) {
       console.error(`${TAG} AI error:`, e.message);
-      await ctx.reply(`❌ Ошибка AI: ${e.message}`);
+      await ctx.reply(`❌ Ошибка мозга: ${e.message}`);
     }
   });
 

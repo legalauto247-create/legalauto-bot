@@ -442,11 +442,17 @@ setupArbitrageMonitor();
 // ── Watchdog Agent — ни один лид не уходит (каждые 5 мин) ─────────────────
 setupWatchdog(clientBot);
 
-// ── Edo Bot — личный AI-ассистент Эдо (полный автопилот) ──────────────────
-initEdoBot().catch(e => console.error('[EdoBot] Init error:', e.message));
-console.log('🤖 Edo personal assistant initializing...');
+// ── Личный бот Эдо @LegalAuto247_bot ──────────────────────────────────────
+// Если задан JARVIS_BOT_TOKEN — запускаем УМНОГО Jarvis (агент-мозг с инструментами)
+// и НЕ запускаем старый edoBot (чтобы не дрались за один токен).
+if (process.env.JARVIS_BOT_TOKEN) {
+  console.log('🧠 Запускаю умного Jarvis (агент-мозг), edoBot пропущен.');
+} else {
+  initEdoBot().catch(e => console.error('[EdoBot] Init error:', e.message));
+  console.log('🤖 Edo personal assistant initializing (простой режим — задай JARVIS_BOT_TOKEN для умного Jarvis)...');
+}
 
-// ── Jarvis Bot — личный Telegraf-бот Эдо (@LegalAuto247_bot) ──────────────
+// ── Jarvis Bot — умный Telegraf-бот Эдо (@LegalAuto247_bot) ──────────────
 initJarvisBot()
   .then(bot => {
     if (bot) {
