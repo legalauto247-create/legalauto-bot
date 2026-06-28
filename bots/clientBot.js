@@ -718,6 +718,29 @@ export function setupClientBot(bot) {
     );
   });
 
+  // ── Запуск любой услуги (СБКТС/ЭПТС/Утиль/Таможня) единым образом ──────────
+  const startService = async (ctx, svc) => {
+    clearState(ctx.chat.id);
+    const firstQ = await askAIFirst(svc, `Клиент выбрал услугу: ${SVC_NAMES[svc] || svc}`);
+    setState(ctx.chat.id, { service: svc, history: [{ role: 'assistant', content: firstQ }] });
+    await ctx.reply(`✅ *${SVC_NAMES[svc] || svc}*`, { parse_mode: 'Markdown' });
+    return ctx.reply(firstQ);
+  };
+  bot.action('svc_sbkts',   async (ctx) => { await ctx.answerCbQuery(); await startService(ctx, 'sbkts'); });
+  bot.action('svc_epts',    async (ctx) => { await ctx.answerCbQuery(); await startService(ctx, 'epts'); });
+  bot.action('svc_customs', async (ctx) => { await ctx.answerCbQuery(); await startService(ctx, 'customs'); });
+  bot.action('svc_util',    async (ctx) => { await ctx.answerCbQuery(); await startService(ctx, 'util'); });
+
+  // ── Выбор марки для подбора запчасти (BMW/Audi/Geely/Li Auto/Mercedes/Toyota) ─
+  bot.action(/^brand_(BMW|Audi|Geely|Li Auto|Mercedes|Toyota)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    const brand = ctx.match[1];
+    const firstQ = await askAIFirst('parts', `Клиент ищет запчасть для ${brand}. Уточни модель, год и нужную деталь.`);
+    setState(ctx.chat.id, { service: 'parts', brand, history: [{ role: 'assistant', content: firstQ }] });
+    await ctx.reply(`✅ *${brand}*`, { parse_mode: 'Markdown' });
+    return ctx.reply(firstQ);
+  });
+
   // ── Выбор варианта из ZZap под заказ ─────────────────────────────────────
   bot.action(/^resale_pick_(\d+)_(\d+)$/, async (ctx) => {
     await ctx.answerCbQuery('Оформляем заказ...');
