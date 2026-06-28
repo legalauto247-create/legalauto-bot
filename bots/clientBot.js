@@ -32,8 +32,9 @@ import { classifyLead } from '../agents/dualBrainAgent.js';
 import { calcImport, fmt as fmtRub } from '../agents/customsCalc.js';
 
 // Платный калькулятор растаможки/утиля
-const PAYMENT_PROVIDER_TOKEN = process.env.PAYMENT_PROVIDER_TOKEN || '';   // ЮKassa через BotFather (СБП)
-const CALC_PRICE_KOPEKS = Number(process.env.CALC_PRICE_KOPEKS || 9900);   // 99 ₽
+const PAYMENT_PROVIDER_TOKEN = process.env.PAYMENT_PROVIDER_TOKEN || '';   // ЮKassa через BotFather (СБП/рубли)
+const CALC_PRICE_KOPEKS = Number(process.env.CALC_PRICE_KOPEKS || 9900);   // 99 ₽ (если ЮKassa)
+const CALC_PRICE_STARS  = Number(process.env.CALC_PRICE_STARS || 75);      // 75 ⭐ (если без ЮKassa — работает сразу)
 const EUR_RATE = Number(process.env.EUR_RATE || 105);                      // курс €→₽ для оценки
 
 function buildCalcResult(p) {
@@ -928,12 +929,14 @@ export function setupClientBot(bot) {
   // ── Платный калькулятор растаможки + утиля ───────────────────────────────────
   const startCalcImport = async (ctx) => {
     setState(ctx.chat.id, { service: 'calc_import', step: 'cc' });
-    const price = (CALC_PRICE_KOPEKS / 100).toFixed(0);
+    const priceLabel = PAYMENT_PROVIDER_TOKEN
+      ? `*${(CALC_PRICE_KOPEKS / 100).toFixed(0)} ₽* (оплата по СБП в боте)`
+      : `*${CALC_PRICE_STARS} ⭐ Telegram Stars* (оплата прямо в боте)`;
     await ctx.reply(
       `🚢 *Расчёт растаможки + утильсбора*\n\n` +
-      `Посчитаю пошлину, утильсбор и сбор за оформление под ключ. ` +
-      (PAYMENT_PROVIDER_TOKEN ? `Стоимость просчёта — *${price} ₽* (оплата по СБП в боте).` : ``) +
-      `\n\n⚙️ Объём двигателя, см³? (например 1998)`,
+      `Посчитаю пошлину, утильсбор и сбор за оформление под ключ.\n` +
+      `Стоимость просчёта — ${priceLabel}.\n\n` +
+      `⚙️ Объём двигателя, см³? (например 1998)`,
       { parse_mode: 'Markdown' }
     );
   };
@@ -1114,17 +1117,16 @@ export function setupClientBot(bot) {
         if (!n || n < 1000) return ctx.reply('Введите цену в евро (например 25000):');
         const params = { engineCc: s.cc, hp: s.hp, ageYears: s.age, priceEur: n, eurRate: EUR_RATE };
         clearState(ctx.chat.id);
-        if (PAYMENT_PROVIDER_TOKEN) {
-          return ctx.replyWithInvoice({
-            title: 'Расчёт растаможки + утильсбора',
-            description: `${s.cc} см³ · ${s.hp} л.с. · ${s.age} лет · €${n} — точный просчёт под ключ`,
-            payload: JSON.stringify(params),
-            provider_token: PAYMENT_PROVIDER_TOKEN,
-            currency: 'RUB',
-            prices: [{ label: 'Просчёт стоимости авто', amount: CALC_PRICE_KOPEKS }],
-          }).catch(() => ctx.reply(`Оплата временно недоступна. Расчёт бесплатно:\n\n${buildCalcResult(params)}`, { parse_mode: 'Markdown', ...KB_MAIN }));
-        }
-        return ctx.reply(buildCalcResult(params), { parse_mode: 'Markdown', ...KB_MAIN });
+        const desc = `${s.cc} см³ · ${s.hp} л.с. · ${s.age} лет · €${n} — точный просчёт под ключ`;
+        // ЮKassa (рубли/СБП) если подключён, иначе Telegram Stars (работает сразу, без провайдера)
+        const invoice = PAYMENT_PROVIDER_TOKEN
+          ? { title: 'Расчёт растаможки + утильсбора', description: desc, payload: JSON.stringify(params),
+              provider_token: PAYMENT_PROVIDER_TOKEN, currency: 'RUB',
+              prices: [{ label: 'Просчёт стоимости авто', amount: CALC_PRICE_KOPEKS }] }
+          : { title: 'Расчёт растаможки + утильсбора', description: desc, payload: JSON.stringify(params),
+              currency: 'XTR', prices: [{ label: 'Просчёт стоимости авто', amount: CALC_PRICE_STARS }] };
+        return ctx.replyWithInvoice(invoice)
+          .catch(() => ctx.reply(`Оплата временно недоступна, вот бесплатный расчёт:\n\n${buildCalcResult(params)}`, { parse_mode: 'Markdown', ...KB_MAIN }));
       }
     }
 
