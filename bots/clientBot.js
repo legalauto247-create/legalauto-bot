@@ -29,6 +29,22 @@ import { registerLead, removeLead, markHandled } from '../agents/watchdogAgent.j
 import { smartMatch, isPartsRequest } from '../agents/smartMatchAgent.js';
 import { orchestrate } from '../agents/masterAgent.js';
 import { classifyLead } from '../agents/dualBrainAgent.js';
+import { calcImport, fmt as fmtRub } from '../agents/customsCalc.js';
+
+// Платный калькулятор растаможки/утиля
+const PAYMENT_PROVIDER_TOKEN = process.env.PAYMENT_PROVIDER_TOKEN || '';   // ЮKassa через BotFather (СБП)
+const CALC_PRICE_KOPEKS = Number(process.env.CALC_PRICE_KOPEKS || 9900);   // 99 ₽
+const EUR_RATE = Number(process.env.EUR_RATE || 105);                      // курс €→₽ для оценки
+
+function buildCalcResult(p) {
+  const r = calcImport(p);
+  const lines = r.breakdown.map(([l, v]) => `• ${l}: *${fmtRub(v)}*`).join('\n');
+  return `🧮 *Расчёт под ключ (физлицо)*\n\n` +
+    `🚗 ${p.engineCc} см³ · ${p.hp} л.с. · ${p.ageYears} лет · €${p.priceEur}\n` +
+    `💶 Стоимость авто: ~${fmtRub(r.valueRub)}\n\n` +
+    `${lines}\n━━━━━━━━━━\n💰 *Итого растаможка + утиль: ${fmtRub(r.totalRub)}*\n\n` +
+    `_${r.disclaimer}_`;
+}
 
 const {
   CLAUDE_API_KEY,
@@ -365,6 +381,9 @@ const KB_MAIN = {
       [
         { text: '📋 СБКТС / ЭПТС',            callback_data: 'svc_docs'    },
         { text: '🛃 Таможня / Утильсбор',     callback_data: 'svc_customs' },
+      ],
+      [
+        { text: '🚢 Расчёт растаможки под ключ', callback_data: 'calc_import' },
       ],
       [
         { text: '🧮 Калькулятор утильсбора',  callback_data: 'calc_util'   },
@@ -883,6 +902,37 @@ export function setupClientBot(bot) {
     );
   });
 
+  // ── Платный калькулятор растаможки + утиля ───────────────────────────────────
+  const startCalcImport = async (ctx) => {
+    setState(ctx.chat.id, { service: 'calc_import', step: 'cc' });
+    const price = (CALC_PRICE_KOPEKS / 100).toFixed(0);
+    await ctx.reply(
+      `🚢 *Расчёт растаможки + утильсбора*\n\n` +
+      `Посчитаю пошлину, утильсбор и сбор за оформление под ключ. ` +
+      (PAYMENT_PROVIDER_TOKEN ? `Стоимость просчёта — *${price} ₽* (оплата по СБП в боте).` : ``) +
+      `\n\n⚙️ Объём двигателя, см³? (например 1998)`,
+      { parse_mode: 'Markdown' }
+    );
+  };
+  bot.action('calc_import', async (ctx) => { await ctx.answerCbQuery(); await startCalcImport(ctx); });
+  bot.command('calc', startCalcImport);
+
+  // Оплата (Telegram Payments / СБП через ЮKassa)
+  bot.on('pre_checkout_query', (ctx) => ctx.answerPreCheckoutQuery(true).catch(() => {}));
+  bot.on('successful_payment', async (ctx) => {
+    try {
+      const params = JSON.parse(ctx.message.successful_payment.invoice_payload);
+      await ctx.reply(buildCalcResult(params), { parse_mode: 'Markdown', ...KB_MAIN });
+      if (ADMIN_BOT_TOKEN && ADMIN_CHAT_ID) {
+        const who = ctx.from?.username ? `@${ctx.from.username}` : `id:${ctx.chat.id}`;
+        await sendToAllManagers({
+          text: `💸 *Оплачен просчёт растаможки* (${(CALC_PRICE_KOPEKS/100)}₽)\n👤 ${who}\n🚗 ${params.engineCc}см³ ${params.hp}лс ${params.ageYears}л €${params.priceEur}\n\nГорячий лид — клиент считает авто к ввозу!`,
+          parse_mode: 'Markdown',
+        }).catch(() => {});
+      }
+    } catch { await ctx.reply(`Оплата получена! Расчёт пришлю — или напишите @${MGR}`); }
+  });
+
   // ── Менеджер ───────────────────────────────────────────────────────────────
   bot.action('svc_manager', async (ctx) => {
     await ctx.answerCbQuery();
@@ -1017,6 +1067,43 @@ export function setupClientBot(bot) {
     if (text.startsWith('/')) return;
 
     const state = getState(ctx.chat.id);
+
+    // ── Платный калькулятор растаможки/утиля ──────────────────────────────────
+    if (state?.service === 'calc_import') {
+      const s = state;
+      const n = parseInt(text.replace(/\D/g, ''), 10);
+      if (s.step === 'cc') {
+        if (!n || n < 200 || n > 9000) return ctx.reply('Введите объём двигателя в см³ (например 1998):');
+        setState(ctx.chat.id, { ...s, cc: n, step: 'hp' });
+        return ctx.reply('⚙️ Мощность двигателя, л.с.? (например 184)');
+      }
+      if (s.step === 'hp') {
+        if (!n || n < 30 || n > 1500) return ctx.reply('Введите мощность в л.с. (например 184):');
+        setState(ctx.chat.id, { ...s, hp: n, step: 'age' });
+        return ctx.reply('📅 Возраст авто — сколько полных лет? (например 2)');
+      }
+      if (s.step === 'age') {
+        if (isNaN(n) || n < 0 || n > 30) return ctx.reply('Введите возраст в годах (например 2):');
+        setState(ctx.chat.id, { ...s, age: n, step: 'price' });
+        return ctx.reply('💶 Цена авто за рубежом, в евро €? (например 25000)');
+      }
+      if (s.step === 'price') {
+        if (!n || n < 1000) return ctx.reply('Введите цену в евро (например 25000):');
+        const params = { engineCc: s.cc, hp: s.hp, ageYears: s.age, priceEur: n, eurRate: EUR_RATE };
+        clearState(ctx.chat.id);
+        if (PAYMENT_PROVIDER_TOKEN) {
+          return ctx.replyWithInvoice({
+            title: 'Расчёт растаможки + утильсбора',
+            description: `${s.cc} см³ · ${s.hp} л.с. · ${s.age} лет · €${n} — точный просчёт под ключ`,
+            payload: JSON.stringify(params),
+            provider_token: PAYMENT_PROVIDER_TOKEN,
+            currency: 'RUB',
+            prices: [{ label: 'Просчёт стоимости авто', amount: CALC_PRICE_KOPEKS }],
+          }).catch(() => ctx.reply(`Оплата временно недоступна. Расчёт бесплатно:\n\n${buildCalcResult(params)}`, { parse_mode: 'Markdown', ...KB_MAIN }));
+        }
+        return ctx.reply(buildCalcResult(params), { parse_mode: 'Markdown', ...KB_MAIN });
+      }
+    }
 
     // ── Интент: «хочу купить» / «заказать» ────────────────────────────────────
     if (!state && /хочу\s+купить|хочу\s+заказ|хочу\s+приобрести|куплю|заказать\s+запчасть|нужна\s+запчасть|ищу\s+запчасть/i.test(text)) {
