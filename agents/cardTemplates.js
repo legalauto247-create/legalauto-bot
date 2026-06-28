@@ -14,6 +14,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 const FB = join(ROOT, 'assets', 'fonts', 'Montserrat-Bold.ttf');
 const FR = join(ROOT, 'assets', 'fonts', 'Montserrat-Regular.ttf');
+const BG_CARS = join(ROOT, 'brand', 'templates', 'bg-cars.png');  // фон от ChatGPT
 const W = 1080, H = 1600;
 
 function chromePath() {
@@ -38,7 +39,8 @@ function carCardHtml(d) {
    @font-face{font-family:'M';font-weight:400;src:url('file://${FR}') format('truetype');}
    *{margin:0;padding:0;box-sizing:border-box;font-family:'M',sans-serif;color:#fff;}
    html,body{width:${W}px;height:${H}px;overflow:hidden;}
-   body{background:radial-gradient(120% 50% at 50% 0%, #2a2008 -10%, #0a0d13 45%, #05070b 100%);padding:54px 54px 40px;display:flex;flex-direction:column;}
+   body{background:#05070b ${existsSync(BG_CARS)?`url('file://${BG_CARS}')`:''} center/cover no-repeat;padding:54px 54px 40px;display:flex;flex-direction:column;}
+   .h2,.h1,.brand{text-shadow:0 2px 14px rgba(0,0,0,.7);}
    .brand{text-align:center;font-weight:700;font-size:34px;letter-spacing:1px;margin-bottom:18px;}
    .brand .s{color:#C0C0C0;} .brand .g{color:#D4AF37;}
    .h1{text-align:center;font-weight:700;font-size:40px;letter-spacing:3px;color:#fff;}
