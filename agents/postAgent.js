@@ -12,6 +12,7 @@
 import fetch from 'node-fetch';
 import Anthropic from '@anthropic-ai/sdk';
 import { checkAndNotify } from './alertAgent.js';
+import { SMART } from './models.js';
 
 const {
   CLAUDE_API_KEY,
@@ -273,7 +274,7 @@ export async function generatePostText(part) {
       const urgencyCtx = stockUrgency ? `\nКонтекст: ${stockUrgency}.` : '';
 
       const msg = await claude.messages.create({
-        model:      'claude-haiku-4-5-20251001',
+        model:      SMART,
         max_tokens: 120,
         messages: [{
           role: 'user',

@@ -27,6 +27,7 @@ import fetch     from 'node-fetch';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
 import { extractPriceFromText } from './priceUtil.js';
+import { HEAVY, FAST } from './models.js';
 
 const {
   CLAUDE_API_KEY,
@@ -83,7 +84,7 @@ async function isCarListing(text) {
 
   try {
     const msg = await claude.messages.create({
-      model:      'claude-haiku-4-5-20251001',
+      model:      FAST,
       max_tokens: 5,
       messages: [{
         role: 'user',
@@ -166,7 +167,7 @@ async function rewriteForChannel(originalText, channelName) {
 
   try {
     const msg = await claude.messages.create({
-      model:      'claude-haiku-4-5-20251001',
+      model:      HEAVY,
       max_tokens: 450,
       messages: [{
         role: 'user',

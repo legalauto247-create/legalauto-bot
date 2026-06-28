@@ -9,6 +9,7 @@
 
 import fetch from 'node-fetch';
 import Anthropic from '@anthropic-ai/sdk';
+import { HEAVY, FAST } from '../agents/models.js';
 
 const {
   CLAUDE_API_KEY,
@@ -97,7 +98,7 @@ async function isRelevant(title, desc) {
   if (!anthropic) return false;
   try {
     const msg = await anthropic.messages.create({
-      model:      'claude-haiku-4-5-20251001',
+      model:      FAST,
       max_tokens: 10,
       messages: [{
         role:    'user',
@@ -136,7 +137,7 @@ async function generatePost(title, link, desc) {
   if (!anthropic) return null;
   try {
     const msg = await anthropic.messages.create({
-      model:      'claude-haiku-4-5-20251001',
+      model:      HEAVY,
       max_tokens: 450,
       messages: [{
         role:    'user',
@@ -183,7 +184,7 @@ async function generateOriginalPost() {
   const topic = ORIGINAL_TOPICS[Math.floor(Math.random() * ORIGINAL_TOPICS.length)];
   try {
     const msg = await anthropic.messages.create({
-      model:      'claude-haiku-4-5-20251001',
+      model:      HEAVY,
       max_tokens: 550,
       messages: [{
         role:    'user',
