@@ -9,7 +9,7 @@ export const theme = {
   // Официальный фирстиль LegalAuto: золото #D4AF37 + серебро на чёрном.
   // Направления: авто=золото, запчасти=красный, документы=синий.
   car:  { accent: '#D4AF37', accent2: '#B9972E', glow: 'rgba(212,175,55,0.45)' },
-  part: { accent: '#c02531', accent2: '#7a1820', glow: 'rgba(192,37,49,0.45)' },
+  part: { accent: '#FF6B00', accent2: '#FF944D', glow: 'rgba(255,107,0,0.45)' },
   docs: { accent: '#1c7fd6', accent2: '#0e4f8a', glow: 'rgba(28,127,214,0.45)' },
   gold: '#D4AF37',
   goldLight: '#F2E6B1',
