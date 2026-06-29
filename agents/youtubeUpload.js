@@ -8,6 +8,16 @@ import { readFileSync, statSync } from 'fs';
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
+// Блок ссылок на группы — добавляется в КАЖДОЕ описание
+export const LINKS_BLOCK =
+`\n\n— — —\n` +
+`🚗 Пригон авто под ключ: https://t.me/LegalAutoStore\n` +
+`🔧 Запчасти BMW/Geely/Li Auto: https://t.me/LegalAutoParts24\n` +
+`📋 Документы СБКТС/ЭПТС/утиль + новости: https://t.me/LegalAuto24\n` +
+`💬 Менеджер: https://t.me/LegalAuto247\n` +
+`📞 +7 938 515-24-29\n` +
+`Ваш надёжный партнёр в мире автомобилей`;
+
 async function accessToken() {
   const { YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN } = process.env;
   if (!YT_CLIENT_ID || !YT_CLIENT_SECRET || !YT_REFRESH_TOKEN) throw new Error('YT_* переменные не заданы');
@@ -26,7 +36,7 @@ export async function uploadShort({ path, title, description = '', tags = [] }) 
 
   // 1) Resumable session
   const meta = {
-    snippet: { title: title.slice(0, 100), description, tags, categoryId: '2' }, // 2 = Autos & Vehicles
+    snippet: { title: title.slice(0, 100), description: (description + LINKS_BLOCK).slice(0, 4900), tags, categoryId: '2' }, // 2 = Autos & Vehicles
     status: { privacyStatus: 'public', selfDeclaredMadeForKids: false },
   };
   const init = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', {
