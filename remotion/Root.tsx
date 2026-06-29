@@ -24,6 +24,7 @@ const defaultProps: ReelProps = {
 
 export const RemotionRoot: React.FC = () => {
   return (
+    <>
     <Composition
       id="CarReel"
       component={CarReel as React.FC<Record<string, unknown>>}
@@ -46,5 +47,6 @@ export const RemotionRoot: React.FC = () => {
       height={HEIGHT}
       defaultProps={{ soraFile: 'sora.mp4', accent: '#FF6B00', hook: 'Запчасти BMW', facts: [], cta: 'Заказ', channel: '@LegalAutoParts24' } as unknown as Record<string, unknown>}
     />
+    </>
   );
 };
