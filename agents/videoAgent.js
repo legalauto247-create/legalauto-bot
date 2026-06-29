@@ -114,6 +114,29 @@ export async function renderViral({ soraPath, musicPath, ...props }) {
   } catch (e) { cleanup(); throw e; }
 }
 
+// ── Product Short: реальные фото + панч-зумы + русская озвучка + субтитры ──
+export async function renderProduct({ voicePath, musicPath, ...props }) {
+  const dir = mkdtempSync(join(tmpdir(), 'prod-'));
+  const cleanup = () => { try { rmSync(dir, { recursive: true, force: true }); } catch {} };
+  const out = join(dir, 'product.mp4');
+  try {
+    if (!existsSync(PUBLIC_DIR)) mkdirSync(PUBLIC_DIR, { recursive: true });
+    if (voicePath && existsSync(voicePath)) cpSync(voicePath, join(PUBLIC_DIR, 'voice.mp3'));
+    if (musicPath && existsSync(musicPath)) cpSync(musicPath, join(PUBLIC_DIR, 'music.mp3'));
+    const exec = chromePath();
+    await ensureBrowser(exec ? { browserExecutable: exec } : undefined).catch(() => {});
+    const serveUrl = await bundle({ entryPoint: ENTRY, publicDir: PUBLIC_DIR });
+    const inputProps = { voiceFile: voicePath ? 'voice.mp3' : undefined, musicFile: musicPath ? 'music.mp3' : undefined, ...props };
+    const composition = await selectComposition({ serveUrl, id: 'ProductShort', inputProps, browserExecutable: exec });
+    await renderMedia({
+      composition, serveUrl, codec: 'h264', outputLocation: out, inputProps,
+      browserExecutable: exec, publicDir: PUBLIC_DIR, concurrency: 1,
+      chromiumOptions: { gl: 'swiftshader' }, x264Preset: 'veryfast', crf: 23,
+    });
+    return { path: out, dir, cleanup };
+  } catch (e) { cleanup(); throw e; }
+}
+
 export async function renderReel(props) {
   const dir = mkdtempSync(join(tmpdir(), 'reel-'));
   const cleanup = () => { try { rmSync(dir, { recursive: true, force: true }); } catch {} };
