@@ -1,6 +1,7 @@
 import React from 'react';
 import { Composition } from 'remotion';
 import { CarReel, reelDuration } from './CarReel';
+import { ViralShort, viralDuration, ViralProps } from './ViralShort';
 import { FPS, WIDTH, HEIGHT, ReelProps } from './theme';
 
 const defaultProps: ReelProps = {
@@ -35,6 +36,15 @@ export const RemotionRoot: React.FC = () => {
         const p = props as unknown as ReelProps;
         return { durationInFrames: reelDuration((p.photos || []).slice(0, 5).length || 1) };
       }}
+    />
+    <Composition
+      id="ViralShort"
+      component={ViralShort as React.FC<Record<string, unknown>>}
+      durationInFrames={viralDuration()}
+      fps={FPS}
+      width={WIDTH}
+      height={HEIGHT}
+      defaultProps={{ soraFile: 'sora.mp4', accent: '#FF6B00', hook: 'Запчасти BMW', facts: [], cta: 'Заказ', channel: '@LegalAutoParts24' } as unknown as Record<string, unknown>}
     />
   );
 };

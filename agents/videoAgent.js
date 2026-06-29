@@ -13,7 +13,7 @@
  * Требует: chromium (PUPPETEER_EXECUTABLE_PATH) — есть в nixpacks.
  */
 
-import { mkdtempSync, rmSync } from 'fs';
+import { mkdtempSync, rmSync, cpSync, existsSync, mkdirSync } from 'fs';
 import { tmpdir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -85,6 +85,33 @@ function getBundle() {
     }).catch((e) => { bundlePromise = null; throw e; });
   }
   return bundlePromise;
+}
+
+// ── Вирусный Short: Sora-видео + музыка + хук/субтитры + CTA ───────────────
+const PUBLIC_DIR = join(ROOT, 'remotion', 'public');
+
+export async function renderViral({ soraPath, musicPath, ...props }) {
+  const dir = mkdtempSync(join(tmpdir(), 'viral-'));
+  const cleanup = () => { try { rmSync(dir, { recursive: true, force: true }); } catch {} };
+  const out = join(dir, 'viral.mp4');
+  try {
+    if (!existsSync(PUBLIC_DIR)) mkdirSync(PUBLIC_DIR, { recursive: true });
+    cpSync(soraPath, join(PUBLIC_DIR, 'sora.mp4'));
+    if (musicPath && existsSync(musicPath)) cpSync(musicPath, join(PUBLIC_DIR, 'music.mp3'));
+
+    const exec = chromePath();
+    await ensureBrowser(exec ? { browserExecutable: exec } : undefined).catch(() => {});
+    // пере-бандлим (ассеты sora/music меняются каждый раз)
+    const serveUrl = await bundle({ entryPoint: ENTRY, publicDir: PUBLIC_DIR });
+    const inputProps = { soraFile: 'sora.mp4', musicFile: musicPath ? 'music.mp3' : undefined, ...props };
+    const composition = await selectComposition({ serveUrl, id: 'ViralShort', inputProps, browserExecutable: exec });
+    await renderMedia({
+      composition, serveUrl, codec: 'h264', outputLocation: out, inputProps,
+      browserExecutable: exec, publicDir: PUBLIC_DIR, concurrency: 1,
+      chromiumOptions: { gl: 'swiftshader' }, x264Preset: 'veryfast', crf: 23,
+    });
+    return { path: out, dir, cleanup };
+  } catch (e) { cleanup(); throw e; }
 }
 
 export async function renderReel(props) {
