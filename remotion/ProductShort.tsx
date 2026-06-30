@@ -5,7 +5,7 @@ import {
 } from 'remotion';
 import { theme, FONT, ensureFonts } from './theme';
 
-export type Item = { photo: string; name: string; price?: string };
+export type Item = { photo: string; name: string; price?: string; fits?: string };
 export type ProductProps = {
   items: Item[];
   hook: string;
@@ -54,7 +54,10 @@ const PartScene: React.FC<{ item: Item; accent: string; index: number; total: nu
       </div>
       {/* ПОДПИСЬ — название и цена ЭТОЙ запчасти */}
       <div style={{ position: 'absolute', left: 54, right: 54, bottom: 150, transform: `translateY(${capY}px)`, opacity: inAnim, textAlign: 'center' }}>
-        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 62, color: '#fff', lineHeight: 1.1, textShadow: '0 2px 16px rgba(0,0,0,.8)' }}>{item.name}</div>
+        {item.fits ? (
+          <div style={{ display: 'inline-block', fontFamily: FONT, fontWeight: 700, fontSize: 34, color: accent, border: `2px solid ${accent}`, borderRadius: 100, padding: '8px 24px', marginBottom: 16, letterSpacing: 1 }}>{item.fits}</div>
+        ) : null}
+        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 60, color: '#fff', lineHeight: 1.1, textShadow: '0 2px 16px rgba(0,0,0,.8)' }}>{item.name}</div>
         {item.price ? (
           <div style={{ display: 'inline-block', marginTop: 18, fontFamily: FONT, fontWeight: 700, fontSize: 54, color: theme.bg, background: accent, padding: '12px 34px', borderRadius: 16 }}>{item.price}</div>
         ) : null}

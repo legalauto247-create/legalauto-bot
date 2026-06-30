@@ -67,6 +67,7 @@ export async function makeProductShort({ platforms = ['youtube'], lengthSec = 18
     photo: p.photo || p.photo_cover,
     name: p.name,
     price: p.price ? Number(p.price).toLocaleString('ru-RU') + ' ₽' : '',
+    fits: [p.brand, (p.model || p.series || '').replace(/\|/g, '/')].filter(Boolean).join(' ').trim(),
   }));
 
   // 2) хук + заголовок (на «вы», без «золотых гор» — по брендбуку)
