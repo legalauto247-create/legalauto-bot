@@ -51,14 +51,14 @@ export const RemotionRoot: React.FC = () => {
     <Composition
       id="ProductShort"
       component={ProductShort as React.FC<Record<string, unknown>>}
-      durationInFrames={productDuration(15)}
+      durationInFrames={productDuration(5)}
       fps={FPS}
       width={WIDTH}
       height={HEIGHT}
-      defaultProps={{ photos: [], hook: 'Запчасти BMW', captions: [], cta: 'Заказ', channel: '@LegalAutoParts24', accent: '#FF6B00', voiceSec: 15 } as unknown as Record<string, unknown>}
+      defaultProps={{ items: [], hook: 'Запчасти BMW', cta: 'Заказ', channel: '@LegalAutoParts24', accent: '#FF6B00' } as unknown as Record<string, unknown>}
       calculateMetadata={({ props }) => {
         const p = props as unknown as ProductProps;
-        return { durationInFrames: productDuration(p.voiceSec || 15) };
+        return { durationInFrames: productDuration((p.items || []).slice(0, 6).length || 1) };
       }}
     />
     </>

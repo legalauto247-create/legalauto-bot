@@ -60,20 +60,26 @@ export async function makeProductShort({ platforms = ['youtube'], lengthSec = 18
   });
   const pool = fresh.length >= 4 ? fresh : all;       // если свежих мало — берём из всех
   const parts = pool.slice(0, 6);
-  const photos = parts.map(p => p.photo || p.photo_cover);
-  if (photos.length < 3) return { ok: false, error: 'Мало фото запчастей в каталоге' };
+  if (parts.length < 3) return { ok: false, error: 'Мало фото запчастей в каталоге' };
 
-  // 2) вирусный сценарий (рус, на «вы»)
-  const m = await claude.messages.create({ model: HEAVY, max_tokens: 500, messages: [{ role: 'user', content:
-`ВИРУСНЫЙ сценарий для Shorts про б/у запчасти BMW из Европы (LegalAuto Parts). Русский, на «вы», цепляюще, по фактам.
-JSON: {"title":"до 80 симв с эмодзи","description":"2 строки + #shorts #bmw #запчасти","hook":"3-4 слова крупно","captions":["5-6 коротких фраз по 2-4 слова, ключевое"]}
-запчасти: ${parts.map(p => p.name + ' ' + p.price + '₽').join(', ')}` }] });
+  // items: КАЖДАЯ запчасть со своим названием и ценой (текст совпадает с фото)
+  const items = parts.map(p => ({
+    photo: p.photo || p.photo_cover,
+    name: p.name,
+    price: p.price ? Number(p.price).toLocaleString('ru-RU') + ' ₽' : '',
+  }));
+
+  // 2) хук + заголовок (на «вы», без «золотых гор» — по брендбуку)
+  const m = await claude.messages.create({ model: HEAVY, max_tokens: 350, messages: [{ role: 'user', content:
+`Короткий вирусный хук и заголовок для Shorts про б/у запчасти BMW из Европы (LegalAuto Parts). Тон по брендбуку: на «вы», прямо и по фактам, БЕЗ обещаний «золотых гор» и слова «копейки».
+JSON: {"title":"до 80 симв, 1 эмодзи","description":"2 строки + #shorts #bmw #запчасти","hook":"3-4 слова крупно (интрига/выгода)"}
+запчасти в ролике: ${parts.map(p => p.name).join(', ')}` }] });
   const s = JSON.parse(m.content[0].text.trim().replace(/^```json?|```$/g, ''));
 
-  // 3) рендер (музыка + фото + субтитры, без голоса)
+  // 3) рендер: музыка + по сцене на запчасть (фото + название + цена)
   const { path, cleanup } = await renderProduct({
-    musicPath: music, photos, hook: s.hook, captions: s.captions,
-    cta: 'Заказ запчасти', channel: '@LegalAutoParts24', accent: '#FF6B00', voiceSec: lengthSec,
+    musicPath: music, items, hook: s.hook,
+    cta: 'Заказ запчасти', channel: '@LegalAutoParts24', accent: '#FF6B00',
   });
 
   const result = { ok: true, partsUsed: parts.map(p => p.name), title: s.title };
