@@ -33,8 +33,15 @@ function pickMusic() {
 
 async function gasCatalog(limit = 40) {
   const GAS = process.env.APPS_SCRIPT_API_URL;
-  const r = await fetch(`${GAS}?action=catalog&limit=${limit}`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-  const d = await r.json();
+  let d = null;
+  for (let i = 0; i < 3 && !d; i++) {
+    try {
+      const r = await fetch(`${GAS}?action=catalog&limit=${limit}`, { redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0 LegalAutoBot/1.0' } });
+      const t = await r.text();
+      d = JSON.parse(t);
+    } catch { await new Promise(res => setTimeout(res, 2000)); }
+  }
+  if (!d) throw new Error('GAS каталог недоступен (вернул не JSON)');
   return (d.products || d.parts || []).filter(p => (p.photo || p.photo_cover || '').includes('yandexcloud'));
 }
 
