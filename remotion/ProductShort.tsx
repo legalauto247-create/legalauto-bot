@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   AbsoluteFill, Audio, Img, Sequence, staticFile,
-  useCurrentFrame, useVideoConfig, interpolate, spring, random,
+  useCurrentFrame, useVideoConfig, interpolate, spring,
 } from 'remotion';
 import { theme, FONT, ensureFonts } from './theme';
 
@@ -16,95 +16,92 @@ export type ProductProps = {
 };
 
 const FPS = 30;
-const INTRO = 42;   // 1.4с хук
-const PER = 66;     // 2.2с на запчасть (динамичнее)
-const OUTRO = 72;   // 2.4с финал
+const INTRO = 48;   // 1.6с
+const PER = 84;     // 2.8с — спокойно, читаемо
+const OUTRO = 78;
 
 export const productDuration = (n: number) => INTRO + PER * Math.max(1, n) + OUTRO;
 
-// ── Грейн + виньетка поверх всего (премиум-грейд) ──────────────────────────
-const Grade: React.FC = () => (
-  <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 8 }}>
-    <svg width="100%" height="100%" style={{ position: 'absolute', opacity: 0.06 }}>
-      <filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" /></filter>
-      <rect width="100%" height="100%" filter="url(#n)" />
-    </svg>
-    <AbsoluteFill style={{ boxShadow: 'inset 0 0 360px 90px rgba(0,0,0,0.85)' }} />
-  </AbsoluteFill>
+// Щит LA в цвете направления (как в логотипе/шаблонах)
+const Shield: React.FC<{ accent: string; size?: number }> = ({ accent, size = 64 }) => (
+  <svg width={size} height={size * 1.13} viewBox="0 0 92 104" fill="none">
+    <path d="M46 4 L84 18 V52 C84 78 66 94 46 100 C26 94 8 78 8 52 V18 Z" fill="#0D0D0D" stroke={accent} strokeWidth="3.5" />
+    <text x="46" y="63" fontFamily={FONT} fontWeight="700" fontSize="38" fill={accent} textAnchor="middle">LA</text>
+  </svg>
 );
 
-// ── Вспышка на склейке ─────────────────────────────────────────────────────
-const FlashCut: React.FC<{ accent: string }> = ({ accent }) => {
-  const f = useCurrentFrame();
-  const o = interpolate(f, [0, 1, 6], [0, 0.9, 0], { extrapolateRight: 'clamp' });
-  return <AbsoluteFill style={{ background: accent, opacity: o, zIndex: 9 }} />;
-};
-
-const ProgressBar: React.FC<{ p: number; accent: string }> = ({ p, accent }) => (
-  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 7, background: 'rgba(255,255,255,0.12)', zIndex: 7 }}>
-    <div style={{ height: '100%', width: `${Math.round(p * 100)}%`, background: accent }} />
+// Постоянная шапка — как в брендбуке
+const Header: React.FC<{ accent: string }> = ({ accent }) => (
+  <div style={{ position: 'absolute', top: 50, left: 56, right: 56, zIndex: 6 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <Shield accent={accent} size={56} />
+      <div>
+        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 38, letterSpacing: 0.5, lineHeight: 1 }}>
+          <span style={{ color: '#fff' }}>LEGAL AUTO </span><span style={{ color: accent }}>PARTS</span>
+        </div>
+        <div style={{ fontFamily: FONT, fontWeight: 400, fontSize: 22, color: '#A6A6A6', marginTop: 4 }}>Запчасти и комплектующие</div>
+      </div>
+    </div>
+    <div style={{ height: 2, marginTop: 16, background: `linear-gradient(90deg, ${accent}, transparent)` }} />
   </div>
 );
 
-const Wm: React.FC<{ accent: string }> = ({ accent }) => (
-  <div style={{ position: 'absolute', top: 40, left: 50, fontFamily: FONT, fontWeight: 700, fontSize: 36, textShadow: '0 2px 14px rgba(0,0,0,.9)', zIndex: 7 }}>
-    <span style={{ color: '#fff' }}>LEGAL</span><span style={{ color: accent }}>AUTO</span>
+// Постоянный футер — контакты + слоган
+const Footer: React.FC<{ accent: string; channel: string }> = ({ accent, channel }) => (
+  <div style={{ position: 'absolute', left: 56, right: 56, bottom: 46, zIndex: 6 }}>
+    <div style={{ height: 2, marginBottom: 16, background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: FONT, fontWeight: 700, fontSize: 30 }}>
+      <span style={{ color: '#fff' }}>📞 +7 938 515-24-29</span>
+      <span style={{ color: accent }}>✈ {channel}</span>
+    </div>
+    <div style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 400, fontSize: 22, color: '#8a939c', marginTop: 12, fontStyle: 'italic' }}>Ваш надёжный партнёр в мире автомобилей</div>
   </div>
 );
 
-// ── Сцена ОДНОЙ запчасти — кино-обработка + кинетический текст ──────────────
+const Bg: React.FC<{ accent: string }> = ({ accent }) => (
+  <AbsoluteFill style={{ background: `radial-gradient(130% 70% at 50% 0%, ${accent}26 -20%, #14110a 35%, ${theme.bg} 100%)` }} />
+);
+
+// Карточка запчасти — как твой шаблон: фото в рамке, плашка модели, имя, бейдж цены
 const PartScene: React.FC<{ item: Item; accent: string }> = ({ item, accent }) => {
   const f = useCurrentFrame();
-  // фото: реактивный «вход» из блюра + ken burns + лёгкий разворот
-  const reveal = spring({ frame: f, fps: FPS, config: { damping: 18, stiffness: 120 } });
-  const blur = interpolate(reveal, [0, 1], [22, 0]);
-  const zoom = interpolate(f, [0, PER], [1.12, 1.28]);
-  const rot = interpolate(f, [0, PER], [-1.2, 1.2]);
-  const shake = (random(`s${f}`) - 0.5) * interpolate(f, [0, 8], [10, 0], { extrapolateRight: 'clamp' });
-
-  // текст: чип модели слайдит, имя «вбивается», цена пружинит
-  const chip = spring({ frame: f - 4, fps: FPS, config: { damping: 16 } });
-  const name = spring({ frame: f - 7, fps: FPS, config: { damping: 11, stiffness: 200 } });
-  const price = spring({ frame: f - 12, fps: FPS, config: { damping: 9, stiffness: 220 } });
-  const outO = interpolate(f, [PER - 8, PER], [1, 0], { extrapolateLeft: 'clamp' });
+  const s = spring({ frame: f, fps: FPS, config: { damping: 20, stiffness: 90 } });
+  const out = interpolate(f, [PER - 12, PER], [1, 0], { extrapolateLeft: 'clamp' });
+  const zoom = interpolate(f, [0, PER], [1.0, 1.06]);
+  const chip = spring({ frame: f - 6, fps: FPS, config: { damping: 18 } });
+  const price = spring({ frame: f - 12, fps: FPS, config: { damping: 12, stiffness: 140 } });
 
   return (
-    <AbsoluteFill style={{ opacity: outO }}>
-      {/* размытая подложка-атмосфера */}
-      <Img src={item.photo} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(40px) brightness(0.35) saturate(1.3)', transform: 'scale(1.3)' }} />
-      <AbsoluteFill style={{ background: `radial-gradient(60% 50% at 50% 42%, ${accent}22, transparent 70%)` }} />
-      {/* герой-фото */}
-      <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', paddingBottom: 300 }}>
-        <Img src={item.photo} style={{ maxWidth: '94%', maxHeight: '60%', objectFit: 'contain', filter: `blur(${blur}px)`, transform: `translateX(${shake}px) scale(${zoom * interpolate(reveal, [0, 1], [0.88, 1])}) rotate(${rot}deg)`, borderRadius: 16, boxShadow: '0 30px 90px rgba(0,0,0,.7)' }} />
-      </AbsoluteFill>
-      <AbsoluteFill style={{ background: 'linear-gradient(to bottom, transparent 46%, rgba(13,13,13,0.95) 100%)' }} />
+    <AbsoluteFill style={{ opacity: out }}>
+      {/* фото в аккуратной рамке (как в карточке) */}
+      <div style={{ position: 'absolute', top: 230, left: 70, right: 70, height: 660, borderRadius: 26, overflow: 'hidden', border: `2px solid ${accent}66`, boxShadow: `0 24px 70px rgba(0,0,0,.55)`, transform: `translateY(${interpolate(s, [0, 1], [40, 0])}px)`, opacity: s }}>
+        <Img src={item.photo} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(26px) brightness(0.5)', transform: 'scale(1.2)' }} />
+        <Img src={item.photo} style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', transform: `scale(${zoom})` }} />
+      </div>
 
-      {/* подпись: модель + название + цена ЭТОЙ запчасти */}
-      <div style={{ position: 'absolute', left: 50, right: 50, bottom: 150, textAlign: 'center' }}>
+      {/* модель + имя + цена */}
+      <div style={{ position: 'absolute', left: 70, right: 70, top: 935, textAlign: 'center' }}>
         {item.fits ? (
-          <div style={{ display: 'inline-block', transform: `translateX(${interpolate(chip, [0, 1], [-60, 0])}px)`, opacity: chip, fontFamily: FONT, fontWeight: 700, fontSize: 34, color: accent, border: `2px solid ${accent}`, borderRadius: 100, padding: '8px 26px', marginBottom: 18, letterSpacing: 1 }}>{item.fits}</div>
+          <div style={{ display: 'inline-block', opacity: chip, transform: `translateY(${interpolate(chip, [0, 1], [16, 0])}px)`, fontFamily: FONT, fontWeight: 700, fontSize: 32, color: accent, background: '#11151d', border: `1.5px solid ${accent}`, borderRadius: 14, padding: '10px 26px', marginBottom: 16, letterSpacing: 0.5 }}>{item.fits}</div>
         ) : null}
-        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 64, color: '#fff', lineHeight: 1.08, textShadow: '0 3px 18px rgba(0,0,0,.9)', transform: `scale(${interpolate(name, [0, 1], [1.35, 1])})`, opacity: name }}>{item.name}</div>
+        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 58, color: '#fff', lineHeight: 1.12, opacity: s, textShadow: '0 2px 14px rgba(0,0,0,.6)' }}>{item.name}</div>
         {item.price ? (
-          <div style={{ display: 'inline-block', marginTop: 18, transform: `scale(${interpolate(price, [0, 1], [0.4, 1])})`, opacity: Math.min(1, price * 1.4), fontFamily: FONT, fontWeight: 700, fontSize: 60, color: theme.bg, background: accent, padding: '14px 40px', borderRadius: 16, boxShadow: `0 10px 40px ${accent}88` }}>{item.price}</div>
+          <div style={{ display: 'inline-block', marginTop: 18, transform: `scale(${interpolate(price, [0, 1], [0.7, 1])})`, opacity: price, fontFamily: FONT, fontWeight: 700, fontSize: 56, color: theme.bg, background: `linear-gradient(135deg, ${accent}, ${theme.part?.accent2 || accent})`, padding: '14px 42px', borderRadius: 16, boxShadow: `0 10px 36px ${accent}66` }}>{item.price}</div>
         ) : null}
       </div>
-      <FlashCut accent={accent} />
     </AbsoluteFill>
   );
 };
 
 const IntroHook: React.FC<{ hook: string; accent: string }> = ({ hook, accent }) => {
   const f = useCurrentFrame();
-  const words = hook.split(' ');
-  const out = interpolate(f, [INTRO - 6, INTRO], [1, 0], { extrapolateLeft: 'clamp' });
+  const s = spring({ frame: f, fps: FPS, config: { damping: 16, stiffness: 80 } });
+  const out = interpolate(f, [INTRO - 8, INTRO], [1, 0], { extrapolateLeft: 'clamp' });
   return (
-    <AbsoluteFill style={{ background: theme.bg, justifyContent: 'center', alignItems: 'center', padding: 70, opacity: out }}>
-      <div style={{ textAlign: 'center', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 14 }}>
-        {words.map((w, i) => {
-          const s = spring({ frame: f - i * 4, fps: FPS, config: { damping: 11, stiffness: 220 } });
-          return <span key={i} style={{ fontFamily: FONT, fontWeight: 700, fontSize: 100, color: i % 2 ? accent : '#fff', lineHeight: 1.02, transform: `scale(${interpolate(s, [0, 1], [0.3, 1])}) translateY(${interpolate(s, [0, 1], [40, 0])}px)`, opacity: s, textShadow: `0 0 40px ${accent}` }}>{w}</span>;
-        })}
+    <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', padding: 80, opacity: out }}>
+      <div style={{ transform: `translateY(${interpolate(s, [0, 1], [40, 0])}px)`, opacity: s, textAlign: 'center' }}>
+        <Shield accent={accent} size={120} />
+        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 84, color: '#fff', lineHeight: 1.08, marginTop: 40, textShadow: `0 0 30px ${accent}55` }}>{hook}</div>
       </div>
     </AbsoluteFill>
   );
@@ -112,43 +109,41 @@ const IntroHook: React.FC<{ hook: string; accent: string }> = ({ hook, accent })
 
 const Outro: React.FC<{ cta: string; channel: string; accent: string }> = ({ cta, channel, accent }) => {
   const f = useCurrentFrame();
-  const s = spring({ frame: f, fps: FPS, config: { damping: 12 } });
-  const pulse = 1 + Math.sin(f / 5) * 0.03;
+  const s = spring({ frame: f, fps: FPS, config: { damping: 14 } });
   return (
-    <AbsoluteFill style={{ background: `radial-gradient(120% 80% at 50% 35%, ${accent}44 -20%, ${theme.bg2} 50%, ${theme.bg} 100%)`, justifyContent: 'center', alignItems: 'center', padding: 80, textAlign: 'center' }}>
-      <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 60, color: '#fff', marginBottom: 30, opacity: s }}>
-        <span>LEGAL</span><span style={{ color: accent }}>AUTO</span> <span style={{ color: '#A6A6A6', fontSize: 42 }}>PARTS</span>
+    <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', padding: 80, textAlign: 'center' }}>
+      <div style={{ opacity: s, transform: `translateY(${interpolate(s, [0, 1], [30, 0])}px)` }}>
+        <Shield accent={accent} size={110} />
+        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 56, color: '#fff', margin: '30px 0 24px' }}>
+          <span>LEGAL AUTO </span><span style={{ color: accent }}>PARTS</span>
+        </div>
+        <div style={{ display: 'inline-block', fontFamily: FONT, fontWeight: 700, fontSize: 50, color: theme.bg, background: accent, padding: '26px 50px', borderRadius: 22 }}>{cta}</div>
+        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 44, color: accent, marginTop: 28 }}>{channel}</div>
       </div>
-      <div style={{ transform: `scale(${s * pulse})`, opacity: s, fontFamily: FONT, fontWeight: 700, fontSize: 54, color: theme.bg, background: accent, padding: '30px 54px', borderRadius: 26, lineHeight: 1.2, boxShadow: `0 14px 50px ${accent}aa` }}>{cta}</div>
-      <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 48, color: accent, marginTop: 32 }}>{channel}</div>
     </AbsoluteFill>
   );
 };
 
 export const ProductShort: React.FC<ProductProps> = (p) => {
   ensureFonts();
-  const { durationInFrames } = useVideoConfig();
-  const f = useCurrentFrame();
   const items = (p.items || []).filter(i => i && i.photo).slice(0, 6);
   const n = items.length || 1;
-
   return (
     <AbsoluteFill style={{ background: theme.bg }}>
-      {p.musicFile ? <Audio src={staticFile(p.musicFile)} volume={0.6} /> : null}
+      {p.musicFile ? <Audio src={staticFile(p.musicFile)} volume={0.55} /> : null}
+      <Bg accent={p.accent} />
 
       <Sequence durationInFrames={INTRO + 4}><IntroHook hook={p.hook} accent={p.accent} /></Sequence>
 
       {items.map((it, i) => (
         <Sequence key={i} from={INTRO + i * PER} durationInFrames={PER + 4}>
           <PartScene item={it} accent={p.accent} />
+          <Header accent={p.accent} />
+          <Footer accent={p.accent} channel={p.channel} />
         </Sequence>
       ))}
 
       <Sequence from={INTRO + n * PER} durationInFrames={OUTRO}><Outro cta={p.cta} channel={p.channel} accent={p.accent} /></Sequence>
-
-      <Wm accent={p.accent} />
-      <ProgressBar p={f / durationInFrames} accent={p.accent} />
-      <Grade />
     </AbsoluteFill>
   );
 };
