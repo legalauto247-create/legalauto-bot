@@ -36,6 +36,7 @@ import { generateImage } from './imageGenAgent.js';
 import { getAutoAdsStatus, pollPublicChannels } from './autoAdsAgent.js';
 import { prepareAutoPost, publishToChannel } from './postAgent.js';
 import { learnFact, buildSystemPrompt, addConversation } from './memoryAgent.js';
+import { makeProductShort } from './contentAgent.js';
 
 const claude = process.env.CLAUDE_API_KEY ? new Anthropic({ apiKey: process.env.CLAUDE_API_KEY }) : null;
 const gemini = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
@@ -49,6 +50,7 @@ const TOOLS = [
   { name: 'post_part', description: 'Опубликовать одну запчасть в канал запчастей сейчас.', input_schema: { type: 'object', properties: {} } },
   { name: 'ask_gemini', description: 'Спросить Gemini (длинный контекст, второе мнение, анализ больших данных).', input_schema: { type: 'object', properties: { prompt: { type: 'string' } }, required: ['prompt'] } },
   { name: 'remember', description: 'Запомнить факт/решение Эдо навсегда.', input_schema: { type: 'object', properties: { fact: { type: 'string' } }, required: ['fact'] } },
+  { name: 'make_short', description: 'Сделать и выложить вирусный Short про запчасти (реальные запчасти из каталога + музыка + субтитры) на YouTube и/или Telegram. Запчасти, которые уже брались для платформы, не повторяются.', input_schema: { type: 'object', properties: { platforms: { type: 'array', items: { type: 'string', enum: ['youtube', 'telegram'] } } } } },
 ];
 
 async function runTool(name, input, ctx) {
@@ -96,6 +98,17 @@ async function runTool(name, input, ctx) {
       case 'remember': {
         learnFact(input.fact);
         return `Запомнил: ${input.fact}`;
+      }
+      case 'make_short': {
+        const platforms = input.platforms?.length ? input.platforms : ['youtube'];
+        // Рендер долгий — запускаем в фоне, сообщаем результат отдельным сообщением
+        makeProductShort({ platforms }).then((r) => {
+          const txt = r.ok
+            ? `✅ Ролик готов!\n${r.ytUrl || ''}${r.tgOk ? '\n+ выложен в Telegram' : ''}\nЗапчасти: ${(r.partsUsed || []).slice(0, 4).join(', ')}`
+            : `❌ Не вышло: ${r.error}`;
+          ctx?.telegram?.sendMessage(ctx.chatId, txt).catch(() => {});
+        }).catch((e) => ctx?.telegram?.sendMessage(ctx.chatId, '❌ Ошибка генерации: ' + e.message).catch(() => {}));
+        return `Запустил генерацию ролика (${platforms.join(', ')}) — пришлю ссылку через ~5 минут, рендер идёт.`;
       }
       default: return `Неизвестный инструмент: ${name}`;
     }
