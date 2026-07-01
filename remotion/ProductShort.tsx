@@ -46,15 +46,26 @@ const Header: React.FC<{ accent: string }> = ({ accent }) => (
   </div>
 );
 
-// Постоянный футер — контакты + слоган
+// Кружок-иконка (как в шаблоне)
+const IconCircle: React.FC<{ accent: string; children: React.ReactNode }> = ({ accent, children }) => (
+  <div style={{ width: 62, height: 62, borderRadius: '50%', background: '#11151d', border: `2px solid ${accent}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, boxShadow: `0 6px 22px ${accent}44`, flexShrink: 0 }}>{children}</div>
+);
+
+// Постоянный футер — контакты в кружках + слоган (стиль твоего шаблона)
 const Footer: React.FC<{ accent: string; channel: string }> = ({ accent, channel }) => (
-  <div style={{ position: 'absolute', left: 56, right: 56, bottom: 46, zIndex: 6 }}>
-    <div style={{ height: 2, marginBottom: 16, background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: FONT, fontWeight: 700, fontSize: 30 }}>
-      <span style={{ color: '#fff' }}>📞 +7 938 515-24-29</span>
-      <span style={{ color: accent }}>✈ {channel}</span>
+  <div style={{ position: 'absolute', left: 56, right: 56, bottom: 44, zIndex: 6 }}>
+    <div style={{ height: 2, marginBottom: 20, background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: FONT }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <IconCircle accent={accent}>📞</IconCircle>
+        <div><div style={{ fontSize: 18, color: '#8a939c' }}>Свяжитесь:</div><div style={{ fontSize: 30, fontWeight: 700, color: '#fff' }}>+7 938 515-24-29</div></div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <IconCircle accent={accent}>✈️</IconCircle>
+        <div><div style={{ fontSize: 18, color: '#8a939c' }}>Telegram:</div><div style={{ fontSize: 30, fontWeight: 700, color: accent }}>{channel}</div></div>
+      </div>
     </div>
-    <div style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 400, fontSize: 22, color: '#8a939c', marginTop: 12, fontStyle: 'italic' }}>Ваш надёжный партнёр в мире автомобилей</div>
+    <div style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 400, fontSize: 22, color: '#8a939c', marginTop: 16, fontStyle: 'italic' }}>Ваш надёжный партнёр в мире автомобилей</div>
   </div>
 );
 
@@ -95,14 +106,14 @@ const PartScene: React.FC<{ item: Item; accent: string }> = ({ item, accent }) =
         <Img src={item.photo} style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', transform: `scale(${zoom})` }} />
       </div>
 
-      {/* модель + имя + цена */}
-      <div style={{ position: 'absolute', left: 70, right: 70, top: 935, textAlign: 'center' }}>
+      {/* модель + имя + цена — в матовой стеклянной панели (как в шаблоне) */}
+      <div style={{ position: 'absolute', left: 60, right: 60, top: 928, textAlign: 'center', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 28, padding: '30px 36px', transform: `translateY(${interpolate(s, [0, 1], [30, 0])}px)`, opacity: s }}>
         {item.fits ? (
-          <div style={{ display: 'inline-block', opacity: chip, transform: `translateY(${interpolate(chip, [0, 1], [16, 0])}px)`, fontFamily: FONT, fontWeight: 700, fontSize: 32, color: accent, background: '#11151d', border: `1.5px solid ${accent}`, borderRadius: 14, padding: '10px 26px', marginBottom: 16, letterSpacing: 0.5 }}>{item.fits}</div>
+          <div style={{ display: 'inline-block', opacity: chip, transform: `translateY(${interpolate(chip, [0, 1], [16, 0])}px)`, fontFamily: FONT, fontWeight: 700, fontSize: 32, color: accent, background: '#0d1119', border: `1.5px solid ${accent}`, borderRadius: 14, padding: '10px 26px', marginBottom: 16, letterSpacing: 0.5 }}>{item.fits}</div>
         ) : null}
-        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 58, color: '#fff', lineHeight: 1.12, opacity: s, textShadow: '0 2px 14px rgba(0,0,0,.6)' }}>{item.name}</div>
+        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 58, color: '#fff', lineHeight: 1.12, textShadow: '0 2px 14px rgba(0,0,0,.6)' }}>{item.name}</div>
         {item.price ? (
-          <div style={{ display: 'inline-block', marginTop: 18, transform: `scale(${interpolate(price, [0, 1], [0.7, 1])})`, opacity: price, fontFamily: FONT, fontWeight: 700, fontSize: 56, color: theme.bg, background: `linear-gradient(135deg, ${accent}, ${theme.part?.accent2 || accent})`, padding: '14px 42px', borderRadius: 16, boxShadow: `0 10px 36px ${accent}66` }}>{item.price}</div>
+          <div style={{ display: 'inline-block', marginTop: 18, transform: `scale(${interpolate(price, [0, 1], [0.7, 1])})`, opacity: price, fontFamily: FONT, fontWeight: 700, fontSize: 56, color: theme.bg, background: `linear-gradient(135deg, #F5D77A, ${accent})`, padding: '14px 44px', borderRadius: 16, boxShadow: `0 10px 36px ${accent}66` }}>{item.price}</div>
         ) : null}
       </div>
     </AbsoluteFill>
