@@ -72,7 +72,9 @@ const ROOT = join(__dirname, '..');
 const ENTRY = join(ROOT, 'remotion', 'index.ts');
 
 function chromePath() {
-  return process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_PATH || undefined;
+  // Remotion сам качает chrome-headless-shell (нужный headless-режим).
+  // НЕ форсим системный Chrome/nix-chromium — у него убран старый headless (падает на Railway).
+  return undefined;
 }
 
 // Бандл Remotion-проекта кэшируем (дорого делать каждый раз)

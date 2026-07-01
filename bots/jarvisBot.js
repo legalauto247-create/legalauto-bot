@@ -275,6 +275,25 @@ export function setupJarvisBot(bot) {
     }
   });
 
+  // ── Голосовые сообщения: распознаём (Whisper) → мозг → ответ ──────────────
+  bot.on(['voice', 'audio'], async (ctx) => {
+    if (!await guard(ctx)) return;
+    try {
+      const fileId = ctx.message.voice?.file_id || ctx.message.audio?.file_id;
+      const link = await ctx.telegram.getFileLink(fileId);
+      const buf = Buffer.from(await (await fetch(link.href || link.toString())).arrayBuffer());
+      const { transcribe } = await import('../agents/tts.js');
+      const text = await transcribe(buf, 'voice.ogg');
+      await ctx.reply(`🎙 _«${text}»_`, { parse_mode: 'Markdown' }).catch(() => {});
+      const reply = await withThinking(ctx, () =>
+        jarvisThink(text, { telegram: ctx.telegram, chatId: ctx.chat.id }));
+      await ctx.reply(reply, { parse_mode: 'Markdown' }).catch(() => ctx.reply(reply));
+    } catch (e) {
+      console.error(`${TAG} voice error:`, e.message);
+      await ctx.reply(`❌ Не расслышал голосовое: ${e.message}`);
+    }
+  });
+
   console.log(`${TAG} Handlers registered.`);
 }
 
