@@ -23,11 +23,17 @@ const claude = process.env.CLAUDE_API_KEY ? new Anthropic({ apiKey: process.env.
 
 function loadUsed() { try { return JSON.parse(readFileSync(USED_FILE, 'utf8')); } catch { return {}; } }
 function saveUsed(u) { try { writeFileSync(USED_FILE, JSON.stringify(u, null, 1)); } catch {} }
+const LAST_MUSIC_FILE = join(ROOT, 'data', 'last_music.json');
 function pickMusic() {
   try {
     const files = readdirSync(MUSIC_DIR).filter(f => /\.(mp3|m4a|wav)$/i.test(f));
     if (!files.length) return null;
-    return join(MUSIC_DIR, files[Math.floor(Math.random() * files.length)]);
+    let last = ''; try { last = JSON.parse(readFileSync(LAST_MUSIC_FILE, 'utf8')).last || ''; } catch {}
+    // не берём тот же трек, что в прошлый раз (если есть выбор)
+    const pool = files.length > 1 ? files.filter(f => f !== last) : files;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    try { writeFileSync(LAST_MUSIC_FILE, JSON.stringify({ last: pick })); } catch {}
+    return join(MUSIC_DIR, pick);
   } catch { return null; }
 }
 
