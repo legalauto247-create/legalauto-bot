@@ -41,17 +41,57 @@ function pickMusic(genres = null) {
   } catch { return null; }
 }
 
+// CSV-парсер (поля в кавычках, запятые внутри, экранированные кавычки)
+function parseCSV(t) {
+  const rows = []; let f = [], cur = '', q = false;
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (q) { if (c === '"') { if (t[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else { if (c === '"') q = true; else if (c === ',') { f.push(cur); cur = ''; } else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; f.push(cur); rows.push(f); f = []; cur = ''; } else cur += c; }
+  }
+  if (cur || f.length) { f.push(cur); rows.push(f); }
+  return rows;
+}
+
+const SPREADSHEET_ID = process.env.SPREADSHEET_ID || '1oxJ1wdyjReC6fCarq0PsmO-T1TSW9FqqLeksQyKRZE8';
+
+// Читаем ВЕСЬ каталог напрямую из таблицы (gviz CSV) — все 1378 позиций и ВСЕ марки
+// (API ?action=catalog режет на 1000 строк и Geely/Li Auto не доходят).
+async function catalogFromSheet() {
+  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&headers=1`;
+  const r = await fetch(url, { redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0' } });
+  const t = await r.text();
+  if (!t.startsWith('"') && !t.includes(',')) throw new Error('gviz: не CSV');
+  const rows = parseCSV(t);
+  const head = rows[0].map(h => h.trim());
+  const ix = n => head.indexOf(n);
+  const [I_id, I_brand, I_model, I_name, I_oem, I_price, I_photo, I_cat, I_series, I_title] =
+    ['id', 'brand', 'model', 'name', 'oem', 'price', 'photo', 'category', 'series', 'display_car'].map(ix);
+  return rows.slice(1).filter(r => r.length >= head.length - 4).map(r => ({
+    id: r[I_id], brand: r[I_brand], model: r[I_model], series: r[I_series],
+    name: r[I_name], oem: r[I_oem], price: r[I_price], photo: r[I_photo],
+    category: r[I_cat], title: r[I_title],
+  }));
+}
+
 async function gasCatalog(limit = 40) {
+  // 1) прямое чтение таблицы (полный каталог, все марки)
+  try {
+    const all = await catalogFromSheet();
+    const withPhoto = all.filter(p => (p.photo || '').includes('yandexcloud'));
+    if (withPhoto.length) return withPhoto;
+  } catch (e) { console.error('[Content] catalogFromSheet:', e.message); }
+
+  // 2) запасной путь — API каталога (капается на 1000, но лучше чем ничего)
   const GAS = process.env.APPS_SCRIPT_API_URL;
   let d = null;
   for (let i = 0; i < 3 && !d; i++) {
     try {
       const r = await fetch(`${GAS}?action=catalog&limit=${limit}`, { redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0 LegalAutoBot/1.0' } });
-      const t = await r.text();
-      d = JSON.parse(t);
+      d = JSON.parse(await r.text());
     } catch { await new Promise(res => setTimeout(res, 2000)); }
   }
-  if (!d) throw new Error('GAS каталог недоступен (вернул не JSON)');
+  if (!d) throw new Error('Каталог недоступен');
   return (d.products || d.parts || []).filter(p => (p.photo || p.photo_cover || '').includes('yandexcloud'));
 }
 
