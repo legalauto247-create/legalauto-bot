@@ -36,7 +36,7 @@ import { generateImage } from './imageGenAgent.js';
 import { getAutoAdsStatus, pollPublicChannels } from './autoAdsAgent.js';
 import { prepareAutoPost, publishToChannel } from './postAgent.js';
 import { learnFact, buildSystemPrompt, addConversation } from './memoryAgent.js';
-import { makeProductShort, makeInfoShort } from './contentAgent.js';
+import { makeProductShort, makeInfoShort, makeCinematicShort } from './contentAgent.js';
 
 const claude = process.env.CLAUDE_API_KEY ? new Anthropic({ apiKey: process.env.CLAUDE_API_KEY }) : null;
 const gemini = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
@@ -50,6 +50,7 @@ const TOOLS = [
   { name: 'post_part', description: 'Опубликовать одну запчасть в канал запчастей сейчас.', input_schema: { type: 'object', properties: {} } },
   { name: 'ask_gemini', description: 'Спросить Gemini (длинный контекст, второе мнение, анализ больших данных).', input_schema: { type: 'object', properties: { prompt: { type: 'string' } }, required: ['prompt'] } },
   { name: 'remember', description: 'Запомнить НАВСЕГДА: предпочтение Эдо, его правку по стилю, решение или важный факт бизнеса. Вызывай ПРОАКТИВНО, без напоминаний — как только Эдо что-то поправил/попросил делать иначе/сообщил новый факт.', input_schema: { type: 'object', properties: { fact: { type: 'string' } }, required: ['fact'] } },
+  { name: 'make_cinematic', description: 'ВЫСШИЙ УРОВЕНЬ. Сделать премиум КИНО-ролик на любую тему (документы, пригон авто, услуги, советы): каждая сцена — кинематографичная AI-картинка (gpt-image) + брендовый оверлей LegalAuto. Выглядит как дорогая реклама. Используй ЭТОТ инструмент, когда Эдо хочет качество/«высший уровень»/красивый ролик, а тема НЕ про конкретные запчасти из каталога. direction: docs/auto/parts.', input_schema: { type: 'object', properties: { topic: { type: 'string', description: 'Тема ролика словами Эдо.' }, direction: { type: 'string', enum: ['docs', 'auto', 'parts'] }, platforms: { type: 'array', items: { type: 'string', enum: ['youtube', 'telegram'] } }, group_link: { type: 'string' } }, required: ['topic'] } },
   { name: 'make_info_short', description: 'Сделать и выложить ИНФО-ролик (Short) на ЛЮБУЮ тему в фирстиле LegalAuto по брендбуку: документы (СБКТС/ЭПТС/утиль/таможня), пригон авто, полезные советы — НЕ из каталога запчастей. Сам пишет сценарий (хук + 4-5 пунктов + CTA), берёт музыку по направлению, добавляет ссылку на группу. Используй ЭТОТ инструмент для тем про документы/оформление/пригон/советы, а make_short — только для роликов про конкретные запчасти из каталога.', input_schema: { type: 'object', properties: { topic: { type: 'string', description: 'Тема ролика словами Эдо, напр. "как оформить СБКТС и ЭПТС", "растаможка авто из Китая".' }, direction: { type: 'string', enum: ['docs', 'auto', 'parts'], description: 'docs — документы (@LegalAuto24, бирюза); auto — пригон (@LegalAutoStore, золото); parts — запчасти (@LegalAutoParts24, оранж).' }, platforms: { type: 'array', items: { type: 'string', enum: ['youtube', 'telegram'] } }, group_link: { type: 'string', description: 'Ссылка на группу/канал, если Эдо дал конкретную (напр. t.me/LegalAuto24).' } }, required: ['topic'] } },
   { name: 'make_short', description: 'Сделать и выложить вирусный Short про запчасти (реальные запчасти из каталога + музыка + субтитры) на YouTube и/или Telegram. ВАЖНО: если Эдо просит конкретную тему (кузовные, оптика/фары, двигатель, подвеска, тормоза, электрика, салон, трансмиссия) — ОБЯЗАТЕЛЬНО передай её в theme, иначе ролик будет про случайные запчасти. Запчасти перемешиваются и не повторяются от ролика к ролику.', input_schema: { type: 'object', properties: { platforms: { type: 'array', items: { type: 'string', enum: ['youtube', 'telegram'] } }, theme: { type: 'string', description: 'Тема/категория запчастей из запроса Эдо, напр. "кузовные", "оптика", "двигатель". Пусто — любые.' } } } },
 ];
@@ -112,6 +113,19 @@ async function runTool(name, input, ctx) {
         }).catch((e) => ctx?.telegram?.sendMessage(ctx.chatId, '❌ Ошибка генерации: ' + e.message).catch(() => {}));
         return `Запустил генерацию ролика${theme ? ` по теме «${theme}»` : ''} (${platforms.join(', ')}) — пришлю ссылку через ~5 минут, рендер идёт.`;
       }
+      case 'make_cinematic': {
+        const platforms = input.platforms?.length ? input.platforms : ['youtube'];
+        const topic = String(input.topic || '').trim();
+        const direction = ['docs', 'auto', 'parts'].includes(input.direction) ? input.direction : 'auto';
+        const groupUrl = input.group_link ? String(input.group_link).replace(/^https?:\/\//, '') : undefined;
+        makeCinematicShort({ topic, direction, platforms, groupUrl }).then((r) => {
+          const txt = r.ok
+            ? `✅ Кино-ролик готов! (${direction}, ${r.scenes} сцен)\n${r.ytUrl || ''}${r.tgOk ? '\n+ выложен в Telegram' : ''}\nТема: ${topic}`
+            : `❌ Не вышло: ${r.error}`;
+          ctx?.telegram?.sendMessage(ctx.chatId, txt).catch(() => {});
+        }).catch((e) => ctx?.telegram?.sendMessage(ctx.chatId, '❌ Ошибка генерации: ' + e.message).catch(() => {}));
+        return `Запустил КИНО-ролик высшего уровня по теме «${topic}» (${direction}) — рендер + AI-кадры идут, пришлю ссылку через ~6-8 минут.`;
+      }
       case 'make_info_short': {
         const platforms = input.platforms?.length ? input.platforms : ['youtube'];
         const topic = String(input.topic || '').trim();
@@ -141,9 +155,11 @@ const PERSONA =
 Факт 2026: льготный утильсбор физлица 3400/5200 ₽ — ТОЛЬКО при мощности ≤160 л.с. и 1 авто/год; свыше 160 л.с. физлицо платит полный тариф (как юрлицо). Не вводи в заблуждение.
 
 ВИДЕО-ЗАВОД — выбирай правильный инструмент по теме:
-• Ролик про конкретные ЗАПЧАСТИ из каталога (кузовные, оптика, двигатель...) → make_short (theme=категория).
-• Ролик/инфо-материал про ДОКУМЕНТЫ, оформление, СБКТС/ЭПТС/утиль/таможню, ПРИГОН авто, полезные советы → make_info_short (direction: docs/auto/parts, укажи topic; если Эдо дал ссылку на группу — передай group_link).
-Всегда добавляй ссылку на нужную группу/канал (инструмент делает это сам по направлению, но если Эдо назвал конкретную ссылку — передай её).
+• Ролик про конкретные ЗАПЧАСТИ из каталога (кузовные, оптика, двигатель...) → make_short (theme=категория; тут реальные фото товара).
+• Любой ролик про ДОКУМЕНТЫ/оформление/СБКТС/ЭПТС/утиль/таможню/ПРИГОН/услуги/советы → по умолчанию make_cinematic (ВЫСШИЙ УРОВЕНЬ: кино-AI-кадры + брендовый оверлей, выглядит как дорогая реклама). Указывай direction (docs/auto/parts) и topic.
+• make_info_short — только если Эдо просит именно простой/быстрый инфо-ролик без AI-картинок.
+Эдо требует «высший уровень» — поэтому по инфо/пригон-темам всегда бери make_cinematic, кроме явной просьбы о простом.
+Всегда передавай group_link, если Эдо назвал конкретную ссылку на группу/канал.
 
 ОБУЧЕНИЕ И ПАМЯТЬ: ты учишься на ходу. Как только Эдо поправил стиль, сказал предпочтение, дал новый факт о бизнесе или ссылку — СРАЗУ вызывай remember, чтобы не переспрашивать в будущем. Лучше запомнить лишнее, чем забыть важное.`;
 

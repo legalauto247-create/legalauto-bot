@@ -12,7 +12,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import Anthropic from '@anthropic-ai/sdk';
-import { renderProduct, renderInfo } from './videoAgent.js';
+import { renderProduct, renderInfo, renderCinematic } from './videoAgent.js';
 import { uploadShort } from './youtubeUpload.js';
 import { HEAVY } from './models.js';
 
@@ -216,6 +216,116 @@ points: РОВНО 4-5 штук, по порядку/логике. Без markdo
         const fd = new FormData();
         fd.append('chat_id', String(ch)); fd.append('caption', `${s.title || topic}\n\n${gurl}`); fd.append('supports_streaming', 'true');
         fd.append('video', new Blob([readFileSync(path)], { type: 'video/mp4' }), 'info.mp4');
+        const r = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, { method: 'POST', body: fd });
+        result.tgOk = (await r.json()).ok;
+      } catch (e) { result.tgError = e.message; }
+    }
+  }
+
+  cleanup();
+  return result;
+}
+
+// ── Кино-ролик высшего уровня: AI-кадры (gpt-image) + брендовый оверлей ──────
+const OPENAI_KEY = () => process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_BACKUP;
+
+// Кино-стиль под направление (подсветка в цвет бренда, без текста/лого)
+const CINE_STYLE = {
+  docs:  'cinematic, dark premium, teal and blue rim lighting, clean corporate automotive mood, documents and paperwork context',
+  auto:  'cinematic, dark premium showroom, warm gold rim lighting, glossy reflective floor, luxury car advertising mood',
+  parts: 'cinematic, dark garage, orange rim lighting, mechanical detail macro mood, premium auto parts',
+};
+
+async function genCineImage(prompt, direction = 'auto') {
+  const key = OPENAI_KEY();
+  if (!key) throw new Error('OPENAI_API_KEY не задан');
+  const model = process.env.IMAGE_MODEL || 'gpt-image-2';
+  const full = `${prompt}. ${CINE_STYLE[direction] || CINE_STYLE.auto}. Ultra-detailed, moody advertising photography, vertical 9:16, no text, no logo, no watermark, no letters.`;
+  const r = await fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, prompt: full, n: 1, size: '1024x1536' }),
+  });
+  if (!r.ok) throw new Error('gpt-image: ' + (await r.text()).slice(0, 160));
+  const d = await r.json();
+  const b64 = d.data?.[0]?.b64_json;
+  if (b64) return Buffer.from(b64, 'base64');
+  const url = d.data?.[0]?.url;
+  if (url) { const im = await fetch(url); return Buffer.from(await im.arrayBuffer()); }
+  throw new Error('gpt-image: пустой ответ');
+}
+
+/**
+ * Кино-ролик высшего уровня на любую тему (документы/пригон/советы).
+ * Каждая сцена — кинематографичная AI-картинка + премиум брендовый оверлей.
+ * makeCinematicShort({ topic, direction, platforms, groupUrl }) → { ok, ytUrl, tgOk, title, error }
+ */
+export async function makeCinematicShort({ topic, direction = 'auto', platforms = ['youtube'], channel, groupUrl } = {}) {
+  if (!claude) return { ok: false, error: 'CLAUDE_API_KEY не задан' };
+  if (!OPENAI_KEY()) return { ok: false, error: 'OPENAI_API_KEY не задан (нужен для кино-кадров)' };
+  if (!topic) return { ok: false, error: 'Не задана тема ролика' };
+  const dir = DIRECTIONS[direction] || DIRECTIONS.auto;
+  const music = pickMusic(dir.genres);
+  if (!music) return { ok: false, error: 'Нет музыки в assets/music/' };
+  const ch = channel || dir.channel;
+  const gurl = groupUrl || dir.groupUrl;
+
+  // 1) сценарий: hook + 3-4 сцены (заголовок/текст/kicker + промпт кино-картинки) + CTA
+  const m = await claude.messages.create({ model: HEAVY, max_tokens: 1100, messages: [{ role: 'user', content:
+`Ты — креативный директор премиум-роликов LegalAuto (${dir.theme}).
+Сделай сценарий вертикального кино-Shorts по теме: "${topic}".
+Тон брендбука: на «вы», уверенно, по фактам, без «золотых гор».
+ФАКТ РФ-2026: льготный утильсбор физлица (3400/5200 ₽) — ТОЛЬКО если ≤160 л.с. и 1 авто/год; свыше 160 л.с. — полный тариф.
+Для каждой сцены дай "imagePrompt" — КОРОТКОЕ описание кинематографичного КАДРА на английском (что в кадре: авто/деталь/сцена; БЕЗ текста и людей крупным планом), под премиум-рекламу.
+Верни ТОЛЬКО JSON:
+{"hook":"3-4 слова крупно","tagline":"подзаголовок до 5 слов","heroPrompt":"english cinematic hero shot description","scenes":[{"kicker":"метка до 12 симв (ШАГ 1 / ФАКТ / ВАЖНО)","title":"суть до 5 слов","text":"пояснение до 12 слов","imagePrompt":"english cinematic frame description"}],"cta":"призыв до 6 слов","title":"YouTube-заголовок до 80 симв, 1 эмодзи","description":"2 строки + 3 хэштега"}
+scenes: РОВНО 3-4. Только JSON, без markdown.` }] });
+  let s;
+  try { s = JSON.parse(m.content[0].text.trim().replace(/^```json?|```$/g, '')); }
+  catch { return { ok: false, error: 'Сценарий не собрался (не JSON)' }; }
+  const scenesRaw = Array.isArray(s.scenes) ? s.scenes.filter(x => x && x.title && x.imagePrompt).slice(0, 4) : [];
+  if (scenesRaw.length < 2) return { ok: false, error: 'Мало сцен в сценарии' };
+
+  // 2) генерим кино-кадры (герой + по сцене) параллельно
+  const heroPrompt = s.heroPrompt || `premium ${direction} automotive hero shot`;
+  const imgJobs = [genCineImage(heroPrompt, direction).then(b => ({ name: 'cine-hero.png', buffer: b })).catch(() => null)];
+  scenesRaw.forEach((sc, i) => imgJobs.push(genCineImage(sc.imagePrompt, direction).then(b => ({ name: `cine-${i}.png`, buffer: b })).catch(() => null)));
+  const imgs = await Promise.all(imgJobs);
+  const hero = imgs[0];
+  const scenes = [];
+  const images = [];
+  if (hero) images.push(hero);
+  scenesRaw.forEach((sc, i) => {
+    const im = imgs[i + 1];
+    if (!im) return;   // пропускаем сцену, если картинка не сгенерилась
+    images.push(im);
+    scenes.push({ image: im.name, kicker: sc.kicker || '', title: sc.title, text: sc.text || '' });
+  });
+  if (scenes.length < 2) return { ok: false, error: 'Кино-кадры не сгенерились (проверь OpenAI ключ/лимиты)' };
+
+  // 3) рендер
+  const { path, cleanup } = await renderCinematic({
+    musicPath: music, images,
+    brandLine: dir.brandLine, heroImage: hero ? 'cine-hero.png' : undefined,
+    hook: s.hook || topic, tagline: s.tagline || '',
+    scenes, cta: s.cta || 'Оставьте заявку', channel: ch, groupUrl: gurl, accent: dir.accent,
+  });
+
+  const result = { ok: true, title: s.title || topic, direction, scenes: scenes.length };
+  const desc = `${s.description || topic}\n\n➡️ ${ch}  ·  ${gurl}`;
+
+  // 4) YouTube
+  if (platforms.includes('youtube')) {
+    try { const yt = await uploadShort({ path, title: s.title || topic, description: desc, tags: ['shorts', 'авто', 'LegalAuto'] }); result.ytUrl = yt.url; }
+    catch (e) { result.ytError = e.message; }
+  }
+  // 5) Telegram
+  if (platforms.includes('telegram')) {
+    const token = process.env.CHANNEL_BOT_TOKEN || process.env.ADMIN_BOT_TOKEN;
+    if (token) {
+      try {
+        const fd = new FormData();
+        fd.append('chat_id', String(ch)); fd.append('caption', `${s.title || topic}\n\n${gurl}`); fd.append('supports_streaming', 'true');
+        fd.append('video', new Blob([readFileSync(path)], { type: 'video/mp4' }), 'cine.mp4');
         const r = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, { method: 'POST', body: fd });
         result.tgOk = (await r.json()).ok;
       } catch (e) { result.tgError = e.message; }

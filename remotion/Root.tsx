@@ -4,6 +4,7 @@ import { CarReel, reelDuration } from './CarReel';
 import { ViralShort, viralDuration, ViralProps } from './ViralShort';
 import { ProductShort, productDuration, ProductProps } from './ProductShort';
 import { InfoShort, infoDuration, InfoProps } from './InfoShort';
+import { CinematicShort, cineDuration, CineProps } from './CinematicShort';
 import { FPS, WIDTH, HEIGHT, ReelProps } from './theme';
 
 const defaultProps: ReelProps = {
@@ -73,6 +74,19 @@ export const RemotionRoot: React.FC = () => {
       calculateMetadata={({ props }) => {
         const p = props as unknown as InfoProps;
         return { durationInFrames: infoDuration((p.points || []).slice(0, 6).length || 1) };
+      }}
+    />
+    <Composition
+      id="CinematicShort"
+      component={CinematicShort as React.FC<Record<string, unknown>>}
+      durationInFrames={cineDuration(4)}
+      fps={FPS}
+      width={WIDTH}
+      height={HEIGHT}
+      defaultProps={{ brandLine: 'LEGAL AUTO • ПРИГОН', hook: 'Авто под ключ', tagline: 'из Китая и Кореи', scenes: [], cta: 'Подберём ваше авто', channel: '@LegalAutoStore', groupUrl: 't.me/LegalAutoStore', accent: '#D4AF37' } as unknown as Record<string, unknown>}
+      calculateMetadata={({ props }) => {
+        const p = props as unknown as CineProps;
+        return { durationInFrames: cineDuration((p.scenes || []).slice(0, 6).length || 1) };
       }}
     />
     </>
