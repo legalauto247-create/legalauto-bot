@@ -3,6 +3,7 @@ import { Composition } from 'remotion';
 import { CarReel, reelDuration } from './CarReel';
 import { ViralShort, viralDuration, ViralProps } from './ViralShort';
 import { ProductShort, productDuration, ProductProps } from './ProductShort';
+import { InfoShort, infoDuration, InfoProps } from './InfoShort';
 import { FPS, WIDTH, HEIGHT, ReelProps } from './theme';
 
 const defaultProps: ReelProps = {
@@ -59,6 +60,19 @@ export const RemotionRoot: React.FC = () => {
       calculateMetadata={({ props }) => {
         const p = props as unknown as ProductProps;
         return { durationInFrames: productDuration((p.items || []).slice(0, 6).length || 1) };
+      }}
+    />
+    <Composition
+      id="InfoShort"
+      component={InfoShort as React.FC<Record<string, unknown>>}
+      durationInFrames={infoDuration(4)}
+      fps={FPS}
+      width={WIDTH}
+      height={HEIGHT}
+      defaultProps={{ brandLine: 'LEGAL AUTO • ДОКУМЕНТЫ', hook: 'СБКТС и ЭПТС', tagline: 'оформляем под ключ', points: [], cta: 'Оформим за вас', channel: '@LegalAuto24', groupUrl: 't.me/LegalAuto24', accent: '#1c7fd6' } as unknown as Record<string, unknown>}
+      calculateMetadata={({ props }) => {
+        const p = props as unknown as InfoProps;
+        return { durationInFrames: infoDuration((p.points || []).slice(0, 6).length || 1) };
       }}
     />
     </>

@@ -12,7 +12,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import Anthropic from '@anthropic-ai/sdk';
-import { renderProduct } from './videoAgent.js';
+import { renderProduct, renderInfo } from './videoAgent.js';
 import { uploadShort } from './youtubeUpload.js';
 import { HEAVY } from './models.js';
 
@@ -24,12 +24,16 @@ const claude = process.env.CLAUDE_API_KEY ? new Anthropic({ apiKey: process.env.
 function loadUsed() { try { return JSON.parse(readFileSync(USED_FILE, 'utf8')); } catch { return {}; } }
 function saveUsed(u) { try { writeFileSync(USED_FILE, JSON.stringify(u, null, 1)); } catch {} }
 const LAST_MUSIC_FILE = join(ROOT, 'data', 'last_music.json');
-function pickMusic() {
+// genres — предпочитаемые жанры по префиксу имени файла (phonk/sport/electronic/hiphop/rock)
+function pickMusic(genres = null) {
   try {
-    const files = readdirSync(MUSIC_DIR).filter(f => /\.(mp3|m4a|wav)$/i.test(f));
+    let files = readdirSync(MUSIC_DIR).filter(f => /\.(mp3|m4a|wav)$/i.test(f));
     if (!files.length) return null;
+    if (genres && genres.length) {
+      const g = files.filter(f => genres.some(pref => f.toLowerCase().startsWith(pref)));
+      if (g.length) files = g;   // если по жанру есть — берём из них, иначе из всех
+    }
     let last = ''; try { last = JSON.parse(readFileSync(LAST_MUSIC_FILE, 'utf8')).last || ''; } catch {}
-    // не берём тот же трек, что в прошлый раз (если есть выбор)
     const pool = files.length > 1 ? files.filter(f => f !== last) : files;
     const pick = pool[Math.floor(Math.random() * pool.length)];
     try { writeFileSync(LAST_MUSIC_FILE, JSON.stringify({ last: pick })); } catch {}
@@ -149,6 +153,75 @@ JSON: {"title":"до 80 симв, 1 эмодзи","description":"2 строки 
     used[key] = Array.from(new Set([...(used[key] || []), ...platforms]));
   }
   saveUsed(used);
+  cleanup();
+  return result;
+}
+
+// ── Инфо-ролик по брендбуку (документы / пригон / советы) ────────────────────
+const DIRECTIONS = {
+  docs:  { accent: '#1c7fd6', brandLine: 'LEGAL AUTO • ДОКУМЕНТЫ', channel: '@LegalAuto24',        groupUrl: 't.me/LegalAuto24',        genres: ['electronic', 'sport'],           theme: 'оформление документов на авто в РФ (СБКТС, ЭПТС, утильсбор, таможенное оформление)' },
+  auto:  { accent: '#D4AF37', brandLine: 'LEGAL AUTO • ПРИГОН',    channel: '@LegalAutoStore',      groupUrl: 't.me/LegalAutoStore',      genres: ['sport', 'rock', 'electronic'],   theme: 'пригон и подбор авто под ключ из Китая/Кореи/Европы' },
+  parts: { accent: '#FF6B00', brandLine: 'LEGAL AUTO • ЗАПЧАСТИ',  channel: '@LegalAutoParts24',    groupUrl: 't.me/LegalAutoParts24',    genres: ['phonk', 'sport'],                theme: 'оригинальные автозапчасти из Европы' },
+};
+
+/**
+ * Инфо-ролик на ЛЮБУЮ тему в фирстиле LegalAuto (не из каталога).
+ * makeInfoShort({ topic, direction, platforms, channel, groupUrl }) → { ok, ytUrl, tgOk, title, error }
+ */
+export async function makeInfoShort({ topic, direction = 'docs', platforms = ['youtube'], channel, groupUrl } = {}) {
+  if (!claude) return { ok: false, error: 'CLAUDE_API_KEY не задан' };
+  if (!topic) return { ok: false, error: 'Не задана тема ролика' };
+  const dir = DIRECTIONS[direction] || DIRECTIONS.docs;
+  const music = pickMusic(dir.genres);
+  if (!music) return { ok: false, error: 'Нет музыки в assets/music/' };
+
+  const ch = channel || dir.channel;
+  const gurl = groupUrl || dir.groupUrl;
+
+  // 1) сценарий: хук + 4-5 шагов/пунктов + CTA (тон по брендбуку, на «вы», факты не выдумывать)
+  const m = await claude.messages.create({ model: HEAVY, max_tokens: 900, messages: [{ role: 'user', content:
+`Ты — сценарист вирусных вертикальных Shorts для LegalAuto (${dir.theme}).
+Сделай короткий информативный ролик по теме: "${topic}".
+Тон брендбука: на «вы», уверенно, по фактам, без «золотых гор» и воды. Каждый пункт — реально полезный.
+ВАЖНЫЙ ФАКТ РФ-2026: льготный утильсбор физлица (3400/5200 ₽) — ТОЛЬКО если мощность ≤160 л.с. и 1 авто/год; свыше 160 л.с. — полный тариф. Не вводи в заблуждение.
+Верни ТОЛЬКО JSON:
+{"hook":"3-4 слова крупно (интрига/выгода)","tagline":"подзаголовок до 5 слов","points":[{"icon":"1 эмодзи по смыслу","title":"суть пункта до 5 слов","text":"пояснение 1 фраза до 12 слов"}],"cta":"призыв до 6 слов","title":"заголовок YouTube до 80 симв, 1 эмодзи","description":"2 строки для YouTube-описания + 3 хэштега"}
+points: РОВНО 4-5 штук, по порядку/логике. Без markdown, только JSON.` }] });
+  let s;
+  try { s = JSON.parse(m.content[0].text.trim().replace(/^```json?|```$/g, '')); }
+  catch { return { ok: false, error: 'Не удалось собрать сценарий (не JSON)' }; }
+  const points = Array.isArray(s.points) ? s.points.filter(p => p && p.title).slice(0, 5) : [];
+  if (points.length < 3) return { ok: false, error: 'Мало пунктов в сценарии' };
+
+  // 2) рендер инфо-ролика
+  const { path, cleanup } = await renderInfo({
+    musicPath: music,
+    brandLine: dir.brandLine, hook: s.hook || topic, tagline: s.tagline || '',
+    points, cta: s.cta || 'Оформим за вас', channel: ch, groupUrl: gurl, accent: dir.accent,
+  });
+
+  const result = { ok: true, title: s.title || topic, direction };
+  const desc = `${s.description || topic}\n\n➡️ ${ch}  ·  ${gurl}`;
+
+  // 3) YouTube
+  if (platforms.includes('youtube')) {
+    try { const yt = await uploadShort({ path, title: s.title || topic, description: desc, tags: ['shorts', 'авто', 'документы', 'LegalAuto'] }); result.ytUrl = yt.url; }
+    catch (e) { result.ytError = e.message; }
+  }
+  // 4) Telegram
+  if (platforms.includes('telegram')) {
+    const token = process.env.CHANNEL_BOT_TOKEN || process.env.ADMIN_BOT_TOKEN;
+    if (token) {
+      try {
+        const fd = new FormData();
+        fd.append('chat_id', String(ch)); fd.append('caption', `${s.title || topic}\n\n${gurl}`); fd.append('supports_streaming', 'true');
+        fd.append('video', new Blob([readFileSync(path)], { type: 'video/mp4' }), 'info.mp4');
+        const r = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, { method: 'POST', body: fd });
+        result.tgOk = (await r.json()).ok;
+      } catch (e) { result.tgError = e.message; }
+    }
+  }
+
   cleanup();
   return result;
 }
