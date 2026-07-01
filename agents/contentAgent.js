@@ -183,10 +183,24 @@ export async function makeProductShort({ platforms = ['youtube'], theme = '', le
     fits: [p.brand, (p.model || p.series || '').replace(/\|/g, '/')].filter(Boolean).join(' ').trim(),
   }));
 
+  // марка(и) и происхождение — из РЕАЛЬНЫХ деталей ролика (не хардкод)
+  const brands = [...new Set(parts.map(p => String(p.brand || '').trim()).filter(Boolean))];
+  const originOf = (b) => {
+    const x = b.toLowerCase();
+    if (/geely|li ?auto|лиауто|zeekr|chery|чери|haval|changan|exeed|omoda|jetour|jac|dongfeng|байк|great wall/.test(x)) return 'из Китая';
+    if (/bmw|audi|mercedes|мерс|volkswagen|porsche|skoda|volvo|peugeot|renault|opel|mini/.test(x)) return 'из Европы';
+    if (/toyota|lexus|honda|nissan|mazda|mitsubishi|subaru|infiniti/.test(x)) return 'из Японии';
+    return '';
+  };
+  const origins = [...new Set(brands.map(originOf).filter(Boolean))];
+  const brandLabel = brands.length === 1 ? brands[0] : (brands.slice(0, 2).join(' и ') || 'авто');
+  const originLabel = origins.length === 1 ? origins[0] : '';   // разные страны — не заявляем одну
+  const brandTag = brands.length === 1 ? brands[0].toLowerCase().replace(/[^a-zа-я0-9]/gi, '') : 'авто';
+
   // 2) хук + заголовок (на «вы», без «золотых гор» — по брендбуку)
   const m = await claude.messages.create({ model: HEAVY, max_tokens: 350, messages: [{ role: 'user', content:
-`Короткий вирусный хук и заголовок для Shorts про б/у запчасти BMW из Европы (LegalAuto Parts). Тон по брендбуку: на «вы», прямо и по фактам, БЕЗ обещаний «золотых гор» и слова «копейки».
-JSON: {"title":"до 80 симв, 1 эмодзи","description":"2 строки + #shorts #bmw #запчасти","hook":"3-4 слова крупно (интрига/выгода)"}
+`Короткий вирусный хук и заголовок для Shorts про оригинальные б/у запчасти ${brandLabel}${originLabel ? ' ' + originLabel : ''} (LegalAuto Parts). Тон по брендбуку: на «вы», прямо и по фактам, БЕЗ обещаний «золотых гор» и слова «копейки». НЕ выдумывай страну происхождения — используй только "${originLabel || 'без указания страны'}".
+JSON: {"title":"до 80 симв, 1 эмодзи","description":"2 строки + 3 хэштега (#shorts #запчасти #${brandTag})","hook":"3-4 слова крупно (интрига/выгода)"}
 запчасти в ролике: ${parts.map(p => p.name).join(', ')}` }] });
   const s = JSON.parse(m.content[0].text.trim().replace(/^```json?|```$/g, ''));
 
