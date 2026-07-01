@@ -58,9 +58,25 @@ const Footer: React.FC<{ accent: string; channel: string }> = ({ accent, channel
   </div>
 );
 
-const Bg: React.FC<{ accent: string }> = ({ accent }) => (
-  <AbsoluteFill style={{ background: `radial-gradient(130% 70% at 50% 0%, ${accent}26 -20%, #14110a 35%, ${theme.bg} 100%)` }} />
-);
+// Профи-фон: брендовый gpt-image фон + карбон-патерн + световой свип + параллакс
+const Bg: React.FC<{ accent: string }> = ({ accent }) => {
+  const f = useCurrentFrame();
+  const { durationInFrames } = useVideoConfig();
+  const zoom = interpolate(f, [0, durationInFrames], [1.06, 1.18]);
+  const drift = interpolate(f, [0, durationInFrames], [-20, 20]);
+  const sweep = ((f * 1.6) % 160) - 30;   // повторяющийся световой свип
+  return (
+    <AbsoluteFill>
+      <Img src={staticFile('bg-parts.png')} style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${zoom}) translateX(${drift}px)` }} />
+      {/* карбон-патерн брендбука */}
+      <AbsoluteFill style={{ opacity: 0.07, backgroundImage: `repeating-linear-gradient(45deg, ${accent} 0 2px, transparent 2px 28px)` }} />
+      {/* световой свип */}
+      <AbsoluteFill style={{ background: `linear-gradient(115deg, transparent ${sweep - 18}%, ${accent}26 ${sweep}%, transparent ${sweep + 18}%)`, mixBlendMode: 'screen' }} />
+      {/* скрим для читаемости */}
+      <AbsoluteFill style={{ background: 'linear-gradient(to bottom, rgba(10,9,6,0.55) 0%, rgba(10,9,6,0.15) 38%, rgba(10,9,6,0.8) 100%)' }} />
+    </AbsoluteFill>
+  );
+};
 
 // Карточка запчасти — как твой шаблон: фото в рамке, плашка модели, имя, бейдж цены
 const PartScene: React.FC<{ item: Item; accent: string }> = ({ item, accent }) => {
