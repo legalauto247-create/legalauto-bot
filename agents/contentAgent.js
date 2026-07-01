@@ -69,9 +69,24 @@ function themeKeywords(theme = '') {
     { on: ['трансмисс','кпп','коробк','сцеплен'], kw: ['кпп','коробк','сцеплен','привод','шрус','кардан','дифференциал'] },
   ];
   for (const g of groups) if (g.on.some(w => t.includes(w))) return g.kw;
-  // произвольная тема — ищем само слово (первые значимые части)
-  const w = t.trim().split(/\s+/).filter(x => x.length > 3);
-  return w.length ? w : null;
+  return null;   // не узнали категорию — не сужаем по категории (марка отфильтрует отдельно)
+}
+
+// Марка из запроса Эдо → канон (для фильтра по brand в каталоге)
+function brandFromTheme(theme = '') {
+  const t = String(theme).toLowerCase();
+  const brands = [
+    { kw: ['geely', 'джили', 'джилли'], label: 'Geely' },
+    { kw: ['bmw', 'бмв'], label: 'BMW' },
+    { kw: ['li auto', 'li-auto', 'liauto', 'лиауто', 'ли авто', 'li xiang', 'лисян'], label: 'Li Auto' },
+    { kw: ['mercedes', 'мерседес', 'мерс', 'benz', 'бенц'], label: 'Mercedes' },
+    { kw: ['audi', 'ауди'], label: 'Audi' },
+    { kw: ['toyota', 'тойота'], label: 'Toyota' },
+    { kw: ['zeekr', 'зикр', 'зиикр'], label: 'Zeekr' },
+    { kw: ['chery', 'чери', 'черри'], label: 'Chery' },
+  ];
+  for (const b of brands) if (b.kw.some(k => t.includes(k))) return b;
+  return null;
 }
 function shuffle(a) { const x = a.slice(); for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; }
 
@@ -85,13 +100,29 @@ export async function makeProductShort({ platforms = ['youtube'], theme = '', le
   const all = await gasCatalog(250);
 
   let pool = all;
+
+  // 1a) фильтр по МАРКЕ — если Эдо назвал марку, а её в каталоге нет, честно откажемся
+  const wantBrand = brandFromTheme(theme);
+  if (wantBrand) {
+    const brandParts = all.filter(p => {
+      const b = String(p.brand || '').toLowerCase();
+      return wantBrand.kw.some(k => b.includes(k)) || b.includes(wantBrand.label.toLowerCase());
+    });
+    if (!brandParts.length) {
+      const have = [...new Set(all.map(p => String(p.brand || '').trim()).filter(Boolean))];
+      return { ok: false, error: `В каталоге нет запчастей ${wantBrand.label}. Сейчас в наличии с фото только: ${have.join(', ') || '—'}. Могу сделать ролик по ним или добавь позиции ${wantBrand.label} в таблицу.` };
+    }
+    pool = brandParts;
+  }
+
+  // 1b) фильтр по КАТЕГОРИИ (в пределах марки, если она задана)
   const kws = themeKeywords(theme);
   if (kws) {
-    const matched = all.filter(p => {
+    const matched = pool.filter(p => {
       const hay = (String(p.category || '') + ' ' + String(p.name || '') + ' ' + String(p.title || '')).toLowerCase();
       return kws.some(k => hay.includes(k));
     });
-    if (matched.length >= 3) pool = matched;   // если по теме мало — не сужаем
+    if (matched.length >= 3) pool = matched;   // если по категории мало — оставляем пул марки
   }
 
   let fresh = pool.filter(p => {
