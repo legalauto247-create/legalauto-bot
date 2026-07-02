@@ -13,7 +13,7 @@
  * Требует: chromium (PUPPETEER_EXECUTABLE_PATH) — есть в nixpacks.
  */
 
-import { mkdtempSync, rmSync, cpSync, existsSync, mkdirSync } from 'fs';
+import { mkdtempSync, rmSync, cpSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -130,6 +130,32 @@ export async function renderProduct({ voicePath, musicPath, ...props }) {
     const serveUrl = await bundle({ entryPoint: ENTRY, publicDir: PUBLIC_DIR });
     const inputProps = { voiceFile: voicePath ? 'voice.mp3' : undefined, musicFile: musicPath ? 'music.mp3' : undefined, ...props };
     const composition = await selectComposition({ serveUrl, id: 'ProductShort', inputProps, browserExecutable: exec });
+    await renderMedia({
+      composition, serveUrl, codec: 'h264', outputLocation: out, inputProps,
+      browserExecutable: exec, publicDir: PUBLIC_DIR, concurrency: 1,
+      chromiumOptions: { gl: 'swiftshader' }, x264Preset: 'veryfast', crf: 23,
+    });
+    return { path: out, dir, cleanup };
+  } catch (e) { cleanup(); throw e; }
+}
+
+// ── Cinematic Short: AI-кадры (кино-уровень) + брендовый оверлей ────────────
+// images: [{name, buffer}] — записываются в PUBLIC_DIR; scenes[].image/heroImage ссылаются по имени (или https-URL)
+export async function renderCinematic({ musicPath, images = [], ...props }) {
+  const dir = mkdtempSync(join(tmpdir(), 'cine-'));
+  const cleanup = () => { try { rmSync(dir, { recursive: true, force: true }); } catch {} };
+  const out = join(dir, 'cinematic.mp4');
+  try {
+    if (!existsSync(PUBLIC_DIR)) mkdirSync(PUBLIC_DIR, { recursive: true });
+    if (musicPath && existsSync(musicPath)) cpSync(musicPath, join(PUBLIC_DIR, 'music.mp3'));
+    for (const im of images) {
+      if (im?.name && im?.buffer) writeFileSync(join(PUBLIC_DIR, im.name), im.buffer);
+    }
+    const exec = chromePath();
+    await ensureBrowser(exec ? { browserExecutable: exec } : undefined).catch(() => {});
+    const serveUrl = await bundle({ entryPoint: ENTRY, publicDir: PUBLIC_DIR });
+    const inputProps = { musicFile: musicPath ? 'music.mp3' : undefined, ...props };
+    const composition = await selectComposition({ serveUrl, id: 'CinematicShort', inputProps, browserExecutable: exec });
     await renderMedia({
       composition, serveUrl, codec: 'h264', outputLocation: out, inputProps,
       browserExecutable: exec, publicDir: PUBLIC_DIR, concurrency: 1,
