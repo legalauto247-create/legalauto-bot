@@ -29,6 +29,7 @@ import { setupArbitrageMonitor } from './agents/arbitrageAgent.js';
 import { setupWatchdog } from './agents/watchdogAgent.js';
 import { initEdoBot, sendMorningBriefing } from './bots/edoBot.js';
 import { initJarvisBot } from './bots/jarvisBot.js';
+import { startVideoAutopilot } from './agents/videoAutopilot.js';
 import { execSync } from 'child_process';
 
 // ── Диагностика Chromium при старте ───────────────────────────────────────────
@@ -464,6 +465,9 @@ initJarvisBot()
     }
   })
   .catch(e => console.error('[JarvisBot] Init error:', e.message));
+
+// ── Видео-автопилот: 2 ролика в день (11:00 запчасти, 17:00 кино) МСК ──────
+startVideoAutopilot();
 
 // ── Graceful shutdown ──────────────────────────────────────────────────────
 function shutdown(signal) {
