@@ -14,6 +14,7 @@ import { fileURLToPath } from 'url';
 import Anthropic from '@anthropic-ai/sdk';
 import { renderProduct, renderInfo, renderCinematic } from './videoAgent.js';
 import { createTask, taskProcessing, taskDone, taskFailed, persistentPath } from '../services/stateService.js';
+import { reviewContent } from '../services/qualityGate.js';
 import { uploadShort } from './youtubeUpload.js';
 import { HEAVY } from './models.js';
 
@@ -217,6 +218,11 @@ JSON: {"title":"до 80 симв, 1 эмодзи","description":"2 строки 
 запчасти в ролике: ${parts.map(p => `${p.name}${p.condition ? ' (' + p.condition + ')' : ''}`).join(', ')}` }] });
   const s = JSON.parse(m.content[0].text.trim().replace(/^```json?|```$/g, ''));
 
+  // QUALITY GATE: сценарий против реальных данных каталога — брак не публикуем и не рендерим
+  const gateSrc = parts.map(p => `${p.brand} ${p.name} ${p.price}₽ ${p.condition || ''}`).join('; ');
+  const gate = await reviewContent({ title: s.title, description: s.description, texts: [s.hook, ...items.map(i => i.name)], direction: 'parts', sourceData: gateSrc });
+  if (!gate.pass) return { ok: false, error: `Quality Gate: ${gate.fails.join('; ')}` };
+
   // 3) рендер: музыка + по сцене на запчасть (фото + название + цена)
   const { path, cleanup } = await renderProduct({
     musicPath: music, items, hook: s.hook,
@@ -290,6 +296,12 @@ points: РОВНО 4-5 штук, по порядку/логике. Без markdo
   catch { return { ok: false, error: 'Не удалось собрать сценарий (не JSON)' }; }
   const points = Array.isArray(s.points) ? s.points.filter(p => p && p.title).slice(0, 5) : [];
   if (points.length < 3) return { ok: false, error: 'Мало пунктов в сценарии' };
+
+  // QUALITY GATE перед рендером
+  {
+    const gate = await reviewContent({ title: s.title || topic, description: s.description || '', texts: [s.hook, s.tagline, ...points.map(p => `${p.title}. ${p.text || ''}`), s.cta], direction, sourceData: null });
+    if (!gate.pass) return { ok: false, error: `Quality Gate: ${gate.fails.join('; ')}` };
+  }
 
   // 2) рендер инфо-ролика
   const { path, cleanup } = await renderInfo({
@@ -390,6 +402,12 @@ scenes: РОВНО 3-4. Только JSON, без markdown.` }] });
   catch { return { ok: false, error: 'Сценарий не собрался (не JSON)' }; }
   const scenesRaw = Array.isArray(s.scenes) ? s.scenes.filter(x => x && x.title && x.imagePrompt).slice(0, 4) : [];
   if (scenesRaw.length < 2) return { ok: false, error: 'Мало сцен в сценарии' };
+
+  // QUALITY GATE перед генерацией кадров (брак не тратит деньги на gpt-image)
+  {
+    const gate = await reviewContent({ title: s.title || topic, description: s.description || '', texts: [s.hook, s.tagline, ...scenesRaw.map(x => `${x.title}. ${x.text || ''}`), s.cta], direction, sourceData: null });
+    if (!gate.pass) return { ok: false, error: `Quality Gate: ${gate.fails.join('; ')}` };
+  }
 
   // 2) генерим кино-кадры (герой + по сцене) параллельно
   const heroPrompt = s.heroPrompt || `premium ${direction} automotive hero shot`;

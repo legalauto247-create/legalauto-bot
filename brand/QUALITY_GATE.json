@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "_comment": "Ворота качества ПЕРЕД публикацией. Хотя бы один провал → НЕ ПУБЛИКОВАТЬ (task failed + доклад Эдо). Проверки visual-элементов (logo, brand_color, cta-кнопка) гарантированы кодом Remotion-оверлея и не проверяются повторно.",
+  "deterministic": {
+    "forbidden_words": true,
+    "title_max_chars": 100,
+    "hook_max_words": 8,
+    "cta_required": true,
+    "group_link_required": true,
+    "raw_markdown_in_text": false,
+    "min_scenes": 2
+  },
+  "llm_review": {
+    "enabled": true,
+    "model": "FAST",
+    "checks": {
+      "grammar": true,
+      "generic_ai_phrases": true,
+      "hallucination_vs_source": true,
+      "tone_matches_brand": true,
+      "misleading_claims": true
+    },
+    "min_score": 80
+  },
+  "on_fail": {
+    "publish": false,
+    "mark_task": "failed",
+    "notify_edo": true,
+    "include_reasons": true
+  }
+}

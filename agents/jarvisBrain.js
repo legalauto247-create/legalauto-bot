@@ -48,6 +48,12 @@ function loadDesignMemory() {
       `Цвета: ${Object.entries(dt.colors || {}).map(([k, v]) => `${k}=${v}`).join(', ')}. ` +
       `Шрифт: ${dt.fonts?.title?.family}. Лого: ${dt.logo?.mark} (${dt.logo?.position_video}).`;
   }
+  const cg = readJson('CONTENT_GRAPH.json');
+  if (cg) {
+    rules += `\n## CONTENT_GRAPH v${cg.version} — цепочку выбираешь ТЫ по типу контента\n` +
+      Object.entries(cg).filter(([k]) => !k.startsWith('_') && !['version', 'ctas'].includes(k))
+        .map(([k, g]) => `${k}: ${g.direction} → ${g.video_template} → музыка ${(g.music_genre || []).join('/')} → CTA "${(cg.ctas || {})[g.cta] || g.cta}" → ${Object.values(g.publish || {}).join(' + ')}`).join('\n');
+  }
   const al = readJson('ASSET_LIBRARY.json');
   if (al) {
     const music = Object.entries(al.music || {}).filter(([k]) => !k.startsWith('_')).map(([g, m]) => `${g}(${(m.files || []).length})`).join(', ');
@@ -92,6 +98,7 @@ const TOOLS = [
   { name: 'scan_partner_cars', description: 'Просканировать канал партнёра и прислать свежие авто на одобрение.', input_schema: { type: 'object', properties: {} } },
   { name: 'post_part', description: 'Опубликовать одну запчасть в канал запчастей сейчас.', input_schema: { type: 'object', properties: {} } },
   { name: 'ask_gemini', description: 'Спросить Gemini (длинный контекст, второе мнение, анализ больших данных).', input_schema: { type: 'object', properties: { prompt: { type: 'string' } }, required: ['prompt'] } },
+  { name: 'save_template', description: 'Template Registry: сохранить НОВЫЙ шаблон контента в библиотеку templates/. ПОРЯДОК: сначала покажи Эдо черновик шаблона в чате и дождись его «да/сохраняй»; только после подтверждения вызывай с confirm=true. Категории: news/parts/shorts.', input_schema: { type: 'object', properties: { category: { type: 'string', enum: ['news', 'parts', 'shorts'] }, id: { type: 'string', description: 'уникальный id, напр. docs_short_002' }, template_json: { type: 'string', description: 'JSON шаблона строкой (id, direction, use_for, structure, metrics)' }, confirm: { type: 'boolean', description: 'true ТОЛЬКО после явного подтверждения Эдо в чате' } }, required: ['category', 'id', 'template_json', 'confirm'] } },
   { name: 'remember', description: 'Запомнить НАВСЕГДА: предпочтение Эдо, его правку по стилю, решение или важный факт бизнеса. Вызывай ПРОАКТИВНО, без напоминаний — как только Эдо что-то поправил/попросил делать иначе/сообщил новый факт.', input_schema: { type: 'object', properties: { fact: { type: 'string' } }, required: ['fact'] } },
   { name: 'make_cinematic', description: 'ВЫСШИЙ УРОВЕНЬ. Сделать премиум КИНО-ролик на любую тему (документы, пригон авто, услуги, советы): каждая сцена — кинематографичная AI-картинка (gpt-image) + брендовый оверлей LegalAuto. Выглядит как дорогая реклама. Используй ЭТОТ инструмент, когда Эдо хочет качество/«высший уровень»/красивый ролик, а тема НЕ про конкретные запчасти из каталога. direction: docs/auto/parts.', input_schema: { type: 'object', properties: { topic: { type: 'string', description: 'Тема ролика словами Эдо.' }, direction: { type: 'string', enum: ['docs', 'auto', 'parts'] }, platforms: { type: 'array', items: { type: 'string', enum: ['youtube', 'telegram'] } }, group_link: { type: 'string' } }, required: ['topic'] } },
   { name: 'make_info_short', description: 'Сделать и выложить ИНФО-ролик (Short) на ЛЮБУЮ тему в фирстиле LegalAuto по брендбуку: документы (СБКТС/ЭПТС/утиль/таможня), пригон авто, полезные советы — НЕ из каталога запчастей. Сам пишет сценарий (хук + 4-5 пунктов + CTA), берёт музыку по направлению, добавляет ссылку на группу. Используй ЭТОТ инструмент для тем про документы/оформление/пригон/советы, а make_short — только для роликов про конкретные запчасти из каталога.', input_schema: { type: 'object', properties: { topic: { type: 'string', description: 'Тема ролика словами Эдо, напр. "как оформить СБКТС и ЭПТС", "растаможка авто из Китая".' }, direction: { type: 'string', enum: ['docs', 'auto', 'parts'], description: 'docs — документы (@LegalAuto24, бирюза); auto — пригон (@LegalAutoStore, золото); parts — запчасти (@LegalAutoParts24, оранж).' }, platforms: { type: 'array', items: { type: 'string', enum: ['youtube', 'telegram'] } }, group_link: { type: 'string', description: 'Ссылка на группу/канал, если Эдо дал конкретную (напр. t.me/LegalAuto24).' } }, required: ['topic'] } },
@@ -142,6 +149,20 @@ async function runTool(name, input, ctx) {
         const m = gemini.getGenerativeModel({ model: 'gemini-2.0-flash' });
         const r = await m.generateContent(input.prompt);
         return r.response.text().slice(0, 1500);
+      }
+      case 'save_template': {
+        if (!input.confirm) return 'Нужно подтверждение Эдо. Покажи ему черновик шаблона и спроси «сохранить?». Вызови снова с confirm=true после его «да».';
+        try {
+          const t = JSON.parse(input.template_json);
+          if (!t.id || !t.use_for) return 'Шаблон должен содержать id и use_for.';
+          if (!t.metrics) t.metrics = { runs: 0, views: null, ctr: null, leads: null, last_used: null };
+          const { writeFileSync: wf, mkdirSync: mk } = await import('fs');
+          const dir = join(ROOT, 'templates', input.category);
+          mk(dir, { recursive: true });
+          wf(join(dir, `${input.id}.json`), JSON.stringify(t, null, 2));
+          stateEvent('template_saved', { note: `${input.category}/${input.id}` });
+          return `Шаблон ${input.id} сохранён в templates/${input.category}/. Появится в моей библиотеке после следующего деплоя (или сразу при локальном чтении).`;
+        } catch (e) { return 'Ошибка сохранения шаблона: ' + e.message; }
       }
       case 'remember': {
         learnFact(input.fact);
@@ -206,6 +227,8 @@ const PERSONA =
 • make_info_short — только если Эдо просит именно простой/быстрый инфо-ролик без AI-картинок.
 Эдо требует «высший уровень» — поэтому по инфо/пригон-темам всегда бери make_cinematic, кроме явной просьбы о простом.
 Всегда передавай group_link, если Эдо назвал конкретную ссылку на группу/канал.
+
+КОНТЕНТ-ЗАВОД — жёсткая цепочка производства: Тема → определи тип по CONTENT_GRAPH → шаблон из TEMPLATE LIBRARY → ассеты по ID из ASSET_LIBRARY → генерация → Quality Gate (проверка кода перед публикацией — брак НЕ публикуется автоматически) → публикация. НЕ выдумывай оформление на лету — всё из графа и шаблонов. Если подходящего шаблона нет — предложи Эдо новый (save_template с его подтверждения).
 
 ПРОАКТИВНОСТЬ: на вопросы «что происходит/как дела/статус/всё ли работает/что сегодня» — СНАЧАЛА вызови platform_state и отвечай его фактами (какие задачи идут, что провалилось, кто жив). Не отвечай о состоянии платформы по памяти.
 
