@@ -430,11 +430,56 @@ export async function publishToChannel(telegram, post) {
 
   let messageId = null;
 
+  // Эталонная карточка запчасти (ЛИСТ 3) — титульное фото поста.
+  // Файл шлём multipart'ом; при любом сбое — старое поведение. Выкл: PARTS_CARD=false.
+  async function sendCardWithCaption(caption) {
+    if (process.env.PARTS_CARD === 'false') return null;
+    const part = post.part || {};
+    const { renderPartsCard } = await import('./videoAgent.js');
+    const { readFileSync: rf } = await import('fs');
+    const models = (part.display_car || part.series || '').replace(/\|/g, ' / ');
+    const compat = String(part.compatibility || '').split(';').map(x => x.trim()).filter(Boolean).slice(0, 3);
+    const card = await renderPartsCard({
+      category: (part.category && part.category !== 'Прочее') ? part.category : '',
+      name: part.name || 'Запчасть',
+      models: models ? `${part.brand || ''} ${models}`.trim() : (part.brand || ''),
+      compatibility: compat,
+      oem: part.oem || '',
+      price: part.price ? Number(part.price).toLocaleString('ru-RU') + ' ₽' : 'Цена по запросу',
+      condition: part.condition || '',
+      photo: photos[0] || part.photo || '',
+    });
+    try {
+      const token = CHANNEL_BOT_TOKEN || process.env.ADMIN_BOT_TOKEN;
+      const fd = new FormData();
+      fd.append('chat_id', String(CHANNEL));
+      fd.append('caption', caption.slice(0, 1024));
+      fd.append('parse_mode', 'HTML');
+      fd.append('reply_markup', JSON.stringify(catalogBtn));
+      fd.append('photo', new Blob([rf(card.path)], { type: 'image/jpeg' }), 'part.jpg');
+      const r = await globalThis.fetch(`https://api.telegram.org/bot${token}/sendPhoto`, { method: 'POST', body: fd });
+      const d = await r.json();
+      card.cleanup();
+      if (!d.ok) throw new Error(d.description || 'sendPhoto card failed');
+      console.log('[PostAgent] ✅ Эталонная карточка (ЛИСТ 3) опубликована');
+      return d.result?.message_id || true;
+    } catch (e) { card.cleanup(); throw e; }
+  }
+
   try {
     // Отмечаем PROCESSING в таблице — следующий цикл не возьмёт этот item
     if (row || oem) await markProcessing(row, oem);
 
-    if (photos.length >= 2) {
+    // 1) пробуем эталонную карточку; сбой → обычный путь
+    try {
+      messageId = await sendCardWithCaption(post.text);
+      if (messageId && photos.length >= 2) {
+        // реальные фото детали — альбомом следом (без подписи)
+        await sendAlbum(photos.slice(0, 6), '').catch(() => {});
+      }
+    } catch (e) { console.warn('[PostAgent] карточка не вышла:', e.message, '— обычный пост'); messageId = null; }
+
+    if (!messageId && photos.length >= 2) {
       try {
         messageId = await sendAlbum(photos.slice(0, 10), post.text);
         // Кнопка каталога отдельным сообщением после альбома
@@ -444,14 +489,14 @@ export async function publishToChannel(telegram, post) {
         console.error('[PostAgent] sendMediaGroup failed, fallback to 1 photo:', e.message);
         messageId = await sendPhoto(photos[0], post.text);
       }
-    } else if (photos.length === 1) {
+    } else if (!messageId && photos.length === 1) {
       try {
         messageId = await sendPhoto(photos[0], post.text);
       } catch (e) {
         console.error('[PostAgent] sendPhoto failed, fallback to text:', e.message);
         messageId = await sendText(post.text);
       }
-    } else {
+    } else if (!messageId) {
       messageId = await sendText(post.text);
     }
 

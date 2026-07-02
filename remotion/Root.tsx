@@ -7,6 +7,7 @@ import { InfoShort, infoDuration, InfoProps } from './InfoShort';
 import { CinematicShort, cineDuration, CineProps } from './CinematicShort';
 import { NewsPost } from './NewsPost';
 import { StoreCard } from './StoreCard';
+import { PartsCard } from './PartsCard';
 import { StoreShorts, storeShortsDuration } from './StoreShorts';
 import { FPS, WIDTH, HEIGHT, ReelProps } from './theme';
 
@@ -118,6 +119,15 @@ export const RemotionRoot: React.FC = () => {
       width={WIDTH}
       height={HEIGHT}
       defaultProps={{ brand: 'BMW', model: 'X5 M50d', year: '2019', hook: 'Премиум который впечатляет', power: '3.0d / 400 л.с.', options: [], condition: '', trust: [], photos: [], channel: '@LegalAutoStore' } as unknown as Record<string, unknown>}
+    />
+    <Composition
+      id="PartsCard"
+      component={PartsCard as React.FC<Record<string, unknown>>}
+      durationInFrames={1}
+      fps={FPS}
+      width={1080}
+      height={1350}
+      defaultProps={{ category: 'ОПТИКА', name: 'Правая LED фара', models: 'BMW X5 G05 / X6 G06', compatibility: [], oem: '', price: '125 000 ₽', photo: '' } as unknown as Record<string, unknown>}
     />
     </>
   );

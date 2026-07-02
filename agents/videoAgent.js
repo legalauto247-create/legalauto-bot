@@ -200,6 +200,22 @@ export async function renderStoreCard(props) {
   } catch (e) { cleanup(); throw e; }
 }
 
+// ── Parts Card: эталонная карточка запчасти (ЛИСТ 3), 1080x1350 ─────────────
+export async function renderPartsCard(props) {
+  const { renderStill, selectComposition: sc } = await import('@remotion/renderer');
+  const dir = mkdtempSync(join(tmpdir(), 'pcard-'));
+  const cleanup = () => { try { rmSync(dir, { recursive: true, force: true }); } catch {} };
+  const out = join(dir, 'part.jpg');
+  try {
+    const exec = chromePath();
+    await ensureBrowser(exec ? { browserExecutable: exec } : undefined).catch(() => {});
+    const serveUrl = await bundle({ entryPoint: ENTRY, publicDir: PUBLIC_DIR });
+    const composition = await sc({ serveUrl, id: 'PartsCard', inputProps: props, browserExecutable: exec });
+    await renderStill({ composition, serveUrl, output: out, inputProps: props, imageFormat: 'jpeg', jpegQuality: 92, browserExecutable: exec, chromiumOptions: { gl: 'swiftshader' } });
+    return { path: out, dir, cleanup };
+  } catch (e) { cleanup(); throw e; }
+}
+
 // ── Store Shorts: 6 кадров / 30 сек по эталону ЛИСТ 6 ───────────────────────
 export async function renderStoreShorts({ musicPath, ...props }) {
   const dir = mkdtempSync(join(tmpdir(), 'sshorts-'));
