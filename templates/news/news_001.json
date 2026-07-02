@@ -1,0 +1,15 @@
+{
+  "id": "news_001",
+  "version": 1,
+  "direction": "docs",
+  "use_for": "новость для импортёров (@LegalAuto24)",
+  "structure": {
+    "hook_max_words": 7,
+    "text_max_words": 120,
+    "blocks": ["хук", "суть новости 2-3 предложения", "что это значит для импортёра", "CTA"],
+    "cta": "вопрос по вашей ситуации → @LegalAutoAssist_bot",
+    "visual": { "type": "ai_image", "style_direction": "docs", "logo": "overlay" }
+  },
+  "source_rule": "только реальные новости из проверенных источников, без выдумок",
+  "metrics": { "runs": 0, "views": null, "ctr": null, "leads": null, "last_used": null }
+}

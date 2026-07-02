@@ -1,0 +1,18 @@
+{
+  "id": "store_short_001",
+  "version": 1,
+  "direction": "auto",
+  "video_template": "cinematic_v1",
+  "use_for": "пригон авто под ключ — имиджевый short",
+  "structure": {
+    "intro": { "sec": 2, "hook_style": "выгода или интрига, ≤5 слов", "bg_asset": "bg_ai_cinematic" },
+    "scenes": [
+      { "kicker": "ШАГ 1", "focus": "подбор авто", "image_hint": "luxury car in showroom, golden light" },
+      { "kicker": "ШАГ 2", "focus": "проверка и выкуп", "image_hint": "inspection scene, professional garage" },
+      { "kicker": "ШАГ 3", "focus": "доставка и документы", "image_hint": "car carrier / port, cinematic" }
+    ],
+    "outro": { "cta_style": "конкретное действие", "channel": "@LegalAutoStore", "deep_link_source": "yt_store" }
+  },
+  "music_genre": ["sport", "rock"],
+  "metrics": { "runs": 0, "views": null, "ctr": null, "leads": null, "last_used": null }
+}

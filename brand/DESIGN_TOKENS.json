@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "_comment": "ЕДИНСТВЕННЫЙ источник дизайн-значений. Image/Video/Stories/Posts берут ВСЁ отсюда. Хардкод цветов/шрифтов в коде запрещён.",
+  "colors": {
+    "legal": "#1c7fd6",
+    "store": "#D4AF37",
+    "parts": "#FF6B00",
+    "background": "#0A0906",
+    "surface": "#11151d",
+    "text": "#FFFFFF",
+    "text_muted": "#A6A6A6",
+    "gold_light": "#F2E6B1",
+    "store_2": "#B9972E",
+    "parts_2": "#FF944D",
+    "legal_2": "#0e4f8a"
+  },
+  "radius": { "card": 30, "panel": 28, "badge": 16, "chip": 14, "button": 20 },
+  "spacing": { "page": 56, "block": 24, "inline": 14 },
+  "glass": { "background": "rgba(255,255,255,0.05)", "blur": 18, "border": "rgba(255,255,255,0.12)" },
+  "logo": {
+    "mark": "shield_LA",
+    "position_video": "header_left",
+    "position_image": "overlay_only",
+    "opacity": 100
+  },
+  "fonts": {
+    "title": { "family": "Montserrat", "weight": 700 },
+    "body": { "family": "Montserrat", "weight": 400 }
+  },
+  "motion": {
+    "ease": [0.22, 1, 0.36, 1],
+    "transition_frames": 20,
+    "ken_burns": { "scale_from": 1.08, "scale_to": 1.22 }
+  }
+}

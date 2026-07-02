@@ -9,7 +9,7 @@
  */
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { HEAVY } from './models.js';
@@ -42,6 +42,30 @@ function loadDesignMemory() {
       Object.entries(vt).filter(([k]) => !k.startsWith('_') && k !== 'version')
         .map(([k, t]) => `${k} (${t.composition}): ${t.use_for}`).join('\n');
   }
+  const dt = readJson('DESIGN_TOKENS.json');
+  if (dt) {
+    rules += `\n## DESIGN_TOKENS v${dt.version} — все цвета/шрифты ТОЛЬКО отсюда\n` +
+      `Цвета: ${Object.entries(dt.colors || {}).map(([k, v]) => `${k}=${v}`).join(', ')}. ` +
+      `Шрифт: ${dt.fonts?.title?.family}. Лого: ${dt.logo?.mark} (${dt.logo?.position_video}).`;
+  }
+  const al = readJson('ASSET_LIBRARY.json');
+  if (al) {
+    const music = Object.entries(al.music || {}).filter(([k]) => !k.startsWith('_')).map(([g, m]) => `${g}(${(m.files || []).length})`).join(', ');
+    rules += `\n## ASSET_LIBRARY v${al.version} — используй ассеты по ID, НЕ ищи в интернете\n` +
+      `Фоны: ${Object.keys(al.backgrounds || {}).join(', ')}. Музыка: ${music}. ` +
+      `Фото товара: только из каталога (${al.product_photos?.count}). Лого: ${Object.keys(al.logos || {}).join(', ')}.`;
+  }
+  // TEMPLATE LIBRARY: templates/**/*.json — Эдо наполняет, Jarvis выбирает
+  try {
+    const cats = readdirSync(join(ROOT, 'templates'), { withFileTypes: true }).filter(d => d.isDirectory());
+    const list = [];
+    for (const c of cats) {
+      for (const f of readdirSync(join(ROOT, 'templates', c.name)).filter(x => x.endsWith('.json'))) {
+        try { const t = JSON.parse(readFileSync(join(ROOT, 'templates', c.name, f), 'utf8')); list.push(`${t.id} [${c.name}/${t.direction}]: ${t.use_for}`); } catch {}
+      }
+    }
+    if (list.length) rules += `\n## TEMPLATE LIBRARY (выбирай шаблон по задаче)\n${list.join('\n')}`;
+  } catch {}
   return { spec, style, rules };
 }
 const DESIGN = loadDesignMemory();

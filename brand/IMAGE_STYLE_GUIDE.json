@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "brand": "LEGAL AUTO",
   "base": {
     "style": "premium automotive advertising",
@@ -9,7 +9,14 @@
     "aspect": "9:16 vertical",
     "size": "1024x1536",
     "model": "gpt-image-2",
-    "negative": ["text", "letters", "logos", "watermark", "people close-up", "cartoon"]
+    "negative": [
+      "text",
+      "letters",
+      "logos",
+      "watermark",
+      "people close-up",
+      "cartoon"
+    ]
   },
   "logo": {
     "note": "Логотип НЕ генерится в картинке — накладывается кодом (щит LA в оверлее Remotion)",
@@ -20,20 +27,53 @@
   "directions": {
     "docs": {
       "accent_light": "teal #1c7fd6",
-      "prompt_suffix": "teal and blue rim lighting, glossy reflective floor, official premium mood, documents/inspection scenery around imported cars"
+      "prompt_suffix": "teal and blue rim lighting, glossy reflective floor, official premium mood, documents/inspection scenery around imported cars",
+      "emotion": "trust",
+      "premium_score": 95
     },
     "auto": {
       "accent_light": "gold #D4AF37",
-      "prompt_suffix": "warm golden rim lighting, luxury showroom, glossy floor reflections, premium car delivery mood"
+      "prompt_suffix": "warm golden rim lighting, luxury showroom, glossy floor reflections, premium car delivery mood",
+      "emotion": "aspiration",
+      "premium_score": 95
     },
     "parts": {
       "accent_light": "orange #FF6B00",
-      "prompt_suffix": "orange rim lighting, dark workshop with carbon details, precision engineering mood, original car parts close-up"
+      "prompt_suffix": "orange rim lighting, dark workshop with carbon details, precision engineering mood, original car parts close-up",
+      "emotion": "value",
+      "premium_score": 95
     }
   },
   "brand_overlay": {
     "font": "Montserrat",
-    "colors": { "bg": "#0A0906", "gold": "#D4AF37", "silver": "#C0C0C0", "teal": "#1c7fd6", "orange": "#FF6B00" },
-    "elements": ["shield_LA", "glass_panels_blur18", "accent_rules", "particles_bokeh", "progress_bar"]
+    "colors": {
+      "bg": "#0A0906",
+      "gold": "#D4AF37",
+      "silver": "#C0C0C0",
+      "teal": "#1c7fd6",
+      "orange": "#FF6B00"
+    },
+    "elements": [
+      "shield_LA",
+      "glass_panels_blur18",
+      "accent_rules",
+      "particles_bokeh",
+      "progress_bar"
+    ]
+  },
+  "quality": {
+    "premium_score": 95,
+    "trust_score": 90,
+    "luxury": "high",
+    "emotion": "confidence",
+    "camera": "cinematic",
+    "composition": "hero",
+    "brand_visibility": "mandatory_via_overlay",
+    "reject_if": [
+      "stock-photo look",
+      "flat lighting",
+      "cluttered composition",
+      "cartoonish"
+    ]
   }
 }

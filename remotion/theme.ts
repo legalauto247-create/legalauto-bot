@@ -1,23 +1,30 @@
 import { continueRender, delayRender } from 'remotion';
 import { FONT_BOLD_B64, FONT_SEMI_B64, FONT_REG_B64 } from './fontsData';
+// ЕДИНСТВЕННЫЙ источник дизайн-значений — brand/DESIGN_TOKENS.json (хардкод запрещён)
+import TOKENS from '../brand/DESIGN_TOKENS.json';
 
 export const FPS = 30;
 export const WIDTH = 1080;
 export const HEIGHT = 1920;
 
+const C: Record<string, string> = (TOKENS as any).colors || {};
+const glow = (hex: string, a = 0.45) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+};
+
 export const theme = {
-  // Официальный фирстиль LegalAuto: золото #D4AF37 + серебро на чёрном.
-  // Направления: авто=золото, запчасти=красный, документы=синий.
-  car:  { accent: '#D4AF37', accent2: '#B9972E', glow: 'rgba(212,175,55,0.45)' },
-  part: { accent: '#FF6B00', accent2: '#FF944D', glow: 'rgba(255,107,0,0.45)' },
-  docs: { accent: '#1c7fd6', accent2: '#0e4f8a', glow: 'rgba(28,127,214,0.45)' },
-  gold: '#D4AF37',
-  goldLight: '#F2E6B1',
+  // Направления из DESIGN_TOKENS: авто=store(золото), запчасти=parts(оранж), документы=legal(бирюза)
+  car:  { accent: C.store || '#D4AF37', accent2: C.store_2 || '#B9972E', glow: glow(C.store || '#D4AF37') },
+  part: { accent: C.parts || '#FF6B00', accent2: C.parts_2 || '#FF944D', glow: glow(C.parts || '#FF6B00') },
+  docs: { accent: C.legal || '#1c7fd6', accent2: C.legal_2 || '#0e4f8a', glow: glow(C.legal || '#1c7fd6') },
+  gold: C.store || '#D4AF37',
+  goldLight: C.gold_light || '#F2E6B1',
   silver: '#C0C0C0',
-  bg: '#05070b',
-  bg2: '#0e1118',
-  text: '#ffffff',
-  muted: '#A6A6A6',
+  bg: C.background || '#05070b',
+  bg2: C.surface || '#0e1118',
+  text: C.text || '#ffffff',
+  muted: C.text_muted || '#A6A6A6',
 };
 
 export type SpecChip = { label: string; value: string };

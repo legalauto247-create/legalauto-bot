@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "_comment": "Каталог ассетов по ID. Jarvis/VideoEngine ссылаются на asset_id, не ищут файлы и не фантазируют. Новые ассеты: добавь файл + строку сюда.",
+  "logos": {
+    "logo_master": { "path": "remotion/public/logo-master.svg", "type": "svg", "use": "оверлей видео" },
+    "logo_store": { "path": "brand/reference/logo-store.png", "type": "png", "use": "канал @LegalAutoStore" },
+    "shield_LA": { "path": "code:remotion Shield component", "type": "vector", "use": "основная эмблема во всех видео" }
+  },
+  "backgrounds": {
+    "bg_parts_wave": { "path": "remotion/public/bg-parts.png", "direction": "parts", "style": "оранжевые световые волны", "use": "ProductShort" },
+    "bg_css_waves": { "path": "code:InfoShort Bg component", "direction": "any", "style": "CSS-волны в цвет направления", "use": "InfoShort" },
+    "bg_ai_cinematic": { "path": "runtime:gpt-image-2 по IMAGE_STYLE_GUIDE", "direction": "any", "use": "CinematicShort — генерится на лету" }
+  },
+  "music": {
+    "phonk": { "dir": "assets/music", "files": ["phonk1", "phonk2", "phonk3", "phonk4", "phonk5", "phonk6", "phonk7", "phonk8"], "mood": "drive/дерзко", "use": "parts" },
+    "sport": { "dir": "assets/music", "files": ["sport1", "sport2", "sport3", "sport4"], "mood": "энергия", "use": "auto/parts" },
+    "electronic": { "dir": "assets/music", "files": ["electronic1", "electronic2", "electronic3", "electronic4"], "mood": "технологично/доверие", "use": "docs" },
+    "hiphop": { "dir": "assets/music", "files": ["hiphop1", "hiphop2", "hiphop3", "hiphop4"], "mood": "уличный стиль", "use": "parts" },
+    "rock": { "dir": "assets/music", "files": ["rock1", "rock2", "rock3", "rock4"], "mood": "мощь", "use": "auto" },
+    "_license": "Pixabay Content License + Mixkit Free License — коммерческое ОК, без атрибуции"
+  },
+  "reference_templates": {
+    "tpl_news": { "path": "brand/reference/tpl-news.png", "use": "макет новостного поста Эдо" },
+    "tpl_parts": { "path": "brand/reference/tpl-parts.jpg", "use": "макет поста запчастей" },
+    "tpl_car_sale": { "path": "brand/reference/tpl-car-sale.png", "use": "макет поста продажи авто" },
+    "tpl_services": { "path": "brand/reference/tpl-services.png", "use": "макет услуг (волны+стекло) — эталон стиля" },
+    "tpl_cities_price": { "path": "brand/reference/tpl-cities-price.png", "use": "макет цен по городам" },
+    "tpl_greeting": { "path": "brand/reference/tpl-greeting.png", "use": "приветственный макет" },
+    "tpl_rate": { "path": "brand/reference/tpl-rate.png", "use": "макет курсов/ставок" }
+  },
+  "product_photos": {
+    "source": "Google Sheet Parts → Yandex Cloud storage.yandexcloud.net/bmw-parts-photos/<oem>/01-05.jpg",
+    "count": "~1201 позиция с фото (BMW/Geely/Li Auto)",
+    "rule": "фото товара ТОЛЬКО отсюда, по данным каталога"
+  },
+  "fonts": { "montserrat": { "path": "remotion/public/fonts", "loaded_by": "theme.ensureFonts()" } },
+  "planned_dirs": ["assets/backgrounds", "assets/heroes", "assets/icons", "assets/sounds", "assets/motion"]
+}
