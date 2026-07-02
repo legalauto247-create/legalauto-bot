@@ -2,13 +2,16 @@ import React from 'react';
 import { AbsoluteFill, Img, staticFile } from 'remotion';
 import { theme, FONT, ensureFonts } from './theme';
 
-// Эталон: ЛИСТ 3 (PARTS) — карточка запчасти 1080x1350. v2:
-// фото ЦЕЛИКОМ в студийной рамке (блюр-подложка + contain) — реальные фото
-// с разборки выглядят премиально; текстовая колонка слева, цена оранжем.
+// Эталон: ЛИСТ 3 (PARTS), 1080x1350 — СТРОГО по макету Эдо:
+// шапка + чип категории с подписью • заголовок + модели бирюзой • СОВМЕСТИМОСТЬ
+// • OEM • преимущества сеткой 2x3 (иконка+заголовок+подпись) • фото вплавлено
+// в тёмную сцену (виньетка, без рамок) • ЦЕНА в оранжевой рамке + В НАЛИЧИИ
+// • футер: канал | подбор по VIN | консультация | гарантия.
 export type PartsCardProps = {
-  category?: string;
+  category?: string;         // «ОПТИКА»
+  categorySub?: string;      // «свет · безопасность · стиль»
   name: string;
-  models?: string;
+  models?: string;           // «BMW X5 G05 / X6 G06»
   compatibility?: string[];
   oem?: string;
   price: string;
@@ -19,6 +22,7 @@ export type PartsCardProps = {
 
 const ORANGE = '#FF6B00';
 const TEAL = '#00D1C2';
+const BG = '#0B0F14';
 
 const Shield: React.FC<{ size?: number }> = ({ size = 54 }) => (
   <svg width={size} height={size * 1.13} viewBox="0 0 92 104" fill="none">
@@ -27,22 +31,44 @@ const Shield: React.FC<{ size?: number }> = ({ size = 54 }) => (
   </svg>
 );
 
+// Преимущества (ЛИСТ 3): иконка + заголовок + подпись, сетка 2 колонки
+const BENEFITS: Array<[string, string, string]> = [
+  ['🛡', '100% ОРИГИНАЛ', 'заводской оригинал'],
+  ['📸', 'РЕАЛЬНЫЕ ФОТО', 'и видео детали'],
+  ['✅', 'ПРОВЕРЕНО', 'перед отправкой'],
+  ['↩️', '14 ДНЕЙ НА ВОЗВРАТ', 'без лишних вопросов'],
+  ['📦', 'НАДЁЖНАЯ УПАКОВКА', 'защита при доставке'],
+  ['🚚', 'БЫСТРАЯ ДОСТАВКА', 'по всей России'],
+];
+
 export const PartsCard: React.FC<PartsCardProps> = (p) => {
   ensureFonts();
   const photo = /^https?:/.test(p.photo || '') ? p.photo : (p.photo ? staticFile(p.photo) : '');
   const compat = (p.compatibility || []).slice(0, 3);
   const longestWord = Math.max(...p.name.split(/\s+/).map(w => w.length), 1);
-  const nameSize = longestWord > 11 ? 44 : longestWord > 8 ? 54 : p.name.length > 16 ? 60 : 70;
+  const nameSize = longestWord > 11 ? 46 : longestWord > 8 ? 56 : 68;
 
   return (
-    <AbsoluteFill style={{ background: theme.bg, fontFamily: FONT, color: '#fff' }}>
-      {/* карбон-паттерн + оранжевое свечение за фото-панелью */}
-      <AbsoluteFill style={{ opacity: 0.05, backgroundImage: `repeating-linear-gradient(45deg, #fff 0 2px, transparent 2px 26px)` }} />
-      <div style={{ position: 'absolute', right: 20, top: 330, width: 560, height: 560, borderRadius: '50%', background: `radial-gradient(circle, ${ORANGE}26 0%, transparent 65%)`, filter: 'blur(30px)' }} />
-      <div style={{ position: 'absolute', right: 0, top: 150, width: 340, height: 2, background: `linear-gradient(90deg, transparent, ${ORANGE})`, opacity: 0.85 }} />
+    <AbsoluteFill style={{ background: BG, fontFamily: FONT, color: '#fff' }}>
+      {/* карбоновая текстура (ЛИСТ 3) */}
+      <AbsoluteFill style={{ opacity: 0.06, backgroundImage: 'repeating-linear-gradient(45deg, #fff 0 2px, transparent 2px 24px)' }} />
 
-      {/* шапка */}
-      <div style={{ position: 'absolute', top: 44, left: 56, right: 56, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* ФОТО: вплавлено в сцену — правая часть, виньетка гасит края в фон (БЕЗ рамки) */}
+      {photo ? (
+        <div style={{ position: 'absolute', right: 0, top: 170, width: 660, height: 730 }}>
+          <Img src={photo} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.92) saturate(1.05)' }} />
+          {/* виньетка: края растворяются в чёрном фоне сцены */}
+          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(90deg, ${BG} 0%, rgba(11,15,20,0.55) 18%, transparent 45%)` }} />
+          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, ${BG} 0%, transparent 22%, transparent 62%, ${BG} 96%)` }} />
+          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(270deg, ${BG} 0%, transparent 14%)` }} />
+        </div>
+      ) : null}
+      {/* акцентные световые линии (teal + orange, как на листе) */}
+      <div style={{ position: 'absolute', right: 40, top: 200, width: 420, height: 3, background: `linear-gradient(90deg, transparent, ${TEAL})`, opacity: 0.75, transform: 'rotate(-18deg)' }} />
+      <div style={{ position: 'absolute', right: 120, top: 860, width: 380, height: 3, background: `linear-gradient(90deg, transparent, ${ORANGE})`, opacity: 0.7, transform: 'rotate(-14deg)' }} />
+
+      {/* шапка: лого слева, чип категории справа (с подписью, как на листе) */}
+      <div style={{ position: 'absolute', top: 44, left: 56, right: 56, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <Shield />
           <div>
@@ -51,28 +77,23 @@ export const PartsCard: React.FC<PartsCardProps> = (p) => {
           </div>
         </div>
         {p.category ? (
-          <div style={{ border: `1.5px solid ${TEAL}`, borderRadius: 999, padding: '9px 22px', fontWeight: 700, fontSize: 20, color: TEAL, textTransform: 'uppercase', background: 'rgba(11,15,20,0.6)' }}>{p.category}</div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ border: `1.5px solid ${TEAL}`, borderRadius: 12, padding: '9px 26px', fontWeight: 700, fontSize: 24, color: TEAL, textTransform: 'uppercase', background: 'rgba(11,15,20,0.7)' }}>{p.category}</div>
+            {p.categorySub ? <div style={{ fontWeight: 600, fontSize: 15, letterSpacing: 2, color: '#9BA3AF', marginTop: 7, textTransform: 'uppercase' }}>{p.categorySub}</div> : null}
+          </div>
         ) : null}
       </div>
 
-      {/* ФОТО: студийная рамка справа — деталь ЦЕЛИКОМ (contain) на блюр-подложке */}
-      {photo ? (
-        <div style={{ position: 'absolute', right: 56, top: 218, width: 520, height: 620, borderRadius: 28, overflow: 'hidden', border: `1.5px solid ${ORANGE}55`, boxShadow: `0 26px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.12)`, background: '#11161D' }}>
-          <Img src={photo} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(34px) brightness(0.28) saturate(1.05)', transform: 'scale(1.25)' }} />
-          <Img src={photo} style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 16px 28px rgba(0,0,0,.55))' }} />
-        </div>
-      ) : null}
-
-      {/* текстовая колонка слева */}
-      <div style={{ position: 'absolute', left: 56, top: 218, width: 400, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ fontWeight: 700, fontSize: nameSize, lineHeight: 1.08, textTransform: 'uppercase' }}>{p.name}</div>
-        {p.models ? <div style={{ fontWeight: 700, fontSize: 36, color: TEAL, marginTop: 12 }}>{p.models}</div> : null}
+      {/* контент слева: заголовок → модели → совместимость → OEM */}
+      <div style={{ position: 'absolute', left: 56, top: 220, width: 470, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ fontWeight: 700, fontSize: nameSize, lineHeight: 1.08, textTransform: 'uppercase', textShadow: '0 4px 26px rgba(0,0,0,.95)' }}>{p.name}</div>
+        {p.models ? <div style={{ fontWeight: 700, fontSize: 38, marginTop: 10, textShadow: '0 3px 18px rgba(0,0,0,.9)' }}><span style={{ color: '#fff' }}>{p.models.split(' ')[0]} </span><span style={{ color: TEAL }}>{p.models.split(' ').slice(1).join(' ')}</span></div> : null}
 
         {compat.length ? (
-          <div style={{ marginTop: 28 }}>
-            <div style={{ fontWeight: 700, fontSize: 21, letterSpacing: 2, color: TEAL }}>СОВМЕСТИМОСТЬ:</div>
+          <div style={{ marginTop: 26 }}>
+            <div style={{ fontWeight: 700, fontSize: 22, letterSpacing: 1.5, color: TEAL }}>СОВМЕСТИМОСТЬ:</div>
             {compat.map((c, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 600, fontSize: 26, color: '#E6E9EC', marginTop: 9 }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 600, fontSize: 26, color: '#E6E9EC', marginTop: 8, textShadow: '0 2px 12px rgba(0,0,0,.9)' }}>
                 <div style={{ width: 8, height: 8, borderRadius: 4, background: TEAL }} />{c}
               </div>
             ))}
@@ -80,38 +101,51 @@ export const PartsCard: React.FC<PartsCardProps> = (p) => {
         ) : null}
 
         {p.oem ? (
-          <div style={{ marginTop: 26, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ fontWeight: 700, fontSize: 24, color: '#9BA3AF' }}>OEM:</div>
-            <div style={{ fontWeight: 700, fontSize: 28, color: ORANGE, letterSpacing: 1.2, background: 'rgba(255,107,0,0.10)', border: `1.5px solid ${ORANGE}66`, borderRadius: 10, padding: '6px 16px' }}>{p.oem}</div>
+          <div style={{ marginTop: 22, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ fontWeight: 700, fontSize: 26, color: TEAL }}>OEM:</div>
+            <div style={{ fontWeight: 700, fontSize: 30, color: '#fff', letterSpacing: 1.5, textShadow: '0 2px 12px rgba(0,0,0,.9)' }}>{p.oem}</div>
+          </div>
+        ) : null}
+
+        {/* преимущества: сетка 2 колонки, иконка + заголовок + подпись (как на листе) */}
+        <div style={{ marginTop: 34, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px 22px', width: 470 }}>
+          {BENEFITS.map(([ic, t, sub], i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 11, border: `1.5px solid ${ORANGE}77`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, background: 'rgba(11,15,20,0.7)', flexShrink: 0 }}>{ic}</div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 19, letterSpacing: 0.5 }}>{i === 0 && p.condition ? p.condition.toUpperCase() : t}</div>
+                <div style={{ fontWeight: 400, fontSize: 16, color: '#9BA3AF', marginTop: 2 }}>{sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ЦЕНА + В НАЛИЧИИ — внизу справа, при фото (как на листе) */}
+      <div style={{ position: 'absolute', right: 56, bottom: 170, display: 'flex', alignItems: 'flex-end', gap: 22 }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontWeight: 600, fontSize: 24, letterSpacing: 5, color: '#C8CDD2', marginBottom: 8, textShadow: '0 2px 10px rgba(0,0,0,.9)' }}>ЦЕНА</div>
+          <div style={{ border: `2.5px solid ${ORANGE}`, borderRadius: 16, padding: '16px 38px', fontWeight: 700, fontSize: 56, color: ORANGE, background: 'rgba(11,15,20,0.82)', boxShadow: `0 0 44px ${ORANGE}30` }}>{p.price}</div>
+        </div>
+        {p.inStock !== false ? (
+          <div style={{ border: `1.5px solid ${TEAL}`, borderRadius: 14, padding: '14px 24px', background: 'rgba(11,15,20,0.82)', textAlign: 'center' }}>
+            <div style={{ fontWeight: 700, fontSize: 24, color: TEAL, letterSpacing: 1 }}>В НАЛИЧИИ ✓</div>
+            <div style={{ fontWeight: 600, fontSize: 15, color: '#9BA3AF', marginTop: 4, letterSpacing: 1 }}>НА СКЛАДЕ В МОСКВЕ</div>
           </div>
         ) : null}
       </div>
 
-      {/* нижняя зона: преимущества слева, цена справа — на одном уровне */}
-      <div style={{ position: 'absolute', left: 56, right: 56, bottom: 160, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-          {[['🛡', `${p.condition || '100% оригинал'} · проверено перед отправкой`], ['📸', 'Реальные фото и видео детали'], ['📦', 'Надёжная упаковка · 14 дней на возврат'], ['🚚', 'Быстрая доставка по всей России']].map(([ic, t], i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 22, color: '#D7DBDF' }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, border: `1.5px solid ${ORANGE}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, background: 'rgba(11,15,20,0.65)' }}>{ic}</div>{t}
-            </div>
-          ))}
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontWeight: 600, fontSize: 22, letterSpacing: 4, color: '#9BA3AF', marginBottom: 8 }}>ЦЕНА</div>
-          <div style={{ border: `2.5px solid ${ORANGE}`, borderRadius: 16, padding: '16px 36px', fontWeight: 700, fontSize: 52, color: ORANGE, background: 'rgba(11,15,20,0.8)', boxShadow: `0 0 40px ${ORANGE}30` }}>{p.price}</div>
-          {p.inStock !== false ? (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginTop: 12, border: `1.5px solid ${TEAL}`, borderRadius: 12, padding: '8px 20px', fontWeight: 700, fontSize: 21, color: TEAL, background: 'rgba(11,15,20,0.7)' }}>В НАЛИЧИИ ✓</div>
-          ) : null}
-        </div>
-      </div>
-
-      {/* футер */}
+      {/* футер: канал | подбор по VIN | консультация | гарантия (как на листе) */}
       <div style={{ position: 'absolute', left: 56, right: 56, bottom: 44 }}>
         <div style={{ height: 1.5, background: 'rgba(255,255,255,0.12)', marginBottom: 20 }} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: ORANGE, color: '#0B0F14', fontWeight: 700, fontSize: 22, padding: '11px 20px', borderRadius: 12, flexShrink: 0 }}>✈ @LegalAutoParts24</div>
-          <div style={{ fontWeight: 600, fontSize: 19, color: '#C8CDD2', whiteSpace: 'nowrap' as const, margin: '0 12px' }}>ПОДБОР ПО VIN · КОНСУЛЬТАЦИЯ</div>
-          <div style={{ fontWeight: 600, fontSize: 16, letterSpacing: 2, color: '#9BA3AF', whiteSpace: 'nowrap' as const }}>ГАРАНТИЯ КАЧЕСТВА</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#2AABEE', color: '#fff', fontWeight: 700, fontSize: 22, padding: '10px 20px', borderRadius: 12, flexShrink: 0 }}>✈ @LegalAutoParts24</div>
+          {['ПОДБОР ПО VIN', 'КОНСУЛЬТАЦИЯ', 'ГАРАНТИЯ КАЧЕСТВА'].map((t, i) => (
+            <React.Fragment key={i}>
+              <div style={{ width: 1.5, height: 26, background: 'rgba(255,255,255,0.2)', margin: '0 22px' }} />
+              <div style={{ fontWeight: 600, fontSize: 19, color: '#C8CDD2', whiteSpace: 'nowrap' }}>{t}</div>
+            </React.Fragment>
+          ))}
         </div>
       </div>
     </AbsoluteFill>
