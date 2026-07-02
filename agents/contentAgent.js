@@ -65,13 +65,21 @@ async function catalogFromSheet() {
   const rows = parseCSV(t);
   const head = rows[0].map(h => h.trim());
   const ix = n => head.indexOf(n);
-  const [I_id, I_brand, I_model, I_name, I_oem, I_price, I_photo, I_cat, I_series, I_title, I_cond, I_desc] =
-    ['id', 'brand', 'model', 'name', 'oem', 'price', 'photo', 'category', 'series', 'display_car', 'condition', 'description'].map(ix);
-  return rows.slice(1).filter(r => r.length >= head.length - 4).map(r => ({
-    id: r[I_id], brand: r[I_brand], model: r[I_model], series: r[I_series],
-    name: r[I_name], oem: r[I_oem], price: r[I_price], photo: r[I_photo],
-    category: r[I_cat], title: r[I_title], condition: r[I_cond], description: r[I_desc],
-  }));
+  const [I_id, I_brand, I_model, I_name, I_oem, I_price, I_photo, I_cat, I_series, I_title, I_cond, I_desc, I_pcount] =
+    ['id', 'brand', 'model', 'name', 'oem', 'price', 'photo', 'category', 'series', 'display_car', 'condition', 'description', 'photo_count'].map(ix);
+  return rows.slice(1).filter(r => r.length >= head.length - 4).map(r => {
+    const photo = r[I_photo];
+    // в облаке лежат 01.jpg..NN.jpg — таблица ссылается только на 01; строим все по photo_count
+    const count = Math.min(Number(r[I_pcount]) || 1, 6);
+    let photos = [photo].filter(Boolean);
+    const m = /^(.*\/)01(\.[a-z]+)$/i.exec(photo || '');
+    if (m && count > 1) photos = Array.from({ length: count }, (_, i) => `${m[1]}${String(i + 1).padStart(2, '0')}${m[2]}`);
+    return {
+      id: r[I_id], brand: r[I_brand], model: r[I_model], series: r[I_series],
+      name: r[I_name], oem: r[I_oem], price: r[I_price], photo, photos,
+      category: r[I_cat], title: r[I_title], condition: r[I_cond], description: r[I_desc],
+    };
+  });
 }
 
 async function gasCatalog(limit = 40) {
@@ -178,6 +186,7 @@ export async function makeProductShort({ platforms = ['youtube'], theme = '', le
   // items: КАЖДАЯ запчасть со своим названием и ценой (текст совпадает с фото)
   const items = parts.map(p => ({
     photo: p.photo || p.photo_cover,
+    photos: (p.photos && p.photos.length ? p.photos : [p.photo || p.photo_cover]).filter(Boolean).slice(0, 3),
     name: p.name,
     price: p.price ? Number(p.price).toLocaleString('ru-RU') + ' ₽' : '',
     fits: [p.brand, (p.model || p.series || '').replace(/\|/g, '/')].filter(Boolean).join(' ').trim(),

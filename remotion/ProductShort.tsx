@@ -5,7 +5,7 @@ import {
 } from 'remotion';
 import { theme, FONT, ensureFonts } from './theme';
 
-export type Item = { photo: string; name: string; price?: string; fits?: string };
+export type Item = { photo: string; photos?: string[]; name: string; price?: string; fits?: string };
 export type ProductProps = {
   items: Item[];
   hook: string;
@@ -165,11 +165,34 @@ const PartScene: React.FC<{ item: Item; accent: string }> = ({ item, accent }) =
       {/* мягкое свечение под карточкой */}
       <div style={{ position: 'absolute', top: 300, left: '50%', width: 720, height: 620, transform: 'translateX(-50%)', background: `radial-gradient(ellipse at center, ${accent}30 0%, transparent 65%)`, filter: 'blur(30px)', opacity: s }} />
 
-      {/* студийная карточка: фото + отражение */}
+      {/* студийная карточка: фото (несколько ракурсов с кроссфейдом) + отражение */}
       <div style={{ position: 'absolute', top: 226, left: 66, right: 66, height: 664, transform: `translateY(${interpolate(s, [0, 1], [42, 0])}px)`, opacity: s }}>
         <div style={{ position: 'relative', height: 500, borderRadius: 30, overflow: 'hidden', background: 'linear-gradient(160deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02))', border: `1.5px solid ${accent}55`, boxShadow: `0 30px 80px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.15)` }}>
           <Img src={item.photo} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(30px) brightness(0.4) saturate(1.2)', transform: 'scale(1.25)' }} />
-          <Img src={item.photo} style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', transform: `scale(${zoom})`, filter: 'drop-shadow(0 18px 30px rgba(0,0,0,.55))' }} />
+          {(() => {
+            const shots = (item.photos && item.photos.length ? item.photos : [item.photo]).slice(0, 3);
+            const seg = PER / shots.length;                 // время на один ракурс
+            return shots.map((ph, i) => {
+              const a = i * seg, b = (i + 1) * seg;
+              const op = i === 0
+                ? interpolate(f, [b - 8, b], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+                : Math.min(
+                    interpolate(f, [a - 8, a], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+                    i === shots.length - 1 ? 1 : interpolate(f, [b - 8, b], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+                  );
+              return <Img key={i} src={ph} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', transform: `scale(${zoom})`, filter: 'drop-shadow(0 18px 30px rgba(0,0,0,.55))', opacity: op }} />;
+            });
+          })()}
+          {/* счётчик ракурсов */}
+          {(item.photos?.length || 1) > 1 ? (
+            <div style={{ position: 'absolute', right: 18, bottom: 14, display: 'flex', gap: 8 }}>
+              {(item.photos || []).slice(0, 3).map((_, i) => {
+                const seg = PER / (item.photos!.slice(0, 3).length);
+                const active = f >= i * seg && f < (i + 1) * seg;
+                return <div key={i} style={{ width: active ? 22 : 8, height: 8, borderRadius: 4, background: active ? accent : 'rgba(255,255,255,0.4)', transition: 'width .2s' }} />;
+              })}
+            </div>
+          ) : null}
         </div>
         {/* отражение на «полу» */}
         <div style={{ position: 'relative', height: 150, marginTop: 2, borderRadius: 30, overflow: 'hidden', WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,.4), transparent 78%)', maskImage: 'linear-gradient(to bottom, rgba(0,0,0,.4), transparent 78%)', opacity: 0.5 }}>
