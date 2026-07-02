@@ -70,15 +70,16 @@ if (errors.length) {
 // Telegraf .launch() при этом падает 409 и НЕ повторяет — бот остаётся мёртвым.
 // Повторяем запуск с бэкоффом, пока старый экземпляр не отпустит лок.
 function launchWithRetry(bot, name, opts = {}, attempt = 1) {
-  const MAX = 20;           // ~20 попыток
-  const DELAY = 8_000;      // каждые 8 сек → до ~160 сек на дренаж старого деплоя
+  const MAX = 60;           // до ~8 минут (409 при дренаже старого деплоя, сеть на старте)
+  const DELAY = 8_000;
   bot.launch(opts).catch(e => {
-    const is409 = /409/.test(e.message) || /Conflict/i.test(e.message);
-    if (is409 && attempt < MAX) {
-      console.warn(`[${name}] 409 при старте (попытка ${attempt}/${MAX}) — повтор через ${DELAY / 1000}с`);
+    // Ретраим ЛЮБУЮ ошибку старта: 409 (старый контейнер держит getUpdates),
+    // сетевые сбои (getMe failed на холодном старте) и т.д. Иначе бот молча мёртв.
+    if (attempt < MAX) {
+      console.warn(`[${name}] Ошибка старта (${e.message.slice(0, 80)}) — попытка ${attempt}/${MAX}, повтор через ${DELAY / 1000}с`);
       setTimeout(() => launchWithRetry(bot, name, opts, attempt + 1), DELAY);
     } else {
-      console.error(`[${name}] Launch error:`, e.message);
+      console.error(`[${name}] Launch error (сдался после ${MAX} попыток):`, e.message);
     }
   });
 }

@@ -503,10 +503,17 @@ export async function pollPublicChannels() {
       }
 
       const lastSeen = seen[handle] || 0;
+      // Холодный старт (после деплоя память пустая): НИЧЕГО не шлём — только
+      // запоминаем текущую позицию. Иначе каждый редеплой = спам теми же 5 авто
+      // + повторная оплата Claude за переписывание.
+      if (lastSeen === 0) {
+        seen[handle] = Math.max(...posts.map(p => p.num), 0);
+        console.log(`[AutoAds] ${handle}: первый прогон — запомнил позицию ${seen[handle]}, ничего не шлю`);
+        continue;
+      }
       // Новые посты (которых ещё не присылали), по возрастанию
       const fresh = posts.filter(p => p.num > lastSeen).sort((a, b) => a.num - b.num);
-      // Первый запуск — 5 самых свежих; дальше — тоже не больше 5 за прогон
-      const batch = lastSeen === 0 ? fresh.slice(-5) : fresh;
+      const batch = fresh;
 
       if (!batch.length) { seen[handle] = Math.max(lastSeen, ...posts.map(p => p.num), 0); continue; }
 
