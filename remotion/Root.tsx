@@ -5,6 +5,7 @@ import { ViralShort, viralDuration, ViralProps } from './ViralShort';
 import { ProductShort, productDuration, ProductProps } from './ProductShort';
 import { InfoShort, infoDuration, InfoProps } from './InfoShort';
 import { CinematicShort, cineDuration, CineProps } from './CinematicShort';
+import { NewsPost } from './NewsPost';
 import { FPS, WIDTH, HEIGHT, ReelProps } from './theme';
 
 const defaultProps: ReelProps = {
@@ -88,6 +89,15 @@ export const RemotionRoot: React.FC = () => {
         const p = props as unknown as CineProps;
         return { durationInFrames: cineDuration((p.scenes || []).slice(0, 6).length || 1) };
       }}
+    />
+    <Composition
+      id="NewsPost"
+      component={NewsPost as React.FC<Record<string, unknown>>}
+      durationInFrames={1}
+      fps={FPS}
+      width={1080}
+      height={1350}
+      defaultProps={{ title: 'Новые правила растаможки авто', titleAccent: 'с 1 июля 2026', subtitle: 'Что изменится и как это повлияет на владельцев автомобилей.', date: '02.07.2026', facts: [], accent: '#00D1C2' } as unknown as Record<string, unknown>}
     />
     </>
   );

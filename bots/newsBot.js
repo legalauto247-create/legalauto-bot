@@ -253,22 +253,23 @@ export async function publishNewsToChannel(text) {
   };
 
   try {
-    const { renderNewsCard } = await import('../agents/newsImageAgent.js');
-    const img = await renderNewsCard(text);
-    if (!img) return sendText();
-    const caption = text.length > 1024 ? text.slice(0, 1021) + '…' : text;
+    // Эталонная карточка ЛИСТ 2: капс-заголовок + 3 факт-блока + светлый AI-фон + Quality Gate
+    const { makeNewsCard } = await import('../agents/contentAgent.js');
+    const card = await makeNewsCard({ newsText: text });
+    if (!card.ok) { console.warn('[NewsBot] карточка не собралась:', card.error, '— публикую текстом'); return sendText(); }
+    const caption = (card.caption || text);
     const fd = new FormData();
     fd.append('chat_id', String(NEWS_CHANNEL_ID));
-    fd.append('caption', caption);
-    fd.append('parse_mode', 'Markdown');
-    fd.append('photo', new Blob([img], { type: 'image/png' }), 'news.png');
+    fd.append('caption', caption.length > 1024 ? caption.slice(0, 1021) + '…' : caption);
+    fd.append('photo', new Blob([_rf(card.path)], { type: 'image/jpeg' }), 'news.jpg');
     const res = await globalThis.fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendPhoto`, { method: 'POST', body: fd });
     const data = await res.json();
-    if (data.ok) { console.log('[NewsBot] ✅ Опубликовано с картинкой'); return true; }
+    card.cleanup();
+    if (data.ok) { console.log('[NewsBot] ✅ Опубликована эталонная карточка'); return true; }
     console.error('[NewsBot] sendPhoto:', data.description, '— откат на текст');
     return sendText();
   } catch (e) {
-    console.error('[NewsBot] publish image error:', e.message);
+    console.error('[NewsBot] publish card error:', e.message);
     return sendText();
   }
 }

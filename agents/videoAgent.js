@@ -165,6 +165,25 @@ export async function renderCinematic({ musicPath, images = [], ...props }) {
   } catch (e) { cleanup(); throw e; }
 }
 
+// ── News Card: брендированный новостной пост-картинка (эталон ЛИСТ 2) ──────
+// props: { title, titleAccent, subtitle, date, facts[3], bgImage(url|buffer) }
+export async function renderNewsCard({ bgImageBuffer, ...props }) {
+  const { renderStill, selectComposition: sc } = await import('@remotion/renderer');
+  const dir = mkdtempSync(join(tmpdir(), 'news-'));
+  const cleanup = () => { try { rmSync(dir, { recursive: true, force: true }); } catch {} };
+  const out = join(dir, 'news.jpg');
+  try {
+    if (!existsSync(PUBLIC_DIR)) mkdirSync(PUBLIC_DIR, { recursive: true });
+    if (bgImageBuffer) { writeFileSync(join(PUBLIC_DIR, 'news-bg.png'), bgImageBuffer); props.bgImage = 'news-bg.png'; }
+    const exec = chromePath();
+    await ensureBrowser(exec ? { browserExecutable: exec } : undefined).catch(() => {});
+    const serveUrl = await bundle({ entryPoint: ENTRY, publicDir: PUBLIC_DIR });
+    const composition = await sc({ serveUrl, id: 'NewsPost', inputProps: props, browserExecutable: exec });
+    await renderStill({ composition, serveUrl, output: out, inputProps: props, imageFormat: 'jpeg', jpegQuality: 92, browserExecutable: exec, chromiumOptions: { gl: 'swiftshader' } });
+    return { path: out, dir, cleanup };
+  } catch (e) { cleanup(); throw e; }
+}
+
 // ── Info Short: инфо-ролик по брендбуку (документы/пригон/советы) ──────────
 export async function renderInfo({ musicPath, ...props }) {
   const dir = mkdtempSync(join(tmpdir(), 'info-'));

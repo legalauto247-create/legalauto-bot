@@ -12,7 +12,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import Anthropic from '@anthropic-ai/sdk';
-import { renderProduct, renderInfo, renderCinematic } from './videoAgent.js';
+import { renderProduct, renderInfo, renderCinematic, renderNewsCard } from './videoAgent.js';
 import { createTask, taskProcessing, taskDone, taskFailed, persistentPath } from '../services/stateService.js';
 import { reviewContent } from '../services/qualityGate.js';
 import { uploadShort, LINKS_BLOCK } from './youtubeUpload.js';
@@ -477,3 +477,40 @@ function tracked(type, fn, metaOf) {
 export const makeProductShort   = tracked('video_product',   _makeProductShort,   o => ({ theme: o.theme || '' }));
 export const makeInfoShort      = tracked('video_info',      _makeInfoShort,      o => ({ topic: o.topic || '', direction: o.direction }));
 export const makeCinematicShort = tracked('video_cinematic', _makeCinematicShort, o => ({ topic: o.topic || '', direction: o.direction }));
+
+
+// ── Новостная карточка по эталону ЛИСТ 2 (1080x1350, 3 факт-блока) ───────────
+// makeNewsCard({ newsText }) → { ok, path, cleanup, caption } | { ok:false, error }
+export async function makeNewsCard({ newsText, date }) {
+  if (!claude) return { ok: false, error: 'CLAUDE_API_KEY не задан' };
+  if (!newsText) return { ok: false, error: 'Нет текста новости' };
+  // 1) структурируем в эталонный layout
+  const m = await claude.messages.create({ model: HEAVY, max_tokens: 700, messages: [{ role: 'user', content:
+`Разложи новость в эталонный шаблон новостного поста LegalAuto (аудитория: импортёры авто и владельцы ввезённых авто). СТРОГО по фактам из текста, ничего не выдумывай.
+Верни ТОЛЬКО JSON:
+{"title":"суть КРАТКО, 3-6 слов (будет капсом, ≤3 строк)","titleAccent":"дата/ключевой факт 2-4 слова (бирюзой) или пусто","subtitle":"1-2 предложения: что это значит","facts":[{"icon":"1 эмодзи","label":"ЧТО ИЗМЕНИТСЯ?","text":"до 12 слов"},{"icon":"1 эмодзи","label":"КОГО КАСАЕТСЯ?","text":"до 12 слов"},{"icon":"1 эмодзи","label":"ЧТО ДЕЛАТЬ?","text":"до 12 слов, конкретное действие"}],"imagePrompt":"english: cinematic scene matching the news topic (cars/customs/port/city), bright professional","caption":"текст поста для Telegram: 3-5 предложений по фактам + в конце «Вопрос по вашей ситуации → @LegalAutoAssist_bot»"}
+
+Новость:
+"${String(newsText).slice(0, 1200)}"` }] });
+  let sc;
+  try { sc = JSON.parse(m.content[0].text.trim().replace(/^```json?|```$/g, '')); }
+  catch { return { ok: false, error: 'Структура новости не собралась' }; }
+  if (!Array.isArray(sc.facts) || sc.facts.length < 3) return { ok: false, error: 'Не собрались 3 факт-блока' };
+
+  // 2) Quality Gate на текст карточки
+  const gate = await reviewContent({ title: sc.title, description: `${sc.caption}`, texts: [sc.subtitle, ...sc.facts.map(f => `${f.label} ${f.text}`)], direction: 'docs', sourceData: String(newsText).slice(0, 900) });
+  if (!gate.pass) return { ok: false, error: `Quality Gate: ${gate.fails.join('; ')}` };
+
+  // 3) фон: светлый docs-кадр по теме
+  let bgImageBuffer = null;
+  try { bgImageBuffer = await genCineImage(sc.imagePrompt || 'imported cars at customs terminal, professional', 'docs'); } catch (e) { console.error('[NewsCard] bg:', e.message); }
+
+  // 4) рендер эталонной карточки
+  const { path, cleanup } = await renderNewsCard({
+    bgImageBuffer,
+    title: sc.title, titleAccent: sc.titleAccent || '', subtitle: sc.subtitle,
+    date: date || new Date().toLocaleDateString('ru-RU'),
+    facts: sc.facts.slice(0, 3), accent: '#00D1C2',
+  });
+  return { ok: true, path, cleanup, caption: sc.caption || sc.title };
+}
