@@ -184,6 +184,44 @@ export async function renderNewsCard({ bgImageBuffer, ...props }) {
   } catch (e) { cleanup(); throw e; }
 }
 
+// ── Store Card: эталонная карточка авто (ЛИСТ 4), пост-картинка 1080x1350 ───
+export async function renderStoreCard(props) {
+  const { renderStill, selectComposition: sc } = await import('@remotion/renderer');
+  const dir = mkdtempSync(join(tmpdir(), 'scard-'));
+  const cleanup = () => { try { rmSync(dir, { recursive: true, force: true }); } catch {} };
+  const out = join(dir, 'store.jpg');
+  try {
+    const exec = chromePath();
+    await ensureBrowser(exec ? { browserExecutable: exec } : undefined).catch(() => {});
+    const serveUrl = await bundle({ entryPoint: ENTRY, publicDir: PUBLIC_DIR });
+    const composition = await sc({ serveUrl, id: 'StoreCard', inputProps: props, browserExecutable: exec });
+    await renderStill({ composition, serveUrl, output: out, inputProps: props, imageFormat: 'jpeg', jpegQuality: 92, browserExecutable: exec, chromiumOptions: { gl: 'swiftshader' } });
+    return { path: out, dir, cleanup };
+  } catch (e) { cleanup(); throw e; }
+}
+
+// ── Store Shorts: 6 кадров / 30 сек по эталону ЛИСТ 6 ───────────────────────
+export async function renderStoreShorts({ musicPath, ...props }) {
+  const dir = mkdtempSync(join(tmpdir(), 'sshorts-'));
+  const cleanup = () => { try { rmSync(dir, { recursive: true, force: true }); } catch {} };
+  const out = join(dir, 'shorts.mp4');
+  try {
+    if (!existsSync(PUBLIC_DIR)) mkdirSync(PUBLIC_DIR, { recursive: true });
+    if (musicPath && existsSync(musicPath)) cpSync(musicPath, join(PUBLIC_DIR, 'music.mp3'));
+    const exec = chromePath();
+    await ensureBrowser(exec ? { browserExecutable: exec } : undefined).catch(() => {});
+    const serveUrl = await bundle({ entryPoint: ENTRY, publicDir: PUBLIC_DIR });
+    const inputProps = { musicFile: musicPath ? 'music.mp3' : undefined, ...props };
+    const composition = await selectComposition({ serveUrl, id: 'StoreShorts', inputProps, browserExecutable: exec });
+    await renderMedia({
+      composition, serveUrl, codec: 'h264', outputLocation: out, inputProps,
+      browserExecutable: exec, publicDir: PUBLIC_DIR, concurrency: 1,
+      chromiumOptions: { gl: 'swiftshader' }, x264Preset: 'veryfast', crf: 23,
+    });
+    return { path: out, dir, cleanup };
+  } catch (e) { cleanup(); throw e; }
+}
+
 // ── Info Short: инфо-ролик по брендбуку (документы/пригон/советы) ──────────
 export async function renderInfo({ musicPath, ...props }) {
   const dir = mkdtempSync(join(tmpdir(), 'info-'));

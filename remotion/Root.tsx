@@ -6,6 +6,8 @@ import { ProductShort, productDuration, ProductProps } from './ProductShort';
 import { InfoShort, infoDuration, InfoProps } from './InfoShort';
 import { CinematicShort, cineDuration, CineProps } from './CinematicShort';
 import { NewsPost } from './NewsPost';
+import { StoreCard } from './StoreCard';
+import { StoreShorts, storeShortsDuration } from './StoreShorts';
 import { FPS, WIDTH, HEIGHT, ReelProps } from './theme';
 
 const defaultProps: ReelProps = {
@@ -98,6 +100,24 @@ export const RemotionRoot: React.FC = () => {
       width={1080}
       height={1350}
       defaultProps={{ title: 'Новые правила растаможки авто', titleAccent: 'с 1 июля 2026', subtitle: 'Что изменится и как это повлияет на владельцев автомобилей.', date: '02.07.2026', facts: [], accent: '#00D1C2' } as unknown as Record<string, unknown>}
+    />
+    <Composition
+      id="StoreCard"
+      component={StoreCard as React.FC<Record<string, unknown>>}
+      durationInFrames={1}
+      fps={FPS}
+      width={1080}
+      height={1350}
+      defaultProps={{ brand: 'BMW', model: 'X5 M50d', year: '2019', photo: '', specs: [], price: '6 950 000 ₽' } as unknown as Record<string, unknown>}
+    />
+    <Composition
+      id="StoreShorts"
+      component={StoreShorts as React.FC<Record<string, unknown>>}
+      durationInFrames={storeShortsDuration()}
+      fps={FPS}
+      width={WIDTH}
+      height={HEIGHT}
+      defaultProps={{ brand: 'BMW', model: 'X5 M50d', year: '2019', hook: 'Премиум который впечатляет', power: '3.0d / 400 л.с.', options: [], condition: '', trust: [], photos: [], channel: '@LegalAutoStore' } as unknown as Record<string, unknown>}
     />
     </>
   );

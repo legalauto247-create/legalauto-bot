@@ -12,7 +12,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import Anthropic from '@anthropic-ai/sdk';
-import { renderProduct, renderInfo, renderCinematic, renderNewsCard } from './videoAgent.js';
+import { renderProduct, renderInfo, renderCinematic, renderNewsCard, renderStoreCard, renderStoreShorts } from './videoAgent.js';
 import { createTask, taskProcessing, taskDone, taskFailed, persistentPath } from '../services/stateService.js';
 import { reviewContent } from '../services/qualityGate.js';
 import { uploadShort, LINKS_BLOCK } from './youtubeUpload.js';
@@ -514,3 +514,62 @@ export async function makeNewsCard({ newsText, date }) {
   });
   return { ok: true, path, cleanup, caption: sc.caption || sc.title };
 }
+
+// ── Авто-промо из Telegram-поста: STORE-карточка (ЛИСТ 4) + Shorts 6 кадров (ЛИСТ 6) ─
+// makeCarPromo({ text, photos, platforms }) → { ok, ytUrl, cardPath, cardCleanup, title }
+async function _makeCarPromo({ text, photos = [], platforms = ['youtube'] } = {}) {
+  if (!claude) return { ok: false, error: 'CLAUDE_API_KEY не задан' };
+  if (!text || photos.length < 1) return { ok: false, error: 'Нужен текст поста и хотя бы 1 фото' };
+
+  // 1) структурируем СТРОГО из текста (context-engineering: ничего не выдумывать)
+  const m = await claude.messages.create({ model: HEAVY, max_tokens: 800, messages: [{ role: 'user', content:
+`Разложи объявление о продаже/пригоне авто в структуру для карточки и Shorts LegalAuto Store. СТРОГО из текста, чего нет — пропусти/пустая строка. Верни ТОЛЬКО JSON:
+{"brand":"МАРКА","model":"Модель (кратко)","year":"2019 или пусто","hook":"эмоц. хук 2-4 слова КАПСОМ (Премиум который впечатляет / Мощь и статус)","power":"двигатель/л.с./привод/коробка одной строкой из текста","options":["4-6 опций ИЗ ТЕКСТА, кратко"],"condition":"пробег + состояние одной строкой из текста","trust":["3-4 пункта доверия ИЗ ТЕКСТА или стандартные: Юридическая чистота/Проверка перед покупкой/Полный пакет документов"],"specs":[{"label":"Пробег","value":"..."},{"label":"Двигатель","value":"..."},{"label":"Привод","value":"..."},{"label":"Коробка","value":"..."},{"label":"Состояние","value":"..."}],"badge":"ПОДБОР ПОД КЛЮЧ или В НАЛИЧИИ (по смыслу)","title":"YouTube-заголовок до 80 симв: марка модель год + суть, 1 эмодзи","description":"2 строки + 3 хэштега"}
+specs — только реально указанные, до 5.
+
+Объявление:
+"${String(text).slice(0, 1100)}"` }] });
+  let d;
+  try { d = JSON.parse(m.content[0].text.trim().replace(/^```json?|```$/g, '')); }
+  catch { return { ok: false, error: 'Структура авто не собралась' }; }
+  const price = (await import('./priceUtil.js')).extractPriceFromText(text) || '';
+  if (!d.brand || !d.model) return { ok: false, error: 'Не распознаны марка/модель' };
+
+  // 2) Quality Gate против исходного поста
+  const gate = await reviewContent({
+    title: d.title || `${d.brand} ${d.model}`, description: `${d.description || ''}\n➡️ @LegalAutoStore · t.me/LegalAutoAssist_bot?start=yt_store`,
+    texts: [d.hook, d.power, ...(d.options || []), d.condition, price].filter(Boolean),
+    direction: 'auto', sourceData: String(text).slice(0, 900),
+  });
+  if (!gate.pass) return { ok: false, error: `Quality Gate: ${gate.fails.join('; ')}` };
+
+  // 3) эталонная карточка (ЛИСТ 4)
+  const card = await renderStoreCard({
+    brand: d.brand, model: d.model, year: d.year || '',
+    photo: photos[0], specs: (d.specs || []).slice(0, 6),
+    price: price || 'Цена по запросу', priceNote: 'выгода и безопасность с нами на каждом этапе',
+    badge: d.badge || 'ПОДБОР ПОД КЛЮЧ',
+  });
+
+  // 4) Shorts 6 кадров / 30 сек (ЛИСТ 6)
+  const music = pickMusic(['sport', 'rock']);
+  const result = { ok: true, cardPath: card.path, cardCleanup: card.cleanup, title: d.title || `${d.brand} ${d.model}` };
+  if (platforms.includes('youtube')) {
+    const video = await renderStoreShorts({
+      musicPath: music,
+      brand: d.brand, model: d.model, year: d.year || '',
+      hook: d.hook || 'Премиум который впечатляет',
+      power: d.power || price, options: d.options || [],
+      condition: d.condition || '', trust: (d.trust && d.trust.length ? d.trust : ['Юридическая чистота', 'Проверка перед покупкой', 'Полный пакет документов']),
+      photos: photos.slice(0, 6), channel: '@LegalAutoStore',
+    });
+    try {
+      const desc = `${d.description || ''}\n\n✅ ЗАКАЗАТЬ (бот, 1 минута): https://t.me/LegalAutoAssist_bot?start=yt_store\n🚗 Канал: https://t.me/LegalAutoStore`;
+      const yt = await uploadShort({ path: video.path, title: result.title, description: desc, tags: ['shorts', 'авто', 'пригон', 'LegalAuto'] });
+      result.ytUrl = yt.url;
+    } catch (e) { result.ytError = e.message; }
+    video.cleanup();
+  }
+  return result;
+}
+export const makeCarPromo = tracked('video_store_shorts', _makeCarPromo, o => ({ photos: (o.photos || []).length }));

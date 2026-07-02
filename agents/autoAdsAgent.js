@@ -341,12 +341,40 @@ export async function publishAd(text, photos = []) {
     buffers.forEach((b, i) =>
       fd.append(`p${i}`, new Blob([b], { type: 'image/jpeg' }), `p${i}.jpg`));
     const data = await apiForm('sendMediaGroup', fd);
-    if (data.ok) { console.log(`[AutoAds] ✅ Опубликовано с ${buffers.length} фото`); return true; }
+    if (data.ok) {
+      console.log(`[AutoAds] ✅ Опубликовано с ${buffers.length} фото`);
+      firePromo(text, photos);   // фоном: STORE-карточка + Shorts на YouTube
+      return true;
+    }
     console.error('[AutoAds] ❌ sendMediaGroup:', data.description, '— откат на текст');
     return sendText();
   } catch (e) {
     console.error('[AutoAds] publish error:', e.message);
     return sendText();
+  }
+}
+
+
+// ── Промо после публикации: эталонная карточка (ЛИСТ 4) + Shorts (ЛИСТ 6) → YouTube ──
+function firePromo(text, photos = []) {
+  if (process.env.STORE_PROMO !== 'false') {
+    import('./contentAgent.js').then(async ({ makeCarPromo }) => {
+      const r = await makeCarPromo({ text, photos, platforms: ['youtube'], source: 'autoads' });
+      const token = ADMIN_BOT_TOKEN, chat = ADMIN_CHAT_ID;
+      if (!token || !chat) { r?.cardCleanup?.(); return; }
+      if (r.ok) {
+        try {
+          const fd = new FormData();
+          fd.append('chat_id', String(chat));
+          fd.append('caption', `🎬 Авто-промо готово\n${r.title}\n${r.ytUrl ? 'YouTube: ' + r.ytUrl : '(YouTube: ' + (r.ytError || 'пропущен') + ')'}\n\nКарточка (ЛИСТ 4) — можно выложить в сториз/пост:`);
+          fd.append('photo', new Blob([readFileSync(r.cardPath)], { type: 'image/jpeg' }), 'card.jpg');
+          await globalThis.fetch(`https://api.telegram.org/bot${token}/sendPhoto`, { method: 'POST', body: fd });
+        } catch (e) { console.error('[AutoAds] promo notify:', e.message); }
+        r.cardCleanup?.();
+      } else {
+        console.warn('[AutoAds] promo:', r.error);
+      }
+    }).catch(e => console.error('[AutoAds] promo import:', e.message));
   }
 }
 
