@@ -29,7 +29,7 @@ import { registerLead, removeLead, markHandled } from '../agents/watchdogAgent.j
 import { smartMatch, isPartsRequest } from '../agents/smartMatchAgent.js';
 import { orchestrate } from '../agents/masterAgent.js';
 import { classifyLead } from '../agents/dualBrainAgent.js';
-import { calcImport, fmt as fmtRub } from '../agents/customsCalc.js';
+import { calcImport, utilFee as utilFee2026, fmt as fmtRub } from '../agents/customsCalc.js';
 
 // Платный калькулятор растаможки/утиля
 const PAYMENT_PROVIDER_TOKEN = process.env.PAYMENT_PROVIDER_TOKEN || '';   // ЮKassa через BotFather (СБП/рубли)
@@ -68,42 +68,16 @@ function getState(id)       { return clientStates.get(String(id)); }
 function setState(id, s)    { clientStates.set(String(id), s); }
 function clearState(id)     { clientStates.delete(String(id)); }
 
-// ── Ставки утильсбора 2024 (руб) ─────────────────────────────────────────────
-const UTIL_RATES = {
-  physical: {
-    // [до_см3]: ставка
-    ranges: [
-      { max: 1000, rate: 3_400 },
-      { max: 2000, rate: 8_900 },
-      { max: 3000, rate: 16_900 },
-      { max: 3500, rate: 20_200 },
-      { max: Infinity, rate: 26_100 },
-    ],
-    electric: 3_400,
-  },
-  legal: {
-    ranges: [
-      { max: 1000, rate: 84_000 },
-      { max: 2000, rate: 126_000 },
-      { max: 3000, rate: 252_000 },
-      { max: 3500, rate: 378_000 },
-      { max: Infinity, rate: 504_000 },
-    ],
-    electric: 84_000,
-  }
-};
-
-function calcUtil(volumeCc, isLegal, isElectric) {
-  const table = isLegal ? UTIL_RATES.legal : UTIL_RATES.physical;
-  if (isElectric) return table.electric;
-  const vol = Number(volumeCc || 0);
-  for (const r of table.ranges) {
-    if (vol <= r.max) return r.rate;
-  }
-  return table.ranges[table.ranges.length - 1].rate;
-}
+// Утильсбор считается ТОЛЬКО через agents/customsCalc.js (реальные ставки 2026,
+// правило льготы физлица ≤160 л.с.). Локальных таблиц со ставками здесь нет.
 
 // ── AI ────────────────────────────────────────────────────────────────────────
+// Ответы шлём клиенту без parse_mode → выпиливаем markdown (** ##), чтобы не было сырых звёздочек
+const stripMd = (s) => String(s)
+  .replace(/\*\*([^*]+)\*\*/g, '$1')
+  .replace(/(^|\s)\*([^*\n]+)\*(?=\s|[.,!?]|$)/g, '$1$2')
+  .replace(/^#{1,4}\s*/gm, '');
+
 async function askAI(systemPrompt, history, maxTokens = 600) {
   if (claude) {
     try {
@@ -113,7 +87,7 @@ async function askAI(systemPrompt, history, maxTokens = 600) {
         system:     systemPrompt,
         messages:   history,
       });
-      return msg.content[0].text.trim();
+      return stripMd(msg.content[0].text.trim());
     } catch (err) {
       console.error('[ClientBot] Claude error:', err.message);
     }
@@ -127,7 +101,7 @@ async function askAI(systemPrompt, history, maxTokens = 600) {
       contents: [{ role: 'user', parts: [{ text: systemPrompt + '\n\n' + ctx }] }],
       generationConfig: { temperature: 0.4, maxOutputTokens: maxTokens }
     });
-    return result.response.text().trim();
+    return stripMd(result.response.text().trim());
   }
   throw new Error('AI недоступен');
 }
@@ -358,6 +332,16 @@ OEM: ...
 
 Если клиент просто смотрит — предложи открыть каталог или написать менеджеру.`,
 };
+
+// Общие правила для ВСЕХ AI-диалогов услуг (добавляются к каждому промпту)
+const COMMON_AI_RULES = `
+
+ЖЁСТКИЕ ПРАВИЛА:
+- Пиши ПРОСТЫМ текстом БЕЗ markdown: никаких **звёздочек**, ##, списков со «*». Эмодзи можно.
+- НИКОГДА не называй суммы пошлин, утильсбора, налогов и не делай расчётов — цифры считает только калькулятор бота. Если клиент просит посчитать — скажи: «Точный расчёт сделает наш калькулятор — нажмите в меню „🚢 Расчёт растаможки под ключ" или „🧮 Калькулятор утильсбора"», и продолжай сбор данных.
+- Один вопрос за раз, коротко, на «вы».
+- Не выдумывай сроки/цены/условия, которых не знаешь — это уточнит менеджер.`;
+for (const k of Object.keys(SERVICE_PROMPTS)) SERVICE_PROMPTS[k] += COMMON_AI_RULES;
 
 const SVC_NAMES = {
   sbkts:   '📋 СБКТС',
@@ -1439,36 +1423,49 @@ export function setupClientBot(bot) {
       return ctx.reply('Выберите раздел:', KB_MAIN);
     }
 
-    // Калькулятор утильсбора
+    // Калькулятор утильсбора — точные ставки 2026 (объём → мощность → возраст)
     if (state.service === 'calc_util' && state.step === 'ask_volume') {
       const isElectric = /электр/i.test(text);
       const vol = isElectric ? 0 : parseInt(text.replace(/\D/g, ''), 10);
-
       if (!isElectric && (isNaN(vol) || vol < 50)) {
         return ctx.reply('Введите корректный объём в куб. см (например: 1600) или "электромобиль":');
       }
-
-      const rate   = calcUtil(vol, state.isLegal, isElectric);
+      setState(ctx.chat.id, { ...state, step: 'ask_hp', vol, isElectric });
+      return ctx.reply('⚙️ Мощность двигателя, л.с.? (например: 150)\n\n_Важно: льгота физлицу действует только до 160 л.с._', { parse_mode: 'Markdown' });
+    }
+    if (state.service === 'calc_util' && state.step === 'ask_hp') {
+      const hp = parseInt(text.replace(/\D/g, ''), 10);
+      if (isNaN(hp) || hp < 20 || hp > 1500) return ctx.reply('Введите мощность в л.с. (например: 150):');
+      setState(ctx.chat.id, { ...state, step: 'ask_age', hp });
+      return ctx.reply('📅 Возраст авто?\n\nНапишите: *новое* (до 3 лет) или *старше 3 лет*', { parse_mode: 'Markdown' });
+    }
+    if (state.service === 'calc_util' && state.step === 'ask_age') {
+      const isNew = /нов|до *3|младше/i.test(text);
+      const isOld = /стар|больше|свыше|более|3\+/i.test(text);
+      if (!isNew && !isOld) return ctx.reply('Напишите «новое» или «старше 3 лет»:');
+      const ageYears = isNew ? 1 : 4;
+      const fee = utilFee2026({
+        engineCc: state.vol, hp: state.hp, ageYears,
+        fuel: state.isElectric ? 'electric' : 'petrol',
+        commercial: !!state.isLegal,
+      });
       const type   = state.isLegal ? 'Юр. лицо' : 'Физ. лицо';
-      const engine = isElectric ? 'Электромобиль' : `${vol} куб. см`;
-      const fmt    = (n) => n.toLocaleString('ru-RU');
-
+      const engine = state.isElectric ? `Электромобиль, ${state.hp} л.с.` : `${state.vol} см³, ${state.hp} л.с.`;
+      const fmtN   = (n) => n.toLocaleString('ru-RU');
+      const benefitNote = (!state.isLegal && state.hp > 160)
+        ? '\n\n⚠️ _Мощность выше 160 л.с. — льготная ставка физлица не действует, применён полный тариф (правила 2026)._'
+        : '';
       clearState(ctx.chat.id);
       await ctx.reply(
-        `🧮 *Расчёт утильсбора*\n\n` +
-        `Тип: ${type}\n` +
-        `Двигатель: ${engine}\n\n` +
-        `💰 *Утильсбор: ${fmt(rate)} ₽*\n\n` +
-        `_Ставки актуальны на 2024 год. Для точного расчёта и помощи с оплатой — нажмите кнопку ниже._`,
-        {
-          parse_mode: 'Markdown',
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '📋 Оформить через LegalAuto', callback_data: 'svc_util' }],
-              [{ text: '← Главное меню',              callback_data: 'back_main' }],
-            ]
-          }
-        }
+        `🧮 *Утильсбор 2026*\n\n` +
+        `Тип: ${type}\nДвигатель: ${engine}\nВозраст: ${isNew ? 'до 3 лет' : 'старше 3 лет'}\n\n` +
+        `💰 *Утильсбор: ${fmtN(fee)} ₽*${benefitNote}\n\n` +
+        `_Официальные ставки 2026 (Пост. №1713). Поможем оформить и оплатить — жмите кнопку._`,
+        { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [
+          [{ text: '📋 Оформить через LegalAuto', callback_data: 'svc_util' }],
+          [{ text: '🚢 Полный расчёт растаможки', callback_data: 'calc_import' }],
+          [{ text: '← Главное меню', callback_data: 'back_main' }],
+        ]}}
       );
       return;
     }

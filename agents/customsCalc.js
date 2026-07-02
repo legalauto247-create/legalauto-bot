@@ -31,7 +31,7 @@ function hpRange(s) {
   if (/и более/.test(s) && nums.length === 1) return [nums[0], Infinity];
   return [nums[0], nums[1] ?? Infinity];
 }
-function utilFee({ engineCc, hp, ageYears, fuel, commercial }) {
+export function utilFee({ engineCc, hp, ageYears, fuel, commercial }) {
   const sec = utilSection(engineCc, fuel);
   const row = sec.rows.find(r => { const [a, b] = hpRange(r.hp); return hp >= a && hp <= b; })
             || sec.rows[sec.rows.length - 1];
