@@ -65,12 +65,12 @@ async function catalogFromSheet() {
   const rows = parseCSV(t);
   const head = rows[0].map(h => h.trim());
   const ix = n => head.indexOf(n);
-  const [I_id, I_brand, I_model, I_name, I_oem, I_price, I_photo, I_cat, I_series, I_title] =
-    ['id', 'brand', 'model', 'name', 'oem', 'price', 'photo', 'category', 'series', 'display_car'].map(ix);
+  const [I_id, I_brand, I_model, I_name, I_oem, I_price, I_photo, I_cat, I_series, I_title, I_cond, I_desc] =
+    ['id', 'brand', 'model', 'name', 'oem', 'price', 'photo', 'category', 'series', 'display_car', 'condition', 'description'].map(ix);
   return rows.slice(1).filter(r => r.length >= head.length - 4).map(r => ({
     id: r[I_id], brand: r[I_brand], model: r[I_model], series: r[I_series],
     name: r[I_name], oem: r[I_oem], price: r[I_price], photo: r[I_photo],
-    category: r[I_cat], title: r[I_title],
+    category: r[I_cat], title: r[I_title], condition: r[I_cond], description: r[I_desc],
   }));
 }
 
@@ -196,12 +196,15 @@ export async function makeProductShort({ platforms = ['youtube'], theme = '', le
   const brandLabel = brands.length === 1 ? brands[0] : (brands.slice(0, 2).join(' и ') || 'авто');
   const originLabel = origins.length === 1 ? origins[0] : '';   // разные страны — не заявляем одну
   const brandTag = brands.length === 1 ? brands[0].toLowerCase().replace(/[^a-zа-я0-9]/gi, '') : 'авто';
+  // состояние — из колонки condition таблицы (что написано у деталей, то и говорим)
+  const conds = [...new Set(parts.map(p => String(p.condition || '').trim()).filter(Boolean))];
+  const condLabel = conds.length === 1 ? conds[0] : '';   // смешанное состояние — не заявляем одно
 
   // 2) хук + заголовок (на «вы», без «золотых гор» — по брендбуку)
   const m = await claude.messages.create({ model: HEAVY, max_tokens: 350, messages: [{ role: 'user', content:
-`Короткий вирусный хук и заголовок для Shorts про оригинальные б/у запчасти ${brandLabel}${originLabel ? ' ' + originLabel : ''} (LegalAuto Parts). Тон по брендбуку: на «вы», прямо и по фактам, БЕЗ обещаний «золотых гор» и слова «копейки». НЕ выдумывай страну происхождения — используй только "${originLabel || 'без указания страны'}".
+`Короткий вирусный хук и заголовок для Shorts про запчасти ${brandLabel}${originLabel ? ' ' + originLabel : ''} (LegalAuto Parts). Состояние деталей СТРОГО из каталога: "${condLabel || 'разное — не указывай состояние'}". НЕ пиши «б/у», если в состоянии этого нет; НЕ пиши «новые», если не написано «Новый». Тон по брендбуку: на «вы», прямо и по фактам, БЕЗ обещаний «золотых гор» и слова «копейки». НЕ выдумывай страну происхождения — используй только "${originLabel || 'без указания страны'}".
 JSON: {"title":"до 80 симв, 1 эмодзи","description":"2 строки + 3 хэштега (#shorts #запчасти #${brandTag})","hook":"3-4 слова крупно (интрига/выгода)"}
-запчасти в ролике: ${parts.map(p => p.name).join(', ')}` }] });
+запчасти в ролике: ${parts.map(p => `${p.name}${p.condition ? ' (' + p.condition + ')' : ''}`).join(', ')}` }] });
   const s = JSON.parse(m.content[0].text.trim().replace(/^```json?|```$/g, ''));
 
   // 3) рендер: музыка + по сцене на запчасть (фото + название + цена)
