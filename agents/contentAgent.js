@@ -547,7 +547,7 @@ specs — только реально указанные, до 5.
   const card = await renderStoreCard({
     brand: d.brand, model: d.model, year: d.year || '',
     photo: photos[0], specs: (d.specs || []).slice(0, 6),
-    price: price || 'Цена по запросу', priceNote: 'выгода и безопасность с нами на каждом этапе',
+    price: price || 'Цена по запросу',
     badge: d.badge || 'ПОДБОР ПОД КЛЮЧ',
   });
 

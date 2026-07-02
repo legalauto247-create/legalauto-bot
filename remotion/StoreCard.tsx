@@ -59,17 +59,14 @@ export const StoreCard: React.FC<StoreCardProps> = (p) => {
         ) : null}
       </div>
 
-      {/* марка + модель + год */}
-      <div style={{ position: 'absolute', left: 56, top: 250, maxWidth: 520 }}>
-        <div style={{ fontWeight: 700, fontSize: 56, textTransform: 'uppercase', textShadow: '0 4px 24px rgba(0,0,0,.9)' }}>{p.brand}</div>
-        <div style={{ fontWeight: 700, fontSize: 92, lineHeight: 1.02, textTransform: 'uppercase', textShadow: '0 4px 30px rgba(0,0,0,.9)' }}>{p.model}</div>
+      {/* марка + модель + год + характеристики — единая колонка (без наложений) */}
+      <div style={{ position: 'absolute', left: 56, top: 230, maxWidth: 540, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ fontWeight: 700, fontSize: 52, textTransform: 'uppercase', textShadow: '0 4px 24px rgba(0,0,0,.9)' }}>{p.brand}</div>
+        <div style={{ fontWeight: 700, fontSize: p.model.length > 10 ? 74 : 90, lineHeight: 1.04, textTransform: 'uppercase', textShadow: '0 4px 30px rgba(0,0,0,.9)' }}>{p.model}</div>
         {p.year ? (
-          <div style={{ display: 'inline-block', marginTop: 20, border: `2px solid ${accent}`, color: accent, fontWeight: 700, fontSize: 34, padding: '8px 24px', borderRadius: 10, background: 'rgba(11,15,20,0.6)' }}>{p.year}</div>
+          <div style={{ alignSelf: 'flex-start', marginTop: 18, border: `2px solid ${accent}`, color: accent, fontWeight: 700, fontSize: 32, padding: '7px 22px', borderRadius: 10, background: 'rgba(11,15,20,0.6)' }}>{p.year}</div>
         ) : null}
-      </div>
-
-      {/* характеристики столбцом с иконками */}
-      <div style={{ position: 'absolute', left: 56, top: 560, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ marginTop: 34, display: 'flex', flexDirection: 'column', gap: 15 }}>
         {specs.map((s, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 29 }}>
             <div style={{ width: 46, height: 46, borderRadius: 12, border: `1.5px solid ${accent}66`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, background: 'rgba(11,15,20,0.6)' }}>{s.icon || SPEC_ICONS[s.label.toLowerCase()] || '•'}</div>
@@ -77,13 +74,14 @@ export const StoreCard: React.FC<StoreCardProps> = (p) => {
             <div style={{ fontWeight: 600, textShadow: '0 2px 10px rgba(0,0,0,.8)' }}>{s.value}</div>
           </div>
         ))}
+        </div>
       </div>
 
       {/* ЦЕНА золотом в рамке */}
-      <div style={{ position: 'absolute', right: 56, bottom: 210, textAlign: 'center' }}>
+      <div style={{ position: 'absolute', right: 56, bottom: 224, textAlign: 'center' }}>
         <div style={{ fontWeight: 600, fontSize: 24, letterSpacing: 4, color: '#9BA3AF', marginBottom: 10 }}>ЦЕНА</div>
         <div style={{ border: `2.5px solid ${accent}`, borderRadius: 16, padding: '18px 40px', fontWeight: 700, fontSize: 58, color: accent, background: 'rgba(11,15,20,0.75)', boxShadow: `0 0 40px ${accent}33` }}>{p.price}</div>
-        {p.priceNote ? <div style={{ fontWeight: 400, fontSize: 20, color: '#C8CDD2', marginTop: 12, maxWidth: 360 }}>{p.priceNote}</div> : null}
+        {p.priceNote ? <div style={{ fontWeight: 400, fontSize: 18, color: '#C8CDD2', marginTop: 10, whiteSpace: 'nowrap' as const }}>{p.priceNote}</div> : null}
       </div>
 
       {/* преимущества-иконки */}

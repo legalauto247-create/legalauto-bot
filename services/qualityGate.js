@@ -33,7 +33,7 @@ function deterministicChecks({ title = '', description = '', texts = [] }) {
     if (hit.length) fails.push(`запрещённые слова: ${hit.join(', ')}`);
   }
   if (d.title_max_chars && title.length > d.title_max_chars) fails.push(`заголовок длиннее ${d.title_max_chars} символов`);
-  if (d.cta_required && !/заказ|заявк|оформ|подбер|вопрос|напишите|жмите|→/i.test(all)) fails.push('нет CTA');
+  if (d.cta_required && !/заказ|заявк|оформ|подбер|вопрос|напишите|жмите|консультац|свяжи|→|➡/i.test(all)) fails.push('нет CTA');
   if (d.group_link_required && !/t\.me\/|@legalauto/i.test(all)) fails.push('нет ссылки на группу/бот');
   if (d.raw_markdown_in_text === false && /\*\*[^*]+\*\*|##\s/.test(texts.join('\n'))) fails.push('сырой markdown в тексте видео');
   return fails;
