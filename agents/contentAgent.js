@@ -236,7 +236,7 @@ JSON: {"title":"до 80 симв, 1 эмодзи","description":"2 строки 
     if (token) {
       try {
         const fd = new FormData();
-        fd.append('chat_id', String(chan)); fd.append('caption', s.title); fd.append('supports_streaming', 'true');
+        fd.append('chat_id', String(chan)); fd.append('caption', `${s.title}\n\n✅ Заказать: https://t.me/LegalAutoAssist_bot?start=tg_parts`); fd.append('supports_streaming', 'true');
         fd.append('video', new Blob([readFileSync(path)], { type: 'video/mp4' }), 'short.mp4');
         const r = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, { method: 'POST', body: fd });
         result.tgOk = (await r.json()).ok;
@@ -311,7 +311,7 @@ points: РОВНО 4-5 штук, по порядку/логике. Без markdo
     if (token) {
       try {
         const fd = new FormData();
-        fd.append('chat_id', String(ch)); fd.append('caption', `${s.title || topic}\n\n${gurl}`); fd.append('supports_streaming', 'true');
+        fd.append('chat_id', String(ch)); fd.append('caption', `${s.title || topic}\n\n✅ Заявка: https://t.me/LegalAutoAssist_bot?start=tg_${direction}\n${gurl}`); fd.append('supports_streaming', 'true');
         fd.append('video', new Blob([readFileSync(path)], { type: 'video/mp4' }), 'info.mp4');
         const r = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, { method: 'POST', body: fd });
         result.tgOk = (await r.json()).ok;
@@ -421,7 +421,7 @@ scenes: РОВНО 3-4. Только JSON, без markdown.` }] });
     if (token) {
       try {
         const fd = new FormData();
-        fd.append('chat_id', String(ch)); fd.append('caption', `${s.title || topic}\n\n${gurl}`); fd.append('supports_streaming', 'true');
+        fd.append('chat_id', String(ch)); fd.append('caption', `${s.title || topic}\n\n✅ Заявка: https://t.me/LegalAutoAssist_bot?start=tg_${direction}\n${gurl}`); fd.append('supports_streaming', 'true');
         fd.append('video', new Blob([readFileSync(path)], { type: 'video/mp4' }), 'cine.mp4');
         const r = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, { method: 'POST', body: fd });
         result.tgOk = (await r.json()).ok;

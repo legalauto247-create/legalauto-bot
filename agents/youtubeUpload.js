@@ -8,9 +8,13 @@ import { readFileSync, statSync } from 'fs';
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
+// Deep-link на клиентский бот с меткой источника (source попадает в CRM)
+export const botLink = (source = 'yt_video') => `https://t.me/LegalAutoAssist_bot?start=${source}`;
+
 // Блок ссылок на группы — добавляется в КАЖДОЕ описание
 export const LINKS_BLOCK =
 `\n\n— — —\n` +
+`✅ ЗАКАЗАТЬ в 1 клик (бот): ${botLink('yt_video')}\n` +
 `🚗 Пригон авто под ключ: https://t.me/LegalAutoStore\n` +
 `🔧 Запчасти BMW/Geely/Li Auto: https://t.me/LegalAutoParts24\n` +
 `📋 Документы СБКТС/ЭПТС/утиль + новости: https://t.me/LegalAuto24\n` +

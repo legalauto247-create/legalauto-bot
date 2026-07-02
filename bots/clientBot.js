@@ -458,10 +458,49 @@ function welcomeText(name) {
 // ── Регистрация хэндлеров ─────────────────────────────────────────────────────
 export function setupClientBot(bot) {
 
-  // /start (с поддержкой реф-ссылок: ?start=ref_XXXXX)
+  // Меню команд (синяя кнопка «Меню» в Telegram)
+  bot.telegram.setMyCommands([
+    { command: 'menu',      description: '🏠 Главное меню' },
+    { command: 'buy',       description: '🛒 Купить запчасть' },
+    { command: 'catalog',   description: '📦 Каталог запчастей' },
+    { command: 'calc',      description: '🚢 Расчёт растаможки под ключ' },
+    { command: 'util',      description: '🧮 Калькулятор утильсбора' },
+    { command: 'status',    description: '📋 Статус моей заявки' },
+    { command: 'subscribe', description: '🔔 Уведомить о поступлении' },
+    { command: 'mysubs',    description: '📑 Мои подписки' },
+    { command: 'oem',       description: '🔍 Поиск по OEM-артикулу' },
+    { command: 'ref',       description: '🎁 Пригласить друга (+500₽)' },
+  ]).catch(() => {});
+
+  // /start (реф-ссылки ?start=ref_XXX + источники из роликов ?start=yt_XXX/tg_XXX/ig_XXX)
   bot.start(async (ctx) => {
     clearState(ctx.chat.id);
     const payload = ctx.startPayload || '';  // то что после ?start=
+
+    // Пришёл из ролика/поста (deep link) — сразу в целевой сценарий с меткой источника
+    const srcMatch = /^(yt|tg|ig|vk|vid)_(.+)$/.exec(payload);
+    if (srcMatch) {
+      const source = payload;   // напр. yt_parts_geely — целиком в CRM
+      const topic = srcMatch[2] || '';
+      if (/^(docs|sbkts|epts|custom|util)/.test(topic)) {
+        // из ролика про документы → сразу диалог по СБКТС/ЭПТС
+        setState(ctx.chat.id, { service: 'sbkts', source, history: [] });
+        await ctx.reply(
+          `👋 Добро пожаловать из нашего видео!\n\n📋 *СБКТС и ЭПТС под ключ.* Отвечу на пару вопросов и оформлю заявку — займёт 2–3 минуты.\n\nКакое авто оформляем? (марка, модель, год)`,
+          { parse_mode: 'Markdown' }
+        );
+      } else {
+        // из ролика про запчасти/авто → сразу подбор
+        setState(ctx.chat.id, { step: 'buy_ask_part', source });
+        await ctx.reply(
+          `👋 Добро пожаловать из нашего видео!\n\n🔩 *Напишите, какая запчасть нужна* (деталь + марка и модель авто) — проверю наличие и цену:\n_Например: «фара правая Geely Coolray»_`,
+          { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [[
+            { text: '📦 Смотреть весь каталог', web_app: { url: MINI_APP_URL } },
+          ]]}}
+        );
+      }
+      return;
+    }
 
     // Обрабатываем реф-ссылку
     if (payload.startsWith('ref_')) {
@@ -722,9 +761,13 @@ export function setupClientBot(bot) {
   // ── Запуск любой услуги (СБКТС/ЭПТС/Утиль/Таможня) единым образом ──────────
   const startService = async (ctx, svc) => {
     clearState(ctx.chat.id);
-    const firstQ = await askAIFirst(svc, `Клиент выбрал услугу: ${SVC_NAMES[svc] || svc}`);
+    const name = SVC_NAMES[svc] || svc;
+    await ctx.reply(
+      `✅ *${name}*\n\nОтвечу на несколько вопросов и оформлю заявку — это займёт 2–3 минуты.`,
+      { parse_mode: 'Markdown' }
+    );
+    const firstQ = await askAIFirst(svc, `Клиент выбрал услугу: ${name}. Задай первый вопрос.`);
     setState(ctx.chat.id, { service: svc, history: [{ role: 'assistant', content: firstQ }] });
-    await ctx.reply(`✅ *${SVC_NAMES[svc] || svc}*`, { parse_mode: 'Markdown' });
     return ctx.reply(firstQ);
   };
   bot.action('svc_sbkts',   async (ctx) => { await ctx.answerCbQuery(); await startService(ctx, 'sbkts'); });
@@ -738,7 +781,10 @@ export function setupClientBot(bot) {
     const brand = ctx.match[1];
     const firstQ = await askAIFirst('parts', `Клиент ищет запчасть для ${brand}. Уточни модель, год и нужную деталь.`);
     setState(ctx.chat.id, { service: 'parts', brand, history: [{ role: 'assistant', content: firstQ }] });
-    await ctx.reply(`✅ *${brand}*`, { parse_mode: 'Markdown' });
+    await ctx.reply(`✅ *${brand}*`, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [
+      [{ text: '📦 Каталог запчастей', web_app: { url: MINI_APP_URL } }],
+      [{ text: '← Другая марка', callback_data: 'svc_parts' }],
+    ]}});
     return ctx.reply(firstQ);
   });
 
@@ -852,21 +898,6 @@ export function setupClientBot(bot) {
     await ctx.reply('🔩 *Подбор запчасти*\n\nВыберите марку автомобиля:', { parse_mode: 'Markdown', ...KB_BRANDS });
   });
 
-  for (const brand of ['BMW', 'Geely', 'Li Auto', 'Mercedes', 'Audi', 'Toyota']) {
-    bot.action(`brand_${brand}`, async (ctx) => {
-      await ctx.answerCbQuery();
-      clearState(ctx.chat.id);
-      setState(ctx.chat.id, { step: 'buy_ask_part', prefillBrand: brand });
-      await ctx.reply(
-        `✅ *${brand}*\n\nКакая запчасть нужна?\n\n_Напишите название детали и модель авто:_\n_Например: «тормозные диски X5 E70»_`,
-        { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [
-          [{ text: '📦 Каталог запчастей', web_app: { url: MINI_APP_URL } }],
-          [{ text: '← Выбрать другую марку', callback_data: 'svc_parts' }],
-        ]}}
-      );
-    });
-  }
-
   bot.action('brand_other', async (ctx) => {
     await ctx.answerCbQuery();
     clearState(ctx.chat.id);
@@ -876,27 +907,6 @@ export function setupClientBot(bot) {
     );
     setState(ctx.chat.id, { service: 'parts', history: [], waitBrand: true });
   });
-
-  // ── Кнопки услуг (СБКТС, ЭПТС, Утильсбор, Таможня) ─────────────────────
-  for (const svc of ['sbkts', 'epts', 'util', 'customs']) {
-    bot.action(`svc_${svc}`, async (ctx) => {
-      await ctx.answerCbQuery();
-      const name = SVC_NAMES[svc];
-      await ctx.reply(
-        `✅ *${name}*\n\nОтвечу на несколько вопросов и оформлю заявку.\nОтвечайте по одному — это займёт 2–3 минуты.`,
-        { parse_mode: 'Markdown' }
-      );
-      const firstQ = await askAIFirst(svc, `Начни сбор данных для ${name}. Задай первый вопрос.`);
-      setState(ctx.chat.id, {
-        service: svc,
-        history: [
-          { role: 'user', content: `Начни сбор данных для ${name}` },
-          { role: 'assistant', content: firstQ }
-        ]
-      });
-      await ctx.reply(firstQ);
-    });
-  }
 
   // ── Калькулятор утильсбора ─────────────────────────────────────────────────
   bot.action('calc_util', async (ctx) => {
@@ -1149,7 +1159,7 @@ export function setupClientBot(bot) {
       const partQuery = text;
       trackPartQuery(partQuery); // 📊 статистика трендов
       registerLead({ chatId: ctx.chat.id, partName: partQuery, username: ctx.from?.username }); // 🐕 watchdog
-      setState(ctx.chat.id, { step: 'buy_ask_phone', partQuery });
+      setState(ctx.chat.id, { step: 'buy_ask_phone', partQuery, source: state.source });
       return ctx.reply(
         `✅ *${partQuery}*\n\n📞 Поделитесь номером телефона — менеджер свяжется с вами в течение 30 минут:`,
         { parse_mode: 'Markdown', reply_markup: {
@@ -1183,9 +1193,9 @@ export function setupClientBot(bot) {
         }}
       );
 
-      // Сохраняем заявку в GAS
+      // Сохраняем заявку в GAS (source: откуда пришёл клиент — ролик/прямой)
       const leadText = `Запчасть: ${partQuery}\nТелефон: ${phone}\nКлиент: @${ctx.from?.username || ctx.from?.id}`;
-      saveLead(ctx.chat.id, 'buy_direct', leadText, ctx.from?.username).catch(() => {});
+      saveLead(ctx.chat.id, state.source || 'buy_direct', leadText, ctx.from?.username).catch(() => {});
 
       // Ищем ZZap параллельно с уведомлением
       const zzapBuyResult = await searchZzap({ partName: partQuery })
