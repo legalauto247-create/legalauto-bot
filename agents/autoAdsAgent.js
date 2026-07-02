@@ -23,6 +23,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import { heartbeat as stateHeartbeat, logEvent as stateEvent, persistentPath } from '../services/stateService.js';
 import fetch     from 'node-fetch';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
@@ -411,7 +412,7 @@ export function setupAutoAdsListener(bot, botName = 'bot') {
 // Работает для любых ПУБЛИЧНЫХ каналов (с @username). Не нужен доступ к каналу.
 // ═══════════════════════════════════════════════════════════════════════════
 
-const SEEN_FILE = 'data/autoads_seen.json';
+const SEEN_FILE = persistentPath('autoads_seen.json');
 
 function loadSeen() {
   try {
@@ -534,11 +535,13 @@ export async function pollPublicChannels() {
       // seen двигаем только до реально просмотренных — непросмотренные останутся на след. прогон
       seen[handle] = Math.max(lastSeen, maxProcessed);
       console.log(`[AutoAds] ${handle}: отправлено ${sent} авто на одобрение`);
+      stateEvent('autoads_poll', { note: `${handle}: ${sent} авто на одобрение` });
     }
 
     saveSeen(seen);
   } finally {
     pollerRunning = false;
+    stateHeartbeat('autoads', { note: 'поллер партнёрских каналов' });
   }
 }
 

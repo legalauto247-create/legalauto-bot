@@ -9,6 +9,7 @@
  * Выключатель: VIDEO_AUTOPILOT=false в env.
  */
 import { makeProductShort, makeCinematicShort } from './contentAgent.js';
+import { heartbeat, logEvent } from '../services/stateService.js';
 
 const ENABLED = process.env.VIDEO_AUTOPILOT !== 'false';
 const ADMIN_BOT_TOKEN = process.env.ADMIN_BOT_TOKEN;
@@ -51,7 +52,7 @@ async function morningSlot() {
   try {
     const theme = PART_THEMES[dayOfYear() % PART_THEMES.length];
     console.log(`[Autopilot] 🎬 Утренний ролик: запчасти${theme ? ' (' + theme + ')' : ''}`);
-    const r = await makeProductShort({ platforms: ['youtube', 'telegram'], theme });
+    const r = await makeProductShort({ platforms: ['youtube', 'telegram'], theme, source: 'autopilot' });
     await notifyEdo(r.ok
       ? `🤖 Автопилот: утренний ролик готов ✅${theme ? `\nТема: ${theme}` : ''}\n${r.ytUrl || ''}${r.tgOk ? '\n+ Telegram' : ''}\nЗапчасти: ${(r.partsUsed || []).slice(0, 4).join(', ')}`
       : `🤖 Автопилот: утренний ролик не вышел ❌\n${r.error}`);
@@ -66,7 +67,7 @@ async function eveningSlot() {
   try {
     const { topic, direction } = CINE_TOPICS[dayOfYear() % CINE_TOPICS.length];
     console.log(`[Autopilot] 🎬 Вечерний кино-ролик: ${topic} (${direction})`);
-    const r = await makeCinematicShort({ topic, direction, platforms: ['youtube', 'telegram'] });
+    const r = await makeCinematicShort({ topic, direction, platforms: ['youtube', 'telegram'], source: 'autopilot' });
     await notifyEdo(r.ok
       ? `🤖 Автопилот: вечерний кино-ролик готов ✅\nТема: ${topic}\n${r.ytUrl || ''}${r.tgOk ? '\n+ Telegram' : ''}`
       : `🤖 Автопилот: вечерний ролик не вышел ❌\n${r.error}`);
@@ -87,5 +88,7 @@ export function startVideoAutopilot() {
     if (hhmm === '11:00') { lastFired = key; morningSlot(); }
     if (hhmm === '17:00') { lastFired = key; eveningSlot(); }
   }, 60_000);
+  heartbeat('autopilot', { note: 'слоты 11:00 и 17:00 МСК' });
+  setInterval(() => heartbeat('autopilot', { note: 'слоты 11:00 и 17:00 МСК' }), 10 * 60_000);
   console.log('🎬 [Autopilot] Видео-автопилот запущен: 11:00 (запчасти) и 17:00 (кино) МСК');
 }

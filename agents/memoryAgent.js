@@ -12,7 +12,8 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const MEMORY_FILE = join(__dirname, '..', 'data', 'edo_memory.json');
+import { persistentPath } from '../services/stateService.js';
+const MEMORY_FILE = persistentPath('edo_memory.json');
 
 // ── Структура памяти ──────────────────────────────────────────────────────
 const DEFAULT_MEMORY = {

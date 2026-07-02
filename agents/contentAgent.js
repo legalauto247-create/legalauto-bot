@@ -13,17 +13,18 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import Anthropic from '@anthropic-ai/sdk';
 import { renderProduct, renderInfo, renderCinematic } from './videoAgent.js';
+import { createTask, taskProcessing, taskDone, taskFailed, persistentPath } from '../services/stateService.js';
 import { uploadShort } from './youtubeUpload.js';
 import { HEAVY } from './models.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const USED_FILE = join(ROOT, 'data', 'video_used.json');
+const USED_FILE = persistentPath('video_used.json');
 const MUSIC_DIR = join(ROOT, 'assets', 'music');
 const claude = process.env.CLAUDE_API_KEY ? new Anthropic({ apiKey: process.env.CLAUDE_API_KEY }) : null;
 
 function loadUsed() { try { return JSON.parse(readFileSync(USED_FILE, 'utf8')); } catch { return {}; } }
 function saveUsed(u) { try { writeFileSync(USED_FILE, JSON.stringify(u, null, 1)); } catch {} }
-const LAST_MUSIC_FILE = join(ROOT, 'data', 'last_music.json');
+const LAST_MUSIC_FILE = persistentPath('last_music.json');
 // genres — предпочитаемые жанры по префиксу имени файла (phonk/sport/electronic/hiphop/rock)
 function pickMusic(genres = null) {
   try {
@@ -138,7 +139,7 @@ function brandFromTheme(theme = '') {
 }
 function shuffle(a) { const x = a.slice(); for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; }
 
-export async function makeProductShort({ platforms = ['youtube'], theme = '', lengthSec = 18 } = {}) {
+async function _makeProductShort({ platforms = ['youtube'], theme = '', lengthSec = 18 } = {}) {
   if (!claude) return { ok: false, error: 'CLAUDE_API_KEY не задан' };
   const music = pickMusic();
   if (!music) return { ok: false, error: 'Нет музыки. Закинь mp3-биты в assets/music/ — без музыки ролики не делаем.' };
@@ -265,7 +266,7 @@ const DIRECTIONS = {
  * Инфо-ролик на ЛЮБУЮ тему в фирстиле LegalAuto (не из каталога).
  * makeInfoShort({ topic, direction, platforms, channel, groupUrl }) → { ok, ytUrl, tgOk, title, error }
  */
-export async function makeInfoShort({ topic, direction = 'docs', platforms = ['youtube'], channel, groupUrl } = {}) {
+async function _makeInfoShort({ topic, direction = 'docs', platforms = ['youtube'], channel, groupUrl } = {}) {
   if (!claude) return { ok: false, error: 'CLAUDE_API_KEY не задан' };
   if (!topic) return { ok: false, error: 'Не задана тема ролика' };
   const dir = DIRECTIONS[direction] || DIRECTIONS.docs;
@@ -356,7 +357,7 @@ async function genCineImage(prompt, direction = 'auto') {
  * Каждая сцена — кинематографичная AI-картинка + премиум брендовый оверлей.
  * makeCinematicShort({ topic, direction, platforms, groupUrl }) → { ok, ytUrl, tgOk, title, error }
  */
-export async function makeCinematicShort({ topic, direction = 'auto', platforms = ['youtube'], channel, groupUrl } = {}) {
+async function _makeCinematicShort({ topic, direction = 'auto', platforms = ['youtube'], channel, groupUrl } = {}) {
   if (!claude) return { ok: false, error: 'CLAUDE_API_KEY не задан' };
   if (!OPENAI_KEY()) return { ok: false, error: 'OPENAI_API_KEY не задан (нужен для кино-кадров)' };
   if (!topic) return { ok: false, error: 'Не задана тема ролика' };
@@ -432,3 +433,21 @@ scenes: РОВНО 3-4. Только JSON, без markdown.` }] });
   cleanup();
   return result;
 }
+
+
+// ── Трекинг в Platform State: каждая генерация = задача со статусами ─────────
+function tracked(type, fn, metaOf) {
+  return async (opts = {}) => {
+    const id = createTask({ type, source: opts.source || 'jarvis', owner: 'contentAgent', meta: metaOf(opts) });
+    taskProcessing(id);
+    try {
+      const r = await fn(opts);
+      if (r?.ok) taskDone(id, { url: r.ytUrl || null, title: r.title || null, tg: !!r.tgOk });
+      else taskFailed(id, r?.error || 'unknown');
+      return r;
+    } catch (e) { taskFailed(id, e); throw e; }
+  };
+}
+export const makeProductShort   = tracked('video_product',   _makeProductShort,   o => ({ theme: o.theme || '' }));
+export const makeInfoShort      = tracked('video_info',      _makeInfoShort,      o => ({ topic: o.topic || '', direction: o.direction }));
+export const makeCinematicShort = tracked('video_cinematic', _makeCinematicShort, o => ({ topic: o.topic || '', direction: o.direction }));

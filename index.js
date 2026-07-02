@@ -30,6 +30,7 @@ import { setupWatchdog } from './agents/watchdogAgent.js';
 import { initEdoBot, sendMorningBriefing } from './bots/edoBot.js';
 import { initJarvisBot } from './bots/jarvisBot.js';
 import { startVideoAutopilot } from './agents/videoAutopilot.js';
+import { heartbeat, logEvent } from './services/stateService.js';
 import { execSync } from 'child_process';
 
 // ── Диагностика Chromium при старте ───────────────────────────────────────────
@@ -73,7 +74,7 @@ if (errors.length) {
 function launchWithRetry(bot, name, opts = {}, attempt = 1) {
   const MAX = 60;           // до ~8 минут (409 при дренаже старого деплоя, сеть на старте)
   const DELAY = 8_000;
-  bot.launch(opts).catch(e => {
+  bot.launch(opts).then(() => {}).catch(e => {
     // Ретраим ЛЮБУЮ ошибку старта: 409 (старый контейнер держит getUpdates),
     // сетевые сбои (getMe failed на холодном старте) и т.д. Иначе бот молча мёртв.
     if (attempt < MAX) {
@@ -468,6 +469,17 @@ initJarvisBot()
 
 // ── Видео-автопилот: 2 ролика в день (11:00 запчасти, 17:00 кино) МСК ──────
 startVideoAutopilot();
+
+// ── Platform State: heartbeat ботов (реальный getMe, не самообман) ──────────
+async function botHeartbeats() {
+  for (const [name, bot] of [['admin_bot', adminBot], ['client_bot', clientBot]]) {
+    try { const me = await bot.telegram.getMe(); heartbeat(name, { note: '@' + me.username }); }
+    catch (e) { logEvent('bot_unreachable', { note: `${name}: ${e.message.slice(0, 80)}` }); }
+  }
+  heartbeat('core', { note: 'index.js жив' });
+}
+setTimeout(botHeartbeats, 20_000);
+setInterval(botHeartbeats, 5 * 60_000);
 
 // ── Graceful shutdown ──────────────────────────────────────────────────────
 function shutdown(signal) {

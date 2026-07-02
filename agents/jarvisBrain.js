@@ -37,11 +37,13 @@ import { getAutoAdsStatus, pollPublicChannels } from './autoAdsAgent.js';
 import { prepareAutoPost, publishToChannel } from './postAgent.js';
 import { learnFact, buildSystemPrompt, addConversation } from './memoryAgent.js';
 import { makeProductShort, makeInfoShort, makeCinematicShort } from './contentAgent.js';
+import { stateSummary, logEvent as stateEvent } from '../services/stateService.js';
 
 const claude = process.env.CLAUDE_API_KEY ? new Anthropic({ apiKey: process.env.CLAUDE_API_KEY }) : null;
 const gemini = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
 
 const TOOLS = [
+  { name: 'platform_state', description: 'ЕДИНОЕ СОСТОЯНИЕ ПЛАТФОРМЫ: живые компоненты (heartbeat), задачи со статусами (created/processing/done/failed), последние провалы, журнал событий. ВСЕГДА вызывай ПЕРВЫМ на вопросы «что происходит / как дела / статус / что сегодня / всё ли работает» — отвечай ФАКТАМИ отсюда, не гадай.', input_schema: { type: 'object', properties: {} } },
   { name: 'platform_status', description: 'Статус платформы: автообъявления, каналы, очереди.', input_schema: { type: 'object', properties: {} } },
   { name: 'get_analytics', description: 'Аналитика бизнеса: запчасти, публикации, лиды, выручка.', input_schema: { type: 'object', properties: { period: { type: 'string', enum: ['today','week','month','all'] } } } },
   { name: 'calc_customs', description: 'Рассчитать растаможку+утильсбор авто (РФ 2026).', input_schema: { type: 'object', properties: { engineCc: { type: 'number' }, hp: { type: 'number' }, ageYears: { type: 'number' }, priceEur: { type: 'number' } }, required: ['engineCc','hp','ageYears','priceEur'] } },
@@ -58,6 +60,9 @@ const TOOLS = [
 async function runTool(name, input, ctx) {
   try {
     switch (name) {
+      case 'platform_state': {
+        return stateSummary();
+      }
       case 'platform_status': {
         const a = getAutoAdsStatus();
         return `Автообъявления: ${a.enabled ? 'вкл' : 'выкл'}, каналов-партнёров ${a.partners}, на одобрении ${a.pending}. Канал авто: ${a.channel}.`;
@@ -160,6 +165,8 @@ const PERSONA =
 • make_info_short — только если Эдо просит именно простой/быстрый инфо-ролик без AI-картинок.
 Эдо требует «высший уровень» — поэтому по инфо/пригон-темам всегда бери make_cinematic, кроме явной просьбы о простом.
 Всегда передавай group_link, если Эдо назвал конкретную ссылку на группу/канал.
+
+ПРОАКТИВНОСТЬ: на вопросы «что происходит/как дела/статус/всё ли работает/что сегодня» — СНАЧАЛА вызови platform_state и отвечай его фактами (какие задачи идут, что провалилось, кто жив). Не отвечай о состоянии платформы по памяти.
 
 ОБУЧЕНИЕ И ПАМЯТЬ: ты учишься на ходу. Как только Эдо поправил стиль, сказал предпочтение, дал новый факт о бизнесе или ссылку — СРАЗУ вызывай remember, чтобы не переспрашивать в будущем. Лучше запомнить лишнее, чем забыть важное.`;
 
