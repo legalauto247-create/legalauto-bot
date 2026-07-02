@@ -30,7 +30,8 @@ import { setupWatchdog } from './agents/watchdogAgent.js';
 import { initEdoBot, sendMorningBriefing } from './bots/edoBot.js';
 import { initJarvisBot } from './bots/jarvisBot.js';
 import { startVideoAutopilot } from './agents/videoAutopilot.js';
-import { heartbeat, logEvent } from './services/stateService.js';
+import { heartbeat, logEvent, setSection } from './services/stateService.js';
+import { startHealthMonitor } from './services/healthMonitor.js';
 import { execSync } from 'child_process';
 
 // ── Диагностика Chromium при старте ───────────────────────────────────────────
@@ -161,6 +162,7 @@ async function runAutoPost() {
     await publishToChannel(adminBot.telegram, result.post);
     const p = result.post.part;
     console.log(`[AutoPost] ✅ Posted: ${p.brand} ${p.name} (ID: ${p.id})`);
+    setSection('autopost', { last_at: new Date().toISOString(), last: `${p.brand} ${p.name}` });
 
     // Уведомить владельца
     if (process.env.ADMIN_CHAT_ID) {
@@ -469,6 +471,9 @@ initJarvisBot()
 
 // ── Видео-автопилот: 2 ролика в день (11:00 запчасти, 17:00 кино) МСК ──────
 startVideoAutopilot();
+
+// ── Health Monitor: сам видит поломки, жнёт зависшие задачи, докладывает ────
+startHealthMonitor();
 
 // ── Platform State: heartbeat ботов (реальный getMe, не самообман) ──────────
 async function botHeartbeats() {
