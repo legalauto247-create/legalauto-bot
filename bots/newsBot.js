@@ -21,13 +21,14 @@ const anthropic = CLAUDE_API_KEY ? new Anthropic({ apiKey: CLAUDE_API_KEY }) : n
 
 // ── RSS источники (импорт авто, таможня, авторынок РФ) ───────────────────
 const RSS_FEEDS = [
-  { url: 'https://www.autonews.ru/rss.xml',               topic: 'авторынок импорт Россия' },
-  { url: 'https://www.rbc.ru/v10/rss/auto.rss',           topic: 'авторынок RBC' },
-  { url: 'https://www.zr.ru/rss.xml',                     topic: 'запчасти авто' },
-  { url: 'https://motor.ru/feed',                         topic: 'автоновости' },
-  { url: 'https://www.drom.ru/rss/news.xml',              topic: 'авторынок Россия' },
-  { url: 'https://kolesa.ru/feed/rss/',                   topic: 'автомобили Россия' },
-  { url: 'https://www.avtovzglyad.ru/rss.xml',            topic: 'авто импорт' },
+  // авто-специфичные (проверены живыми 02.07.2026)
+  { url: 'https://www.gazeta.ru/export/rss/auto.xml',                 topic: 'авто Газета.ру' },
+  { url: 'https://motor.ru/exports/rss',                              topic: 'автоновости Motor' },
+  { url: 'https://quto.ru/exports/rss',                               topic: 'автоновости Quto' },
+  { url: 'https://www.kommersant.ru/RSS/section-auto.xml',            topic: 'авто Коммерсант' },
+  // общие деловые (Haiku отфильтрует только про импорт/таможню/утиль/авторынок)
+  { url: 'https://rssexport.rbc.ru/rbcnews/news/30/full.rss',         topic: 'новости РБК' },
+  { url: 'https://tass.ru/rss/v2.xml',                                topic: 'новости ТАСС' },
 ];
 
 // ── Веб-скрапинг сайтов без RSS ───────────────────────────────────────────
@@ -65,13 +66,31 @@ const SCRAPE_SOURCES = [
 ];
 
 // Счётчик постов за сутки (сбрасывается при рестарте)
+import { persistentPath } from '../services/stateService.js';
+import { readFileSync as _rf, writeFileSync as _wf } from 'fs';
+const NEWS_SEEN_FILE = persistentPath('news_published.json');
 let dailyCount = 0;
 let lastReset  = new Date().toDateString();
-const publishedUrls = new Set();
+const publishedUrls = new Set((() => { try { return JSON.parse(_rf(NEWS_SEEN_FILE, 'utf8')); } catch { return []; } })());
+function saveSeenNews() { try { _wf(NEWS_SEEN_FILE, JSON.stringify([...publishedUrls].slice(-500))); } catch {} }
 
 function resetDailyIfNeeded() {
   const today = new Date().toDateString();
   if (today !== lastReset) { dailyCount = 0; lastReset = today; }
+}
+
+
+// Фетч XML с автоопределением кодировки (gazeta.ru и др. отдают windows-1251)
+async function fetchXml(url) {
+  const res = await fetch(url, { signal: AbortSignal.timeout(15000), headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh) Chrome/120.0' }, redirect: 'follow' });
+  const buf = await res.arrayBuffer();
+  let text = new TextDecoder('utf-8').decode(buf);
+  const m = /encoding=["']?([\w-]+)/i.exec(text.slice(0, 200)) || /charset=([\w-]+)/i.exec(res.headers.get('content-type') || '');
+  const enc = (m && m[1] || 'utf-8').toLowerCase();
+  if (enc !== 'utf-8' && enc !== 'utf8') {
+    try { text = new TextDecoder(enc).decode(buf); } catch {}
+  }
+  return text;
 }
 
 // ── RSS парсер ─────────────────────────────────────────────────────────────
@@ -85,9 +104,13 @@ function parseRss(xml) {
       const m = block.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\/${tag}>|<${tag}[^>]*>([^<]*)<\/${tag}>`));
       return m ? (m[1] || m[2] || '').trim() : '';
     };
-    const title = get('title');
+    const de = (t) => t
+      .replace(/&quot;/g, '«').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+      .replace(/&#x2013;|&ndash;/g, '–').replace(/&#x2014;|&mdash;/g, '—').replace(/&#(\d+);/g, (m, n) => String.fromCharCode(n))
+      .replace(/<[^>]+>/g, '').trim();
+    const title = de(get('title'));
     const link  = get('link') || get('guid');
-    const desc  = get('description');
+    const desc  = de(get('description'));
     if (title && link) items.push({ title, link, desc });
   }
   return items.slice(0, 8);
@@ -329,8 +352,7 @@ export async function runNewsBot() {
   const allItems = [];
   for (const feed of RSS_FEEDS) {
     try {
-      const res   = await fetch(feed.url, { signal: AbortSignal.timeout(10000) });
-      const xml   = await res.text();
+      const xml   = await fetchXml(feed.url);
       const items = parseRss(xml);
       allItems.push(...items);
     } catch (e) {
@@ -361,7 +383,7 @@ export async function runNewsBot() {
 
     const ok = await sendForApproval(post, item.link);
     if (ok) {
-      publishedUrls.add(item.link);
+      publishedUrls.add(item.link); saveSeenNews();
       dailyCount++;
       published++;
       console.log(`[NewsBot] 📨 ${item.title.substring(0, 60)} → ожидает одобрения`);
@@ -370,4 +392,22 @@ export async function runNewsBot() {
   }
 
   console.log(`[NewsBot] Готово. Опубликовано: ${published} / сегодня: ${dailyCount}`);
+}
+
+
+// ── Для Jarvis: собрать свежие ПОЛЕЗНЫЕ новости (фильтр Haiku), без публикации ─
+export async function fetchFreshNews(maxItems = 5) {
+  const all = [];
+  for (const feed of RSS_FEEDS) {
+    try {
+      all.push(...parseRss(await fetchXml(feed.url)));
+    } catch {}
+  }
+  const fresh = all.filter(i => !publishedUrls.has(i.link));
+  const useful = [];
+  for (const item of fresh) {
+    if (useful.length >= maxItems) break;
+    if (await isRelevant(item.title, item.desc)) useful.push({ title: item.title, link: item.link, desc: (item.desc || '').slice(0, 200) });
+  }
+  return useful;
 }

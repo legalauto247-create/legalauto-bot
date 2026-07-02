@@ -86,6 +86,7 @@ import { learnFact, buildSystemPrompt, addConversation } from './memoryAgent.js'
 import { makeProductShort, makeInfoShort, makeCinematicShort } from './contentAgent.js';
 import { stateSummary, logEvent as stateEvent } from '../services/stateService.js';
 import { runHealthCheck, formatHealth } from '../services/healthMonitor.js';
+import { fetchFreshNews } from '../bots/newsBot.js';
 
 const claude = process.env.CLAUDE_API_KEY ? new Anthropic({ apiKey: process.env.CLAUDE_API_KEY }) : null;
 const gemini = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
@@ -97,6 +98,7 @@ const TOOLS = [
   { name: 'get_analytics', description: 'Аналитика бизнеса: запчасти, публикации, лиды, выручка.', input_schema: { type: 'object', properties: { period: { type: 'string', enum: ['today','week','month','all'] } } } },
   { name: 'calc_customs', description: 'Рассчитать растаможку+утильсбор авто (РФ 2026).', input_schema: { type: 'object', properties: { engineCc: { type: 'number' }, hp: { type: 'number' }, ageYears: { type: 'number' }, priceEur: { type: 'number' } }, required: ['engineCc','hp','ageYears','priceEur'] } },
   { name: 'generate_image', description: 'Нарисовать изображение через OpenAI gpt-image (фон, баннер, иллюстрация). Сразу отправляет картинку Эдо.', input_schema: { type: 'object', properties: { prompt: { type: 'string' } }, required: ['prompt'] } },
+  { name: 'scan_news', description: 'Просканировать свежие новости (6 живых RSS: авто + деловые) и отфильтровать ПОЛЕЗНЫЕ для импортёров (таможня/утиль/авторынок/импорт). Возвращает список заголовков с ссылками. Используй на «что нового / есть ли новости / проверь новости». Дальше можешь предложить Эдо сделать из лучшей новости ролик (make_cinematic с direction=docs и темой новости) или пост.', input_schema: { type: 'object', properties: { max: { type: 'number' } } } },
   { name: 'scan_partner_cars', description: 'Просканировать канал партнёра и прислать свежие авто на одобрение.', input_schema: { type: 'object', properties: {} } },
   { name: 'post_part', description: 'Опубликовать одну запчасть в канал запчастей сейчас.', input_schema: { type: 'object', properties: {} } },
   { name: 'ask_gemini', description: 'Спросить Gemini (длинный контекст, второе мнение, анализ больших данных).', input_schema: { type: 'object', properties: { prompt: { type: 'string' } }, required: ['prompt'] } },
@@ -139,6 +141,11 @@ async function runTool(name, input, ctx) {
           return 'Картинка сгенерирована и отправлена Эдо.';
         }
         return img?.url ? `Картинка: ${img.url}` : 'Не удалось сгенерировать изображение.';
+      }
+      case 'scan_news': {
+        const news = await fetchFreshNews(Math.min(input.max || 5, 8));
+        if (!news.length) return 'Свежих полезных новостей для импортёров сейчас нет (проверил 6 источников).';
+        return 'Свежие полезные новости:\n' + news.map((n, i) => `${i + 1}. ${n.title}\n   ${n.link}`).join('\n');
       }
       case 'scan_partner_cars': {
         await pollPublicChannels();
