@@ -1,55 +1,82 @@
 {
-  "version": 1,
+  "version": 2,
   "_comment": "Граф связей: тип контента → вся цепочка (шаблон, стиль, музыка, CTA, каналы). Выбирает Jarvis, не человек. Цепочка: Тема → направление → CONTENT_GRAPH → остальные JSON → Renderer → Quality Gate → публикация.",
   "news_import": {
     "direction": "docs",
-    "content_template": "news_001",
+    "content_template": "news_import_001",
     "video_template": "cinematic_v1",
     "image_style": "docs",
-    "music_genre": ["electronic"],
+    "music_genre": [
+      "electronic"
+    ],
     "cta": "consultation",
     "deep_link_source": "yt_news",
-    "publish": { "telegram": "@LegalAuto24", "youtube": "shorts" }
+    "publish": {
+      "telegram": "@LegalAuto24",
+      "youtube": "shorts"
+    }
   },
   "docs_explainer": {
     "direction": "docs",
-    "content_template": null,
+    "content_template": "docs_short_001",
     "video_template": "cinematic_v1",
     "image_style": "docs",
-    "music_genre": ["electronic", "sport"],
+    "music_genre": [
+      "electronic",
+      "sport"
+    ],
     "cta": "docs_order",
     "deep_link_source": "yt_docs",
-    "publish": { "telegram": "@LegalAuto24", "youtube": "shorts" }
+    "publish": {
+      "telegram": "@LegalAuto24",
+      "youtube": "shorts"
+    }
   },
   "store_promo": {
     "direction": "auto",
     "content_template": "store_short_001",
     "video_template": "cinematic_v1",
     "image_style": "auto",
-    "music_genre": ["sport", "rock"],
+    "music_genre": [
+      "sport",
+      "rock"
+    ],
     "cta": "car_request",
     "deep_link_source": "yt_store",
-    "publish": { "telegram": "@LegalAutoStore", "youtube": "shorts" }
+    "publish": {
+      "telegram": "@LegalAutoStore",
+      "youtube": "shorts"
+    }
   },
   "parts_showcase": {
     "direction": "parts",
-    "content_template": null,
+    "content_template": "parts_showcase_001",
     "video_template": "product_v2",
     "image_style": "parts",
-    "music_genre": ["phonk", "sport"],
+    "music_genre": [
+      "phonk",
+      "sport"
+    ],
     "cta": "part_order",
     "deep_link_source": "yt_parts",
-    "publish": { "telegram": "@LegalAutoParts24", "youtube": "shorts" }
+    "publish": {
+      "telegram": "@LegalAutoParts24",
+      "youtube": "shorts"
+    }
   },
   "car_sale_post": {
     "direction": "auto",
     "content_template": null,
     "video_template": "car_reel_v1",
     "image_style": "auto",
-    "music_genre": ["sport"],
+    "music_genre": [
+      "sport"
+    ],
     "cta": "car_request",
     "deep_link_source": "tg_store",
-    "publish": { "telegram": "@LegalAutoStore" }
+    "publish": {
+      "telegram": "@LegalAutoStore"
+    }
   },
   "ctas": {
     "consultation": "Вопрос по вашей ситуации → @LegalAutoAssist_bot",

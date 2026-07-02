@@ -1,0 +1,83 @@
+{
+  "id": "news_import_001",
+  "version": "1.0",
+  "direction": "docs",
+  "brand_line": "LEGAL AUTO",
+  "accent_color": "#00D1C2",
+  "use_for": [
+    "import_news",
+    "law_change",
+    "customs_update"
+  ],
+  "goal": "trust_and_leads",
+  "style": {
+    "background": "graphite",
+    "feel": "premium newsroom automotive",
+    "emotion": "confidence",
+    "premium_score": 95
+  },
+  "structure": {
+    "hook_max_words": 5,
+    "body": [
+      "что произошло",
+      "почему важно",
+      "как влияет на клиента",
+      "что делать"
+    ],
+    "cta": "Напишите в Telegram — проверим ваш случай"
+  },
+  "scenes": [
+    {
+      "time": "0-2",
+      "text": "Ввоз авто меняется",
+      "visual": "dark premium car silhouette, cyan accent",
+      "motion": "slow push-in"
+    },
+    {
+      "time": "2-7",
+      "text": "Главный факт",
+      "visual": "documents + car + customs",
+      "motion": "clean slide"
+    },
+    {
+      "time": "7-15",
+      "text": "Что это значит",
+      "visual": "route map to Russia",
+      "motion": "map line"
+    },
+    {
+      "time": "15-23",
+      "text": "Риски и решение",
+      "visual": "legal checklist",
+      "motion": "calm reveal"
+    },
+    {
+      "time": "23-30",
+      "text": "LEGAL AUTO проверит",
+      "visual": "LA shield + Telegram",
+      "motion": "logo close"
+    }
+  ],
+  "required_fields": [
+    "source_title",
+    "source_summary",
+    "client_impact"
+  ],
+  "forbidden": [
+    "шок",
+    "золотые горы",
+    "гарантия без проверки"
+  ],
+  "quality_gate": [
+    "source_required",
+    "no_hallucination",
+    "cta_required",
+    "logo_required"
+  ],
+  "metrics": {
+    "runs": 0,
+    "views": 0,
+    "ctr": 0,
+    "leads": 0
+  }
+}

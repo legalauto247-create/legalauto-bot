@@ -1,0 +1,93 @@
+{
+  "id": "parts_showcase_001",
+  "version": "1.0",
+  "direction": "parts",
+  "brand_line": "LEGAL AUTO PARTS",
+  "accent_color": "#FF6B00",
+  "use_for": [
+    "single_part_sale",
+    "hot_part",
+    "new_arrival"
+  ],
+  "goal": "lead_generation",
+  "style": {
+    "background": "graphite",
+    "feel": "technical premium product showcase",
+    "emotion": "trust",
+    "premium_score": 88
+  },
+  "structure": {
+    "hook_max_words": 5,
+    "body": [
+      "OEM",
+      "совместимость",
+      "состояние",
+      "наличие",
+      "доставка"
+    ],
+    "cta": "Напишите OEM или VIN — проверим совместимость"
+  },
+  "scenes": [
+    {
+      "time": "0-2",
+      "text": "{part_name}",
+      "visual": "real catalog product photo only",
+      "motion": "sharp reveal"
+    },
+    {
+      "time": "2-6",
+      "text": "OEM: {oem}",
+      "visual": "technical grid orange accent",
+      "motion": "data reveal"
+    },
+    {
+      "time": "6-12",
+      "text": "{compatibility}",
+      "visual": "model badges, no fake photos",
+      "motion": "scan"
+    },
+    {
+      "time": "12-19",
+      "text": "{condition} • проверено",
+      "visual": "quality check marks",
+      "motion": "tick animation"
+    },
+    {
+      "time": "19-25",
+      "text": "{price} ₽",
+      "visual": "price card + delivery",
+      "motion": "premium price reveal"
+    },
+    {
+      "time": "25-30",
+      "text": "LEGAL AUTO PARTS",
+      "visual": "LA shield + Telegram",
+      "motion": "logo lockup"
+    }
+  ],
+  "required_fields": [
+    "part_name",
+    "oem",
+    "compatibility",
+    "condition",
+    "price",
+    "warehouse"
+  ],
+  "hard_rules": [
+    "фото только из каталога",
+    "не писать новый если Б/У",
+    "не выдумывать совместимость"
+  ],
+  "quality_gate": [
+    "catalog_match_required",
+    "oem_required",
+    "cta_required",
+    "logo_required"
+  ],
+  "metrics": {
+    "runs": 0,
+    "views": 0,
+    "ctr": 0,
+    "leads": 0
+  }
+}

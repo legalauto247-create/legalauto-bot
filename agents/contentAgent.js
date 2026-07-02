@@ -263,7 +263,7 @@ JSON: {"title":"до 80 симв, 1 эмодзи","description":"2 строки 
 
 // ── Инфо-ролик по брендбуку (документы / пригон / советы) ────────────────────
 const DIRECTIONS = {
-  docs:  { accent: '#1c7fd6', brandLine: 'LEGAL AUTO • ДОКУМЕНТЫ', channel: '@LegalAuto24',        groupUrl: 't.me/LegalAuto24',        genres: ['electronic', 'sport'],           theme: 'оформление документов на авто в РФ (СБКТС, ЭПТС, утильсбор, таможенное оформление)' },
+  docs:  { accent: '#00D1C2', brandLine: 'LEGAL AUTO • ДОКУМЕНТЫ', channel: '@LegalAuto24',        groupUrl: 't.me/LegalAuto24',        genres: ['electronic', 'sport'],           theme: 'оформление документов на авто в РФ (СБКТС, ЭПТС, утильсбор, таможенное оформление)' },
   auto:  { accent: '#D4AF37', brandLine: 'LEGAL AUTO • ПРИГОН',    channel: '@LegalAutoStore',      groupUrl: 't.me/LegalAutoStore',      genres: ['sport', 'rock', 'electronic'],   theme: 'пригон и подбор авто под ключ из Китая/Кореи/Европы' },
   parts: { accent: '#FF6B00', brandLine: 'LEGAL AUTO • ЗАПЧАСТИ',  channel: '@LegalAutoParts24',    groupUrl: 't.me/LegalAutoParts24',    genres: ['phonk', 'sport'],                theme: 'оригинальные автозапчасти из Европы' },
 };

@@ -70,7 +70,7 @@ export const RemotionRoot: React.FC = () => {
       fps={FPS}
       width={WIDTH}
       height={HEIGHT}
-      defaultProps={{ brandLine: 'LEGAL AUTO • ДОКУМЕНТЫ', hook: 'СБКТС и ЭПТС', tagline: 'оформляем под ключ', points: [], cta: 'Оформим за вас', channel: '@LegalAuto24', groupUrl: 't.me/LegalAuto24', accent: '#1c7fd6' } as unknown as Record<string, unknown>}
+      defaultProps={{ brandLine: 'LEGAL AUTO • ДОКУМЕНТЫ', hook: 'СБКТС и ЭПТС', tagline: 'оформляем под ключ', points: [], cta: 'Оформим за вас', channel: '@LegalAuto24', groupUrl: 't.me/LegalAuto24', accent: '#00D1C2' } as unknown as Record<string, unknown>}
       calculateMetadata={({ props }) => {
         const p = props as unknown as InfoProps;
         return { durationInFrames: infoDuration((p.points || []).slice(0, 6).length || 1) };

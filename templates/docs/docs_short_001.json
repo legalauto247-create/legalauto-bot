@@ -1,0 +1,85 @@
+{
+  "id": "docs_short_001",
+  "version": "1.0",
+  "direction": "docs",
+  "brand_line": "LEGAL AUTO",
+  "accent_color": "#00D1C2",
+  "use_for": [
+    "sbkts",
+    "epts",
+    "customs",
+    "util_fee",
+    "lab_entry"
+  ],
+  "goal": "trust_and_consultation",
+  "style": {
+    "background": "graphite",
+    "feel": "legal premium calm accurate",
+    "emotion": "security",
+    "premium_score": 92
+  },
+  "structure": {
+    "hook_max_words": 5,
+    "body": [
+      "какой документ нужен",
+      "когда нужен",
+      "что подготовить",
+      "как ведём процесс"
+    ],
+    "cta": "Напишите — скажем, какие документы нужны"
+  },
+  "scenes": [
+    {
+      "time": "0-2",
+      "text": "{pain_or_doc}",
+      "visual": "car + document close-up, cyan line",
+      "motion": "calm zoom"
+    },
+    {
+      "time": "2-7",
+      "text": "Без ошибки в документах",
+      "visual": "checklist, EPTS/SBKTS abstract",
+      "motion": "document reveal"
+    },
+    {
+      "time": "7-14",
+      "text": "Проверим ваш случай",
+      "visual": "VIN/documents/customs route",
+      "motion": "clean transition"
+    },
+    {
+      "time": "14-22",
+      "text": "Сопровождение под ключ",
+      "visual": "status steps dashboard",
+      "motion": "steps reveal"
+    },
+    {
+      "time": "22-30",
+      "text": "LEGAL AUTO",
+      "visual": "LA shield + Telegram",
+      "motion": "logo lockup"
+    }
+  ],
+  "required_fields": [
+    "service_type",
+    "client_case",
+    "required_docs"
+  ],
+  "hard_rules": [
+    "не обещать срок без данных",
+    "не обещать 100% без проверки",
+    "утиль и мощность проверять отдельно"
+  ],
+  "quality_gate": [
+    "legal_accuracy",
+    "no_false_guarantees",
+    "cta_required",
+    "logo_required"
+  ],
+  "metrics": {
+    "runs": 0,
+    "views": 0,
+    "ctr": 0,
+    "leads": 0
+  }
+}

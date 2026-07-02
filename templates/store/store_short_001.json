@@ -1,0 +1,86 @@
+{
+  "id": "store_short_001",
+  "version": "1.0",
+  "direction": "auto",
+  "brand_line": "LEGAL AUTO STORE",
+  "accent_color": "#D4AF37",
+  "use_for": [
+    "car_sale",
+    "car_import_offer",
+    "premium_car_showcase"
+  ],
+  "goal": "desire_and_application",
+  "style": {
+    "background": "deep_graphite",
+    "feel": "Porsche BMW corporate cinematic",
+    "emotion": "aspiration",
+    "premium_score": 97
+  },
+  "structure": {
+    "hook_max_words": 4,
+    "body": [
+      "модель/год/пробег",
+      "опции",
+      "почему выгодно",
+      "проверка/документы"
+    ],
+    "cta": "Напишите — подготовим расчёт"
+  },
+  "scenes": [
+    {
+      "time": "0-3",
+      "text": "{car_model}",
+      "visual": "cinematic hero car, dark studio, gold accent",
+      "motion": "luxury push"
+    },
+    {
+      "time": "3-8",
+      "text": "{year} • {mileage}",
+      "visual": "interior/details/options",
+      "motion": "smooth cuts"
+    },
+    {
+      "time": "8-14",
+      "text": "Комплектация решает",
+      "visual": "lights, seats, dashboard",
+      "motion": "detail montage"
+    },
+    {
+      "time": "14-21",
+      "text": "Проверка и документы",
+      "visual": "inspection + documents + route",
+      "motion": "premium wipe"
+    },
+    {
+      "time": "21-27",
+      "text": "{price_or_offer}",
+      "visual": "final hero angle",
+      "motion": "gold line reveal"
+    },
+    {
+      "time": "27-30",
+      "text": "LEGAL AUTO STORE",
+      "visual": "LA shield + Telegram",
+      "motion": "logo lockup"
+    }
+  ],
+  "required_fields": [
+    "car_model",
+    "year",
+    "mileage",
+    "price_or_offer",
+    "key_options"
+  ],
+  "quality_gate": [
+    "no_fake_specs",
+    "price_required",
+    "cta_required",
+    "logo_required"
+  ],
+  "metrics": {
+    "runs": 0,
+    "views": 0,
+    "ctr": 0,
+    "leads": 0
+  }
+}

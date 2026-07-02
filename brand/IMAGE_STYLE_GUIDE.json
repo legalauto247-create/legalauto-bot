@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "brand": "LEGAL AUTO",
   "base": {
     "style": "premium automotive advertising",
@@ -26,7 +26,7 @@
   },
   "directions": {
     "docs": {
-      "accent_light": "teal #1c7fd6",
+      "accent_light": "teal #00D1C2",
       "prompt_suffix": "teal and blue rim lighting, glossy reflective floor, official premium mood, documents/inspection scenery around imported cars",
       "emotion": "trust",
       "premium_score": 95
@@ -50,7 +50,7 @@
       "bg": "#0A0906",
       "gold": "#D4AF37",
       "silver": "#C0C0C0",
-      "teal": "#1c7fd6",
+      "teal": "#00D1C2",
       "orange": "#FF6B00"
     },
     "elements": [

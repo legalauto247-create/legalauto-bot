@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "brand": "LEGAL AUTO",
   "voice": {
     "address": "вы",
@@ -24,7 +24,7 @@
       "brand_line": "LEGAL AUTO • ДОКУМЕНТЫ",
       "channel": "@LegalAuto24",
       "group_url": "t.me/LegalAuto24",
-      "accent": "#1c7fd6",
+      "accent": "#00D1C2",
       "emotion": "trust",
       "topics": [
         "СБКТС",
