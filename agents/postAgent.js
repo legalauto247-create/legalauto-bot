@@ -437,12 +437,14 @@ export async function publishToChannel(telegram, post) {
     const part = post.part || {};
     const { renderPartsCard } = await import('./videoAgent.js');
     const { readFileSync: rf } = await import('fs');
-    const models = (part.display_car || part.series || '').replace(/\|/g, ' / ');
+    let models = (part.display_car || part.series || '').replace(/\|/g, ' / ').trim();
+    const brand = String(part.brand || '').trim();
+    if (brand && !models.toLowerCase().startsWith(brand.toLowerCase())) models = `${brand} ${models}`.trim();
     const compat = String(part.compatibility || '').split(';').map(x => x.trim()).filter(Boolean).slice(0, 3);
     const card = await renderPartsCard({
       category: (part.category && part.category !== 'Прочее') ? part.category : '',
       name: part.name || 'Запчасть',
-      models: models ? `${part.brand || ''} ${models}`.trim() : (part.brand || ''),
+      models: models || brand,
       compatibility: compat,
       oem: part.oem || '',
       price: part.price ? Number(part.price).toLocaleString('ru-RU') + ' ₽' : 'Цена по запросу',
