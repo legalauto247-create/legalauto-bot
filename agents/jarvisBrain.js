@@ -28,6 +28,12 @@ function loadDesignMemory() {
     const t = readJson('tokens.json');
     style = `Фирстиль: чёрный фон ${t?.color?.bg}, золото ${t?.color?.gold}, серебро ${t?.color?.silver}, шрифт ${t?.font?.display?.family}. Эмблема — щит LA.`;
   } catch {}
+  const db = readJson('DESIGN_BRAIN.json');
+  if (db) {
+    rules += `\n## DESIGN_BRAIN v${db.version} — LEVEL 1: думай как арт-директор (ПОЧЕМУ, не только что)\n` +
+      Object.entries(db.principles || {}).map(([k, p]) => `• ${p.rule} — ПОТОМУ ЧТО ${p.why}`).join('\n') +
+      (db.templates_logic ? '\nЛогика шаблонов: ' + Object.entries(db.templates_logic).map(([k, t]) => `${k}: ${t.when_to_use} (НЕ для: ${t.when_not})`).join('; ') : '');
+  }
   const cr = readJson('CONTENT_RULES.json');
   const vt = readJson('VIDEO_TEMPLATES.json');
   if (cr) {
