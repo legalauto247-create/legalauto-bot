@@ -1,18 +1,23 @@
 {
-  "version": 2,
+  "version": 3,
   "_comment": "ЕДИНСТВЕННЫЙ источник дизайн-значений. Image/Video/Stories/Posts берут ВСЁ отсюда. Хардкод цветов/шрифтов в коде запрещён.",
   "colors": {
     "legal": "#00D1C2",
     "store": "#D4AF37",
     "parts": "#FF6B00",
-    "background": "#0A0906",
-    "surface": "#11151d",
+    "background": "#0B0F14",
+    "surface": "#1A222B",
     "text": "#FFFFFF",
     "text_muted": "#A6A6A6",
     "gold_light": "#F2E6B1",
     "store_2": "#B9972E",
     "parts_2": "#FF944D",
-    "legal_2": "#00A396"
+    "legal_2": "#005F5A",
+    "docs_silver": "#9BA3AF",
+    "surface_2": "#11161D",
+    "gray_medium": "#2A333F",
+    "gray_light": "#3D4654",
+    "white": "#FFFFFF"
   },
   "radius": {
     "card": 30,
@@ -33,14 +38,29 @@
   },
   "logo": {
     "mark": "shield_LA",
-    "position_video": "header_left",
+    "position_video": "top_left",
     "position_image": "overlay_only",
-    "opacity": 100
+    "opacity": 100,
+    "clear_space": "1x со всех сторон",
+    "min_size_px": 32,
+    "size_video": "8-12% ширины",
+    "forbidden": [
+      "менять пропорции/наклон",
+      "менять цвета",
+      "тени и эффекты",
+      "сложный фон без подложки"
+    ]
   },
   "fonts": {
     "title": {
       "family": "Montserrat",
-      "weight": 700
+      "weight": 800,
+      "_note": "Extra Bold — заголовки, ВЕРХНИЙ РЕГИСТР"
+    },
+    "subtitle": {
+      "family": "Montserrat",
+      "weight": 600,
+      "_note": "Semi Bold — подзаголовки"
     },
     "body": {
       "family": "Montserrat",
@@ -59,5 +79,25 @@
       "scale_from": 1.08,
       "scale_to": 1.22
     }
-  }
+  },
+  "_source": "Эталонные листы Эдо 8шт (02.07.2026), ЛИСТ 8: фирменные элементы",
+  "gradients": {
+    "teal_energy": [
+      "#00D1C2",
+      "#005F5A"
+    ],
+    "gold_light": [
+      "#FFD700",
+      "#D4AF37"
+    ],
+    "orange_fire": [
+      "#FF6B00",
+      "#FF3D00"
+    ],
+    "steel_dark": [
+      "#2A2A2A",
+      "#0D0D0D"
+    ]
+  },
+  "slogan": "ФАКТЫ • КОНТРОЛЬ • РЕЗУЛЬТАТ"
 }

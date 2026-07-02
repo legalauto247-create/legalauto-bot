@@ -1,0 +1,24 @@
+{
+  "id": "store_shorts_002",
+  "version": "1.0",
+  "_source": "ЛИСТ 6: эталон YouTube Shorts (6 кадров / 30 сек)",
+  "direction": "auto",
+  "brand_line": "LEGAL AUTO STORE",
+  "accent_color": "#D4AF37",
+  "use_for": ["car_sale_video", "car_import_video", "premium_car_shorts"],
+  "goal": "desire_and_contact",
+  "format": { "ratio": "9:16", "resolution": "1080x1920", "duration_sec": 30, "fps": 30 },
+  "frames": [
+    { "n": 1, "time": "0-3",   "role": "hook",       "text": "{хук-эмоция} + бейдж {марка модель год}", "visual": "эффектный вид спереди, город/ночь", "motion": "подъём камеры", "sound": "мощный удар" },
+    { "n": 2, "time": "3-6",   "role": "power",      "text": "{двигатель} / {л.с.} • {привод} • {коробка}", "visual": "вид сзади, фонари", "motion": "панорама", "sound": "рык двигателя" },
+    { "n": 3, "time": "6-12",  "role": "options",    "text": "чек-лист 4-6 ключевых опций", "visual": "салон", "motion": "слайд влево", "sound": "приятный бит" },
+    { "n": 4, "time": "12-18", "role": "condition",  "text": "{пробег} • обслужен/состояние", "visual": "крупный план детали (фара/кузов)", "motion": "крупный план", "sound": "тихий бит" },
+    { "n": 5, "time": "18-24", "role": "trust",      "text": "чек-лист: юр. чистота • проверки • полный пакет документов", "visual": "вид 3/4, панорама", "motion": "панорама", "sound": "уверенность" },
+    { "n": 6, "time": "24-30", "role": "cta",        "text": "ТВОЙ НОВЫЙ {модель} ЖДЁТ ТЕБЯ + Telegram-кнопка", "visual": "отъезд камеры, город", "motion": "отъезд", "sound": "финальный аккорд" }
+  ],
+  "text_rules": ["заголовок ≤2 строк", "короткие фразы", "крупный читаемый шрифт", "акцент бирюзовым на ключевых словах"],
+  "logo": { "position": "низ кадра", "width": "8-12%", "margin": "≥5% от краёв" },
+  "colors": ["#00D1C2", "#FFFFFF", "#B0B0B0", "#0A0A0A"],
+  "quality_gate": ["no_fake_specs", "cta_required", "logo_required"],
+  "metrics": { "runs": 0, "views": null, "ctr": null, "leads": null, "last_used": null }
+}

@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "_source": "ЛИСТ 7: Motion Design System",
+  "transitions": {
+    "allowed": [
+      "slide",
+      "fade",
+      "zoom",
+      "wipe",
+      "push",
+      "match_cut"
+    ],
+    "special": [
+      "glitch (только tech-моменты)",
+      "light_leak (премиум-переходы)"
+    ],
+    "rule": "переход мотивирован содержанием, не для украшения"
+  },
+  "accent_animations": [
+    "light_streak",
+    "particle_flow",
+    "energy_line",
+    "pulse",
+    "shield_reveal"
+  ],
+  "accent_usage": [
+    "акцент на текст",
+    "выделение цены",
+    "появление логотипа",
+    "акцент на кнопку",
+    "подчеркнуть факт"
+  ],
+  "easing": {
+    "curves": [
+      "ease_out (плавный выкат)",
+      "ease_in_out (разгон и выкат)",
+      "snappy (резкая)",
+      "spring (пружина)"
+    ],
+    "speed_sec": {
+      "fast": [
+        0.1,
+        0.5
+      ],
+      "optimal": [
+        0.5,
+        1.5
+      ],
+      "calm": [
+        1.5,
+        3
+      ]
+    },
+    "rule": "0.5–1.5с оптимально; быстрее — только акценты"
+  },
+  "camera": {
+    "moves": [
+      "slow_push",
+      "panorama",
+      "tilt",
+      "orbit",
+      "tracking"
+    ],
+    "rules": [
+      "движение всегда мотивировано",
+      "без резких хаотичных движений",
+      "главный объект всегда в фокусе",
+      "глубина кадра и пространство",
+      "премиум-подача"
+    ]
+  },
+  "text_animation": {
+    "types": [
+      "type_in",
+      "slide_up",
+      "fade_up",
+      "scale_in",
+      "highlight"
+    ],
+    "rules": [
+      "максимум 1-2 анимации на текст",
+      "текст читается мгновенно",
+      "акценты только фирменными цветами",
+      "заголовки ≤2 строк",
+      "ключевая информация в центре внимания"
+    ]
+  },
+  "light_effects": [
+    "neon_glow",
+    "lens_flare",
+    "light_rays",
+    "bokeh"
+  ],
+  "sound": {
+    "types": [
+      "whoosh (движение)",
+      "impact (удар/акцент)",
+      "swoosh (переход)",
+      "click (взаимодействие)",
+      "ambient (фон)"
+    ],
+    "rules": [
+      "звук усиливает эмоцию",
+      "не перегружать аудио",
+      "синхронизировать звук и движение",
+      "громкость сбалансирована"
+    ]
+  },
+  "rhythm": {
+    "timeline_30s": {
+      "attention": [
+        0,
+        2
+      ],
+      "interest": [
+        2,
+        6
+      ],
+      "trust": [
+        6,
+        20
+      ],
+      "action": [
+        20,
+        30
+      ]
+    },
+    "rule": "Первые 2 секунды решают — цепляем внимание. Далее удерживаем и ведём к действию."
+  },
+  "export": {
+    "resolution": "1080x1920 (9:16)",
+    "fps": "25/30",
+    "codec": "H.264 High",
+    "audio": "48kHz 320kbps",
+    "platforms": [
+      "YouTube Shorts",
+      "Instagram Reels",
+      "Telegram",
+      "TikTok"
+    ]
+  }
+}

@@ -60,6 +60,12 @@ function loadDesignMemory() {
       Object.entries(cg).filter(([k]) => !k.startsWith('_') && !['version', 'ctas'].includes(k))
         .map(([k, g]) => `${k}: ${g.direction} → ${g.video_template} → музыка ${(g.music_genre || []).join('/')} → CTA "${(cg.ctas || {})[g.cta] || g.cta}" → ${Object.values(g.publish || {}).join(' + ')}`).join('\n');
   }
+  const ms = readJson('MOTION_SYSTEM.json');
+  if (ms) {
+    rules += `\n## MOTION_SYSTEM v${ms.version} (ЛИСТ 7 эталонов)\n` +
+      `Переходы: ${(ms.transitions?.allowed || []).join(', ')}. Камера: ${(ms.camera?.moves || []).join(', ')} — ${(ms.camera?.rules || [])[0]}. ` +
+      `Скорость анимаций 0.5–1.5с оптимально. Ритм 30с: внимание 0-2с → интерес 2-6с → доверие 6-20с → действие 20-30с. Первые 2 секунды решают.`;
+  }
   const al = readJson('ASSET_LIBRARY.json');
   if (al) {
     const music = Object.entries(al.music || {}).filter(([k]) => !k.startsWith('_')).map(([g, m]) => `${g}(${(m.files || []).length})`).join(', ');
