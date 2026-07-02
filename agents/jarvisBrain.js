@@ -17,15 +17,32 @@ import { HEAVY } from './models.js';
 const __d = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__d, '..');
 
-// Дизайн-память: спека, извлечённая из шаблонов Эдо (brand/templates-spec.md) + токены
+// Дизайн-память: машиночитаемые правила бренда (JSON — единый источник правды)
+// CONTENT_RULES.json — тон/лимиты/запреты; VIDEO_TEMPLATES.json — библиотека шаблонов;
+// IMAGE_STYLE_GUIDE.json — стиль AI-картинок. Плюс legacy: templates-spec.md, tokens.json.
 function loadDesignMemory() {
-  let spec = '', style = '';
-  try { if (existsSync(join(ROOT, 'brand', 'templates-spec.md'))) spec = readFileSync(join(ROOT, 'brand', 'templates-spec.md'), 'utf8').slice(0, 1800); } catch {}
+  let spec = '', style = '', rules = '';
+  const readJson = (f) => { try { return JSON.parse(readFileSync(join(ROOT, 'brand', f), 'utf8')); } catch { return null; } };
+  try { if (existsSync(join(ROOT, 'brand', 'templates-spec.md'))) spec = readFileSync(join(ROOT, 'brand', 'templates-spec.md'), 'utf8').slice(0, 1200); } catch {}
   try {
-    const t = JSON.parse(readFileSync(join(ROOT, 'brand', 'tokens.json'), 'utf8'));
-    style = `Фирстиль: чёрный фон ${t.color?.bg}, золото ${t.color?.gold}, серебро ${t.color?.silver}, шрифт ${t.font?.display?.family}. Эмблема — щит LA.`;
+    const t = readJson('tokens.json');
+    style = `Фирстиль: чёрный фон ${t?.color?.bg}, золото ${t?.color?.gold}, серебро ${t?.color?.silver}, шрифт ${t?.font?.display?.family}. Эмблема — щит LA.`;
   } catch {}
-  return { spec, style };
+  const cr = readJson('CONTENT_RULES.json');
+  const vt = readJson('VIDEO_TEMPLATES.json');
+  if (cr) {
+    rules += `\n## CONTENT_RULES v${cr.version} (соблюдать ЖЁСТКО)\n` +
+      `Тон: на «${cr.voice?.address}», ${cr.voice?.tone}. Запрещено: ${(cr.voice?.forbidden || []).join(', ')}.\n` +
+      `Факты: ${(cr.voice?.hard_facts || []).join(' | ')}\n` +
+      `Направления: ${Object.entries(cr.directions || {}).map(([k, d]) => `${k}=${d.brand_line} ${d.channel} ${d.accent}`).join('; ')}\n` +
+      `Short: хук ≤${cr.formats?.short_video?.hook_max_words} слов, заголовок YT ≤${cr.formats?.short_video?.yt_title_max_chars} симв, хэштегов ${cr.formats?.short_video?.hashtags}, deep-link заявки обязателен.`;
+  }
+  if (vt) {
+    rules += `\n## VIDEO_TEMPLATES v${vt.version}\n` +
+      Object.entries(vt).filter(([k]) => !k.startsWith('_') && k !== 'version')
+        .map(([k, t]) => `${k} (${t.composition}): ${t.use_for}`).join('\n');
+  }
+  return { spec, style, rules };
 }
 const DESIGN = loadDesignMemory();
 // Префикс стиля для gpt-image — чтобы картинки выходили как в шаблонах Эдо
@@ -172,7 +189,7 @@ const PERSONA =
 
 export async function jarvisThink(userText, ctx = {}) {
   if (!claude) return 'Мозг недоступен: не задан CLAUDE_API_KEY.';
-  const designBlock = `\n\n## Дизайн (бери из шаблонов Эдо, не выдумывай свой)\n${DESIGN.style}\nКогда делаешь картинку/пост — следуй фирстилю и структуре шаблонов:\n${DESIGN.spec}`;
+  const designBlock = `\n\n## Дизайн (бери из шаблонов Эдо, не выдумывай свой)\n${DESIGN.style}\n${DESIGN.rules || ''}\nКогда делаешь картинку/пост — следуй фирстилю и структуре шаблонов:\n${DESIGN.spec}`;
   const system = `${PERSONA}${designBlock}\n\n${(() => { try { return buildSystemPrompt(); } catch { return ''; } })()}`;
   let messages = [{ role: 'user', content: userText }];
 

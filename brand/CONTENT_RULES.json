@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "brand": "LEGAL AUTO",
+  "voice": {
+    "address": "вы",
+    "tone": "уверенно, по фактам, премиум без пафоса",
+    "forbidden": ["золотые горы", "копейки", "халява", "самые низкие цены", "шок", "срочно только сегодня"],
+    "hard_facts": [
+      "Утильсбор 2026: льгота физлица 3400/5200 ₽ ТОЛЬКО при мощности ≤160 л.с. и 1 авто/год; свыше — полный тариф",
+      "Состояние/происхождение/цены деталей — только из каталога, не выдумывать",
+      "Не обещать сроки и цены, которых нет в данных"
+    ],
+    "markdown_in_telegram": false
+  },
+  "directions": {
+    "docs": {
+      "brand_line": "LEGAL AUTO • ДОКУМЕНТЫ",
+      "channel": "@LegalAuto24",
+      "group_url": "t.me/LegalAuto24",
+      "accent": "#1c7fd6",
+      "emotion": "trust",
+      "topics": ["СБКТС", "ЭПТС", "утильсбор", "таможенное оформление", "новости для импортёров"]
+    },
+    "auto": {
+      "brand_line": "LEGAL AUTO • ПРИГОН",
+      "channel": "@LegalAutoStore",
+      "group_url": "t.me/LegalAutoStore",
+      "accent": "#D4AF37",
+      "emotion": "aspiration",
+      "topics": ["пригон под ключ", "Китай", "Корея", "подбор", "проверка", "доставка"]
+    },
+    "parts": {
+      "brand_line": "LEGAL AUTO PARTS",
+      "channel": "@LegalAutoParts24",
+      "group_url": "t.me/LegalAutoParts24",
+      "accent": "#FF6B00",
+      "emotion": "value",
+      "topics": ["оригинальные запчасти", "BMW", "Geely", "Li Auto", "наличие", "разборка"]
+    }
+  },
+  "formats": {
+    "short_video": {
+      "hook_max_words": 5,
+      "scene_title_max_words": 5,
+      "scene_text_max_words": 12,
+      "cta_max_words": 6,
+      "yt_title_max_chars": 80,
+      "yt_title_emoji": 1,
+      "hashtags": 3,
+      "cta": true,
+      "logo": true,
+      "group_link": true,
+      "lead_deep_link": "https://t.me/LegalAutoAssist_bot?start={source}"
+    },
+    "news_post": {
+      "hook_max_words": 7,
+      "text_max_words": 120,
+      "style": "premium",
+      "cta": true,
+      "logo": true
+    },
+    "sale_post": {
+      "template": "фирменный шаблон LegalAutoStore",
+      "price_source": "только из исходника, детерминированно",
+      "foreign_contacts": "вырезать полностью",
+      "footer": "контакты LegalAuto добавляются кодом, не AI"
+    }
+  }
+}

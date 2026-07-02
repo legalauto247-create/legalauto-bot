@@ -327,18 +327,26 @@ points: РОВНО 4-5 штук, по порядку/логике. Без markdo
 // ── Кино-ролик высшего уровня: AI-кадры (gpt-image) + брендовый оверлей ──────
 const OPENAI_KEY = () => process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_BACKUP;
 
-// Кино-стиль под направление (подсветка в цвет бренда, без текста/лого)
+// Кино-стиль картинок — из brand/IMAGE_STYLE_GUIDE.json (единый источник правды)
+function loadImageGuide() {
+  try { return JSON.parse(readFileSync(join(ROOT, 'brand', 'IMAGE_STYLE_GUIDE.json'), 'utf8')); }
+  catch { return null; }
+}
+const IMG_GUIDE = loadImageGuide();
 const CINE_STYLE = {
-  docs:  'cinematic, dark premium, teal and blue rim lighting, clean corporate automotive mood, documents and paperwork context',
-  auto:  'cinematic, dark premium showroom, warm gold rim lighting, glossy reflective floor, luxury car advertising mood',
-  parts: 'cinematic, dark garage, orange rim lighting, mechanical detail macro mood, premium auto parts',
+  docs:  IMG_GUIDE?.directions?.docs?.prompt_suffix  || 'cinematic, teal rim lighting, premium automotive mood',
+  auto:  IMG_GUIDE?.directions?.auto?.prompt_suffix  || 'cinematic, gold rim lighting, luxury showroom mood',
+  parts: IMG_GUIDE?.directions?.parts?.prompt_suffix || 'cinematic, orange rim lighting, premium auto parts mood',
 };
+const IMG_BASE = IMG_GUIDE?.base
+  ? `${IMG_GUIDE.base.style}, ${IMG_GUIDE.base.lighting}, ${IMG_GUIDE.base.background}, ${IMG_GUIDE.base.quality}, vertical ${IMG_GUIDE.base.aspect}, no ${(IMG_GUIDE.base.negative || []).join(', no ')}`
+  : 'Ultra-detailed, moody advertising photography, vertical 9:16, no text, no logo, no watermark, no letters';
 
 async function genCineImage(prompt, direction = 'auto') {
   const key = OPENAI_KEY();
   if (!key) throw new Error('OPENAI_API_KEY не задан');
-  const model = process.env.IMAGE_MODEL || 'gpt-image-2';
-  const full = `${prompt}. ${CINE_STYLE[direction] || CINE_STYLE.auto}. Ultra-detailed, moody advertising photography, vertical 9:16, no text, no logo, no watermark, no letters.`;
+  const model = process.env.IMAGE_MODEL || IMG_GUIDE?.base?.model || 'gpt-image-2';
+  const full = `${prompt}. ${CINE_STYLE[direction] || CINE_STYLE.auto}. ${IMG_BASE}.`;
   const r = await fetch('https://api.openai.com/v1/images/generations', {
     method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, prompt: full, n: 1, size: '1024x1536' }),

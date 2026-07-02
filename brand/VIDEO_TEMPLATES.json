@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "_comment": "Библиотека видеошаблонов. composition = ID в Remotion. Jarvis выбирает шаблон по типу контента; тайминги исполняет Remotion-код.",
+  "cinematic_v1": {
+    "composition": "CinematicShort",
+    "use_for": "документы / пригон / услуги / советы — высший уровень",
+    "duration_sec": [18, 26],
+    "fps": 30,
+    "scenes_count": [3, 4],
+    "scene": { "per_sec": 3.2, "camera": "ken_burns", "motion": "cinematic", "text_blocks": ["kicker", "title", "subtext"], "transition": "crossfade_20f" },
+    "intro": { "sec": 2.0, "elements": ["shield_LA", "hook", "tagline"], "bg": "ai_hero_frame" },
+    "outro": { "sec": 2.8, "elements": ["shield_LA", "cta_button", "channel", "group_url"] },
+    "image_source": "gpt-image-2 1024x1536 по IMAGE_STYLE_GUIDE",
+    "music_genres": { "docs": ["electronic", "sport"], "auto": ["sport", "rock", "electronic"], "parts": ["phonk", "sport"] }
+  },
+  "product_v2": {
+    "composition": "ProductShort",
+    "use_for": "конкретные запчасти из каталога (реальные фото товара)",
+    "duration_sec": [14, 22],
+    "fps": 30,
+    "items_count": [3, 6],
+    "scene": { "per_sec": 2.8, "photos_per_item": 3, "photo_style": "studio_card_reflection", "text_blocks": ["fits_chip", "name_kinetic", "price_counter"], "transition": "slide_crossfade" },
+    "header": ["shield_LA", "brand_line", "accent_rule"],
+    "footer": ["phone_circle", "telegram_circle", "slogan"],
+    "bg": "wave_brand + particles + light_sweep",
+    "music_genres": ["phonk", "sport"]
+  },
+  "info_v1": {
+    "composition": "InfoShort",
+    "use_for": "простой инфо-ролик без AI-картинок (только по явной просьбе)",
+    "duration_sec": [16, 24],
+    "fps": 30,
+    "points_count": [4, 5],
+    "scene": { "per_sec": 3.0, "elements": ["step_counter", "icon_ring", "glass_panel"], "bg": "css_waves_direction_color" }
+  },
+  "car_reel_v1": {
+    "composition": "CarReel",
+    "use_for": "пост о продаже конкретного авто (фото из объявления)",
+    "duration_sec": [15, 25],
+    "photos_count": [3, 5],
+    "data_rule": "все данные строго из исходного объявления (context-engineering)"
+  }
+}

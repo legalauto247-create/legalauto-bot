@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "brand": "LEGAL AUTO",
+  "base": {
+    "style": "premium automotive advertising",
+    "lighting": "cinematic, dramatic rim light, volumetric",
+    "background": "deep graphite / black studio",
+    "quality": "ultra-detailed",
+    "aspect": "9:16 vertical",
+    "size": "1024x1536",
+    "model": "gpt-image-2",
+    "negative": ["text", "letters", "logos", "watermark", "people close-up", "cartoon"]
+  },
+  "logo": {
+    "note": "Логотип НЕ генерится в картинке — накладывается кодом (щит LA в оверлее Remotion)",
+    "in_image": false,
+    "overlay": "shield_LA",
+    "position": "header_left + outro_center"
+  },
+  "directions": {
+    "docs": {
+      "accent_light": "teal #1c7fd6",
+      "prompt_suffix": "teal and blue rim lighting, glossy reflective floor, official premium mood, documents/inspection scenery around imported cars"
+    },
+    "auto": {
+      "accent_light": "gold #D4AF37",
+      "prompt_suffix": "warm golden rim lighting, luxury showroom, glossy floor reflections, premium car delivery mood"
+    },
+    "parts": {
+      "accent_light": "orange #FF6B00",
+      "prompt_suffix": "orange rim lighting, dark workshop with carbon details, precision engineering mood, original car parts close-up"
+    }
+  },
+  "brand_overlay": {
+    "font": "Montserrat",
+    "colors": { "bg": "#0A0906", "gold": "#D4AF37", "silver": "#C0C0C0", "teal": "#1c7fd6", "orange": "#FF6B00" },
+    "elements": ["shield_LA", "glass_panels_blur18", "accent_rules", "particles_bokeh", "progress_bar"]
+  }
+}
