@@ -15,7 +15,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { renderProduct, renderInfo, renderCinematic } from './videoAgent.js';
 import { createTask, taskProcessing, taskDone, taskFailed, persistentPath } from '../services/stateService.js';
 import { reviewContent } from '../services/qualityGate.js';
-import { uploadShort } from './youtubeUpload.js';
+import { uploadShort, LINKS_BLOCK } from './youtubeUpload.js';
 import { HEAVY } from './models.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -220,7 +220,7 @@ JSON: {"title":"до 80 симв, 1 эмодзи","description":"2 строки 
 
   // QUALITY GATE: сценарий против реальных данных каталога — брак не публикуем и не рендерим
   const gateSrc = parts.map(p => `${p.brand} ${p.name} ${p.price}₽ ${p.condition || ''}`).join('; ');
-  const gate = await reviewContent({ title: s.title, description: s.description, texts: [s.hook, ...items.map(i => i.name)], direction: 'parts', sourceData: gateSrc });
+  const gate = await reviewContent({ title: s.title, description: `${s.description}${LINKS_BLOCK}`, texts: [s.hook, ...items.map(i => i.name)], direction: 'parts', sourceData: gateSrc });
   if (!gate.pass) return { ok: false, error: `Quality Gate: ${gate.fails.join('; ')}` };
 
   // 3) рендер: музыка + по сцене на запчасть (фото + название + цена)
@@ -299,7 +299,7 @@ points: РОВНО 4-5 штук, по порядку/логике. Без markdo
 
   // QUALITY GATE перед рендером
   {
-    const gate = await reviewContent({ title: s.title || topic, description: s.description || '', texts: [s.hook, s.tagline, ...points.map(p => `${p.title}. ${p.text || ''}`), s.cta], direction, sourceData: null });
+    const gate = await reviewContent({ title: s.title || topic, description: `${s.description || ''}\n➡️ ${ch} · ${gurl}`, texts: [s.hook, s.tagline, ...points.map(p => `${p.title}. ${p.text || ''}`), s.cta], direction, sourceData: null });
     if (!gate.pass) return { ok: false, error: `Quality Gate: ${gate.fails.join('; ')}` };
   }
 
@@ -405,7 +405,7 @@ scenes: РОВНО 3-4. Только JSON, без markdown.` }] });
 
   // QUALITY GATE перед генерацией кадров (брак не тратит деньги на gpt-image)
   {
-    const gate = await reviewContent({ title: s.title || topic, description: s.description || '', texts: [s.hook, s.tagline, ...scenesRaw.map(x => `${x.title}. ${x.text || ''}`), s.cta], direction, sourceData: null });
+    const gate = await reviewContent({ title: s.title || topic, description: `${s.description || ''}\n➡️ ${ch} · ${gurl}`, texts: [s.hook, s.tagline, ...scenesRaw.map(x => `${x.title}. ${x.text || ''}`), s.cta], direction, sourceData: null });
     if (!gate.pass) return { ok: false, error: `Quality Gate: ${gate.fails.join('; ')}` };
   }
 
