@@ -92,7 +92,7 @@ const IMG_STYLE = `Premium LegalAuto brand style: deep black background, gold (#
 import { getStats, formatReport } from './analyticsAgent.js';
 import { calcImport, fmt } from './customsCalc.js';
 import { generateImage } from './imageGenAgent.js';
-import { getAutoAdsStatus, pollPublicChannels } from './autoAdsAgent.js';
+import { getAutoAdsStatus, pollPublicChannels, fetchPublicFeed } from './autoAdsAgent.js';
 import { prepareAutoPost, publishToChannel } from './postAgent.js';
 import { learnFact, buildSystemPrompt, addConversation } from './memoryAgent.js';
 import { makeProductShort, makeInfoShort, makeCinematicShort } from './contentAgent.js';
@@ -110,6 +110,7 @@ const TOOLS = [
   { name: 'get_analytics', description: 'Аналитика бизнеса: запчасти, публикации, лиды, выручка.', input_schema: { type: 'object', properties: { period: { type: 'string', enum: ['today','week','month','all'] } } } },
   { name: 'calc_customs', description: 'Рассчитать растаможку+утильсбор авто (РФ 2026).', input_schema: { type: 'object', properties: { engineCc: { type: 'number' }, hp: { type: 'number' }, ageYears: { type: 'number' }, priceEur: { type: 'number' } }, required: ['engineCc','hp','ageYears','priceEur'] } },
   { name: 'generate_image', description: 'Нарисовать изображение через OpenAI gpt-image (фон, баннер, иллюстрация). Сразу отправляет картинку Эдо.', input_schema: { type: 'object', properties: { prompt: { type: 'string' } }, required: ['prompt'] } },
+  { name: 'store_shorts', description: 'Сделать YouTube Shorts из постов ТВОЕГО канала @LegalAutoStore (пригон/продажа авто). count=1 → эталонный 6-кадровый ролик про одно авто (последний пост или по запросу «про BMW M2»); count=2-4 → ролик-ПОДБОРКА из нескольких постов (ТОП авто в наличии). Вызывай на «сделай шортс про авто из стора / выложи машину в ютуб / подборка авто».', input_schema: { type: 'object', properties: { query: { type: 'string', description: 'какое авто (слова из поста: марка/модель), пусто = последние' }, count: { type: 'number', description: '1 = одно авто (по умолч.), 2-4 = подборка' } } } },
   { name: 'set_autopilot', description: 'ВКЛ/ВЫКЛ автовыставление роликов (автопилот 11:00/17:00). Эдо: «выключи автопилот / не выкладывай ролики сам / включи обратно». off = ролики только по явной команде Эдо (экономия денег, фокус на качестве).', input_schema: { type: 'object', properties: { mode: { type: 'string', enum: ['on', 'off'] } }, required: ['mode'] } },
   { name: 'media_collections', description: 'MEDIA_FACTORY: показать готовые смысловые коллекции для роликов (Оптика BMW X5 G05, Двери и молдинги BMW X7...) с составом и рейтингом. Вызывай, когда Эдо спрашивает «какие темы для роликов / что снять» или перед выбором темы.', input_schema: { type: 'object', properties: {} } },
   { name: 'scan_news', description: 'Просканировать свежие новости (6 живых RSS: авто + деловые) и отфильтровать ПОЛЕЗНЫЕ для импортёров (таможня/утиль/авторынок/импорт). Возвращает список заголовков с ссылками. Используй на «что нового / есть ли новости / проверь новости». Дальше можешь предложить Эдо сделать из лучшей новости ролик (make_cinematic с direction=docs и темой новости) или пост.', input_schema: { type: 'object', properties: { max: { type: 'number' } } } },
@@ -155,6 +156,32 @@ async function runTool(name, input, ctx) {
           return 'Картинка сгенерирована и отправлена Эдо.';
         }
         return img?.url ? `Картинка: ${img.url}` : 'Не удалось сгенерировать изображение.';
+      }
+      case 'store_shorts': {
+        const query = String(input.query || '').toLowerCase().trim();
+        const count = Math.min(Math.max(Number(input.count) || 1, 1), 4);
+        const channel = (process.env.AUTO_ADS_CHANNEL || '@LegalAutoStore');
+        let posts;
+        try { posts = await fetchPublicFeed(channel); } catch (e) { return 'Не смог прочитать канал ' + channel + ': ' + e.message; }
+        let candidates = (posts || []).filter(p => p.text && p.text.length > 60 && (p.photos || []).length)
+          .sort((a, b) => b.num - a.num);
+        if (query) candidates = candidates.filter(p => query.split(/\s+/).every(w => p.text.toLowerCase().includes(w)));
+        if (!candidates.length) return query ? `В ${channel} не нашёл поста про «${input.query}» с фото.` : `В ${channel} нет свежих постов с фото.`;
+        const chosen = candidates.slice(0, count);
+        const { makeCarPromo: mcp, makeStoreDigest: msd } = await import('./contentAgent.js');
+        const job = count === 1
+          ? mcp({ text: chosen[0].text, photos: chosen[0].photos, platforms: ['youtube'], source: 'jarvis' })
+          : msd({ posts: chosen, platforms: ['youtube'], source: 'jarvis' });
+        job.then((r) => {
+          const txt = r.ok
+            ? `✅ Shorts готов!\n${r.ytUrl || '(YouTube: ' + (r.ytError || '—') + ')'}\n${r.cars ? 'Авто: ' + r.cars.join(', ') : r.title}`
+            : `❌ Не вышло: ${r.error}`;
+          ctx?.telegram?.sendMessage(ctx.chatId, txt).catch(() => {});
+          if (r.ok && r.cardPath) { r.cardCleanup?.(); }
+        }).catch((e) => ctx?.telegram?.sendMessage(ctx.chatId, '❌ Ошибка: ' + e.message).catch(() => {}));
+        return count === 1
+          ? `Запустил 🎬 Shorts (6 кадров, эталон) про: ${chosen[0].text.split('\n').find(l => l.trim().length > 5)?.slice(0, 60) || 'авто'}. Ссылку пришлю через ~5-7 минут.`
+          : `Запустил 🎬 подборку из ${chosen.length} авто. Ссылку пришлю через ~5-7 минут.`;
       }
       case 'set_autopilot': {
         const cur = getSection('settings') || {};
@@ -266,6 +293,7 @@ const PERSONA =
 Факт 2026: льготный утильсбор физлица 3400/5200 ₽ — ТОЛЬКО при мощности ≤160 л.с. и 1 авто/год; свыше 160 л.с. физлицо платит полный тариф (как юрлицо). Не вводи в заблуждение.
 
 ВИДЕО-ЗАВОД — выбирай правильный инструмент по теме:
+• Shorts про АВТО из канала @LegalAutoStore (пригон/продажа, «выложи машину в ютуб», «подборка авто») → store_shorts (query=какое авто, count=1 одно / 2-4 подборка).
 • Ролик про конкретные ЗАПЧАСТИ из каталога (кузовные, оптика, двигатель...) → make_short (theme=категория; тут реальные фото товара). В каталоге сейчас: BMW (~1165), Geely (34), Li Auto (2). В theme передавай марку И категорию, если названы (напр. «Geely кузовные», «BMW оптика»). Если Эдо просит марку, которой в каталоге нет — инструмент вернёт честный отказ со списком доступного; передай это Эдо, не подсовывай чужую марку. Состояние (новый/б/у), происхождение (Китай/Европа) и цены инструмент берёт из колонок таблицы автоматически — сам ничего про состояние деталей не выдумывай.
 • Любой ролик про ДОКУМЕНТЫ/оформление/СБКТС/ЭПТС/утиль/таможню/ПРИГОН/услуги/советы → по умолчанию make_cinematic (ВЫСШИЙ УРОВЕНЬ: кино-AI-кадры + брендовый оверлей, выглядит как дорогая реклама). Указывай direction (docs/auto/parts) и topic.
 • make_info_short — только если Эдо просит именно простой/быстрый инфо-ролик без AI-картинок.

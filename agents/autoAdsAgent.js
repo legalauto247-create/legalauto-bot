@@ -499,7 +499,7 @@ function parsePublicFeed(html, channel) {
   return posts;
 }
 
-async function fetchPublicFeed(channel) {
+export async function fetchPublicFeed(channel) {
   const handle = channel.replace(/^@/, '').replace(/^https?:\/\/t\.me\//, '').replace(/\/s\//, '');
   const url = `https://t.me/s/${handle}`;
   const res = await fetch(url, {

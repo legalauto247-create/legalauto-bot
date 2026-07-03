@@ -644,3 +644,52 @@ specs — только реально указанные, до 5.
   return result;
 }
 export const makeCarPromo = tracked('video_store_shorts', _makeCarPromo, o => ({ photos: (o.photos || []).length }));
+
+// ── Подборка авто из НЕСКОЛЬКИХ постов @LegalAutoStore → один Shorts ─────────
+// makeStoreDigest({ posts: [{text, photos}], platforms }) → { ok, ytUrl, title }
+async function _makeStoreDigest({ posts = [], platforms = ['youtube'] } = {}) {
+  if (!claude) return { ok: false, error: 'CLAUDE_API_KEY не задан' };
+  const valid = posts.filter(p => p.text && (p.photos || []).length);
+  if (valid.length < 2) return { ok: false, error: 'Нужно минимум 2 поста с фото для подборки' };
+
+  // данные КАЖДОГО авто строго из его поста (context-engineering: не смешивать)
+  const { extractReelData } = await import('./videoAgent.js');
+  const cars = [];
+  for (const post of valid.slice(0, 4)) {
+    const d = await extractReelData(post.text, 'car');
+    if (!d || !d.brand) continue;
+    cars.push({
+      image: post.photos[0],
+      kicker: d.price || '',
+      title: `${d.brand} ${d.model}`.trim(),
+      text: (d.specs || []).slice(0, 2).map(s => `${s.label}: ${s.value}`).join(' · ') || d.tagline || '',
+    });
+  }
+  if (cars.length < 2) return { ok: false, error: 'Не удалось разобрать посты (марка/модель не распознаны)' };
+
+  const title = `ТОП-${cars.length} авто в наличии: ${cars.map(c => c.title.split(' ')[0]).join(', ')} 🚗`;
+  const desc = `${cars.map(c => `• ${c.title} — ${c.kicker || 'цена по запросу'}`).join('\n')}\n\n✅ ЗАКАЗАТЬ (бот, 1 минута): https://t.me/LegalAutoAssist_bot?start=yt_store\n🚗 Канал: https://t.me/LegalAutoStore`;
+
+  const gate = await reviewContent({
+    title, description: desc, texts: cars.map(c => `${c.title} ${c.kicker} ${c.text}`),
+    direction: 'auto', sourceData: valid.map(p => p.text.slice(0, 300)).join('\n---\n'),
+  });
+  if (!gate.pass) return { ok: false, error: `Quality Gate: ${gate.fails.join('; ')}` };
+
+  const music = pickMusic(['sport', 'rock']);
+  const video = await renderCinematic({
+    musicPath: music, images: [],
+    brandLine: 'LEGAL AUTO STORE', heroImage: cars[0].image,
+    hook: `ТОП-${cars.length} АВТО В НАЛИЧИИ`, tagline: 'подбор и продажа под ключ',
+    scenes: cars, cta: 'Подберём ваше авто — заявка в 1 минуту',
+    channel: '@LegalAutoStore', groupUrl: 't.me/LegalAutoStore', accent: '#D4AF37',
+  });
+  const result = { ok: true, title, cars: cars.map(c => c.title) };
+  if (platforms.includes('youtube')) {
+    try { const yt = await uploadShort({ path: video.path, title, description: desc, tags: ['shorts', 'авто', 'пригон', 'LegalAuto'] }); result.ytUrl = yt.url; }
+    catch (e) { result.ytError = e.message; }
+  }
+  video.cleanup();
+  return result;
+}
+export const makeStoreDigest = tracked('video_store_digest', _makeStoreDigest, o => ({ posts: (o.posts || []).length }));
