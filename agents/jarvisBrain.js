@@ -96,7 +96,7 @@ import { getAutoAdsStatus, pollPublicChannels } from './autoAdsAgent.js';
 import { prepareAutoPost, publishToChannel } from './postAgent.js';
 import { learnFact, buildSystemPrompt, addConversation } from './memoryAgent.js';
 import { makeProductShort, makeInfoShort, makeCinematicShort } from './contentAgent.js';
-import { stateSummary, logEvent as stateEvent } from '../services/stateService.js';
+import { stateSummary, logEvent as stateEvent, setSection, getSection } from '../services/stateService.js';
 import { runHealthCheck, formatHealth } from '../services/healthMonitor.js';
 import { fetchFreshNews } from '../bots/newsBot.js';
 
@@ -110,6 +110,7 @@ const TOOLS = [
   { name: 'get_analytics', description: 'Аналитика бизнеса: запчасти, публикации, лиды, выручка.', input_schema: { type: 'object', properties: { period: { type: 'string', enum: ['today','week','month','all'] } } } },
   { name: 'calc_customs', description: 'Рассчитать растаможку+утильсбор авто (РФ 2026).', input_schema: { type: 'object', properties: { engineCc: { type: 'number' }, hp: { type: 'number' }, ageYears: { type: 'number' }, priceEur: { type: 'number' } }, required: ['engineCc','hp','ageYears','priceEur'] } },
   { name: 'generate_image', description: 'Нарисовать изображение через OpenAI gpt-image (фон, баннер, иллюстрация). Сразу отправляет картинку Эдо.', input_schema: { type: 'object', properties: { prompt: { type: 'string' } }, required: ['prompt'] } },
+  { name: 'set_autopilot', description: 'ВКЛ/ВЫКЛ автовыставление роликов (автопилот 11:00/17:00). Эдо: «выключи автопилот / не выкладывай ролики сам / включи обратно». off = ролики только по явной команде Эдо (экономия денег, фокус на качестве).', input_schema: { type: 'object', properties: { mode: { type: 'string', enum: ['on', 'off'] } }, required: ['mode'] } },
   { name: 'media_collections', description: 'MEDIA_FACTORY: показать готовые смысловые коллекции для роликов (Оптика BMW X5 G05, Двери и молдинги BMW X7...) с составом и рейтингом. Вызывай, когда Эдо спрашивает «какие темы для роликов / что снять» или перед выбором темы.', input_schema: { type: 'object', properties: {} } },
   { name: 'scan_news', description: 'Просканировать свежие новости (6 живых RSS: авто + деловые) и отфильтровать ПОЛЕЗНЫЕ для импортёров (таможня/утиль/авторынок/импорт). Возвращает список заголовков с ссылками. Используй на «что нового / есть ли новости / проверь новости». Дальше можешь предложить Эдо сделать из лучшей новости ролик (make_cinematic с direction=docs и темой новости) или пост.', input_schema: { type: 'object', properties: { max: { type: 'number' } } } },
   { name: 'scan_partner_cars', description: 'Просканировать канал партнёра и прислать свежие авто на одобрение.', input_schema: { type: 'object', properties: {} } },
@@ -154,6 +155,14 @@ async function runTool(name, input, ctx) {
           return 'Картинка сгенерирована и отправлена Эдо.';
         }
         return img?.url ? `Картинка: ${img.url}` : 'Не удалось сгенерировать изображение.';
+      }
+      case 'set_autopilot': {
+        const cur = getSection('settings') || {};
+        setSection('settings', { ...cur, video_autopilot: input.mode });
+        stateEvent('autopilot_toggle', { note: input.mode });
+        return input.mode === 'off'
+          ? 'Автопилот роликов ВЫКЛЮЧЕН. Ролики теперь только по твоей команде — деньги не тратятся. Включить обратно: «включи автопилот».'
+          : 'Автопилот роликов ВКЛЮЧЁН: 11:00 запчасти, 17:00 кино (МСК).';
       }
       case 'media_collections': {
         const { listCollections } = await import('../services/mediaFactory.js');

@@ -9,7 +9,7 @@
  * Выключатель: VIDEO_AUTOPILOT=false в env.
  */
 import { makeProductShort, makeCinematicShort } from './contentAgent.js';
-import { heartbeat, logEvent } from '../services/stateService.js';
+import { heartbeat, logEvent, getSection } from '../services/stateService.js';
 
 const ENABLED = process.env.VIDEO_AUTOPILOT !== 'false';
 const ADMIN_BOT_TOKEN = process.env.ADMIN_BOT_TOKEN;
@@ -85,6 +85,8 @@ export function startVideoAutopilot() {
     const hhmm = `${String(msk.getUTCHours()).padStart(2, '0')}:${String(msk.getUTCMinutes()).padStart(2, '0')}`;
     const key = `${msk.getUTCDate()}_${hhmm}`;
     if (lastFired === key) return;
+    // Выключатель Эдо (через Jarvis: «выключи автопилот роликов») — деньги не жжём
+    if (getSection('settings')?.video_autopilot === 'off') return;
     if (hhmm === '11:00') { lastFired = key; morningSlot(); }
     if (hhmm === '17:00') { lastFired = key; eveningSlot(); }
   }, 60_000);
