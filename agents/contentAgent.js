@@ -586,6 +586,16 @@ export async function makeNewsCard({ newsText, date }) {
   return { ok: true, path, cleanup, caption: sc.caption || sc.title };
 }
 
+
+// Telegram-CDN блокируется Chrome (ORB) при рендере — качаем фото байтами на диск
+async function fetchImage(url) {
+  try {
+    const r = await Promise.race([fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000))]);
+    if (!r.ok) return null;
+    return Buffer.from(await r.arrayBuffer());
+  } catch { return null; }
+}
+
 // ── Авто-промо из Telegram-поста: STORE-карточка (ЛИСТ 4) + Shorts 6 кадров (ЛИСТ 6) ─
 // makeCarPromo({ text, photos, platforms }) → { ok, ytUrl, cardPath, cardCleanup, title }
 async function _makeCarPromo({ text, photos = [], platforms = ['youtube'] } = {}) {
@@ -614,10 +624,17 @@ specs — только реально указанные, до 5.
   });
   if (!gate.pass) return { ok: false, error: `Quality Gate: ${gate.fails.join('; ')}` };
 
-  // 3) эталонная карточка (ЛИСТ 4)
+  // 3) фото байтами (t.me CDN блокируется в рендере) → локальные файлы
+  const buffers = (await Promise.all(photos.slice(0, 6).map(fetchImage)));
+  const images = buffers.map((b, i) => b ? { name: `car-${i}.jpg`, buffer: b } : null).filter(Boolean);
+  if (!images.length) return { ok: false, error: 'Не удалось скачать фото из поста' };
+  const localNames = images.map(im => im.name);
+
+  // эталонная карточка (ЛИСТ 4)
   const card = await renderStoreCard({
+    images,
     brand: d.brand, model: d.model, year: d.year || '',
-    photo: photos[0], specs: (d.specs || []).slice(0, 6),
+    photo: localNames[0], specs: (d.specs || []).slice(0, 6),
     price: price || 'Цена по запросу',
     badge: d.badge || 'ПОДБОР ПОД КЛЮЧ',
   });
@@ -632,7 +649,7 @@ specs — только реально указанные, до 5.
       hook: d.hook || 'Премиум который впечатляет',
       power: d.power || price, options: d.options || [],
       condition: d.condition || '', trust: (d.trust && d.trust.length ? d.trust : ['Юридическая чистота', 'Проверка перед покупкой', 'Полный пакет документов']),
-      photos: photos.slice(0, 6), channel: '@LegalAutoStore',
+      price: price || '', photos: localNames, images, channel: '@LegalAutoStore',
     });
     try {
       const desc = `${d.description || ''}\n\n✅ ЗАКАЗАТЬ (бот, 1 минута): https://t.me/LegalAutoAssist_bot?start=yt_store\n🚗 Канал: https://t.me/LegalAutoStore`;
@@ -659,7 +676,7 @@ async function _makeStoreDigest({ posts = [], platforms = ['youtube'] } = {}) {
     const d = await extractReelData(post.text, 'car');
     if (!d || !d.brand) continue;
     cars.push({
-      image: post.photos[0],
+      image: post.photos[0],   // заменим на локальное имя ниже
       kicker: d.price || '',
       title: `${d.brand} ${d.model}`.trim(),
       text: (d.specs || []).slice(0, 2).map(s => `${s.label}: ${s.value}`).join(' · ') || d.tagline || '',
@@ -676,12 +693,21 @@ async function _makeStoreDigest({ posts = [], platforms = ['youtube'] } = {}) {
   });
   if (!gate.pass) return { ok: false, error: `Quality Gate: ${gate.fails.join('; ')}` };
 
+  // фото байтами (обход ORB)
+  const digestImages = [];
+  for (let i = 0; i < cars.length; i++) {
+    const b = await fetchImage(cars[i].image);
+    if (b) { digestImages.push({ name: `digest-${i}.jpg`, buffer: b }); cars[i].image = `digest-${i}.jpg`; }
+  }
+  const okCars = cars.filter(c => c.image.startsWith('digest-'));
+  if (okCars.length < 2) return { ok: false, error: 'Не удалось скачать фото постов' };
+
   const music = pickMusic(['sport', 'rock']);
   const video = await renderCinematic({
-    musicPath: music, images: [],
+    musicPath: music, images: digestImages,
     brandLine: 'LEGAL AUTO STORE', heroImage: cars[0].image,
     hook: `ТОП-${cars.length} АВТО В НАЛИЧИИ`, tagline: 'подбор и продажа под ключ',
-    scenes: cars, cta: 'Подберём ваше авто — заявка в 1 минуту',
+    scenes: okCars, cta: 'Подберём ваше авто — заявка в 1 минуту',
     channel: '@LegalAutoStore', groupUrl: 't.me/LegalAutoStore', accent: '#D4AF37',
   });
   const result = { ok: true, title, cars: cars.map(c => c.title) };

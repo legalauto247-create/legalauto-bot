@@ -185,12 +185,14 @@ export async function renderNewsCard({ bgImageBuffer, ...props }) {
 }
 
 // ── Store Card: эталонная карточка авто (ЛИСТ 4), пост-картинка 1080x1350 ───
-export async function renderStoreCard(props) {
+export async function renderStoreCard({ images = [], ...props }) {
   const { renderStill, selectComposition: sc } = await import('@remotion/renderer');
   const dir = mkdtempSync(join(tmpdir(), 'scard-'));
   const cleanup = () => { try { rmSync(dir, { recursive: true, force: true }); } catch {} };
   const out = join(dir, 'store.jpg');
   try {
+    if (!existsSync(PUBLIC_DIR)) mkdirSync(PUBLIC_DIR, { recursive: true });
+    for (const im of images) { if (im?.name && im?.buffer) writeFileSync(join(PUBLIC_DIR, im.name), im.buffer); }
     const exec = chromePath();
     await ensureBrowser(exec ? { browserExecutable: exec } : undefined).catch(() => {});
     const serveUrl = await bundle({ entryPoint: ENTRY, publicDir: PUBLIC_DIR });
@@ -217,13 +219,14 @@ export async function renderPartsCard(props) {
 }
 
 // ── Store Shorts: 6 кадров / 30 сек по эталону ЛИСТ 6 ───────────────────────
-export async function renderStoreShorts({ musicPath, ...props }) {
+export async function renderStoreShorts({ musicPath, images = [], ...props }) {
   const dir = mkdtempSync(join(tmpdir(), 'sshorts-'));
   const cleanup = () => { try { rmSync(dir, { recursive: true, force: true }); } catch {} };
   const out = join(dir, 'shorts.mp4');
   try {
     if (!existsSync(PUBLIC_DIR)) mkdirSync(PUBLIC_DIR, { recursive: true });
     if (musicPath && existsSync(musicPath)) cpSync(musicPath, join(PUBLIC_DIR, 'music.mp3'));
+    for (const im of images) { if (im?.name && im?.buffer) writeFileSync(join(PUBLIC_DIR, im.name), im.buffer); }
     const exec = chromePath();
     await ensureBrowser(exec ? { browserExecutable: exec } : undefined).catch(() => {});
     const serveUrl = await bundle({ entryPoint: ENTRY, publicDir: PUBLIC_DIR });
