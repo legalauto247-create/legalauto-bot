@@ -1,0 +1,163 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LEGAL AUTO GROUP — документы, подбор авто и запчасти под ключ</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--teal:#00B8AC;--teal2:#00D1C2;--gold:#D4AF37;--orange:#FF6B00;--ink:#0F1720;--mut:#6B7683;--line:#E7EBEF;--bgs:#F5F7F9}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Montserrat,sans-serif;color:var(--ink);background:#fff}
+img{display:block;max-width:100%}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+/* ── topbar ── */
+.top{border-bottom:1px solid var(--line)}
+.top-i{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 0;flex-wrap:wrap}
+.lg{display:flex;align-items:center;gap:12px}
+.shield{width:46px;height:52px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:17px;color:#fff;background:linear-gradient(160deg,#1B2733,#0E141B);clip-path:polygon(50% 0,100% 13%,100% 56%,50% 100%,0 56%,0 13%);border:2px solid #223041}
+.lg b{font-size:19px;font-weight:800;letter-spacing:.3px}
+.lg span{display:block;font-size:9px;letter-spacing:2.6px;color:var(--teal);font-weight:700}
+.tcell{display:flex;align-items:center;gap:10px;font-size:13px}
+.tico{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--teal);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.tcell b{font-size:14.5px;font-weight:800;display:block}
+.tcell small{color:var(--mut);font-size:11.5px;font-weight:600}
+.soc{display:flex;gap:7px}
+.soc a{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;text-decoration:none}
+.soc .wa{background:#2BC252}.soc .tg{background:#2AABEE}
+.cta-top{background:var(--teal);color:#fff;font-weight:800;font-size:13px;letter-spacing:.6px;padding:13px 24px;border-radius:12px;text-decoration:none;box-shadow:0 6px 20px rgba(0,184,172,.35)}
+/* ── меню ── */
+.menu{border-bottom:1px solid var(--line)}
+.menu-i{display:flex;gap:34px;padding:14px 0;font-size:13px;font-weight:700;letter-spacing:.4px;overflow-x:auto;scrollbar-width:none}
+.menu-i a{color:var(--ink);text-decoration:none;white-space:nowrap}
+.menu-i a:hover{color:var(--teal)}
+/* ── hero ── */
+.hero{position:relative;background:linear-gradient(180deg,#FDFEFE, #F2F5F7);overflow:hidden}
+.hero-i{display:grid;grid-template-columns:1.05fr 1.2fr;gap:20px;align-items:center;min-height:470px;padding-bottom:64px}
+.hero h1{font-size:44px;font-weight:900;line-height:1.1;text-transform:uppercase;letter-spacing:-.5px}
+.hero h1 .t{color:var(--teal)}
+.hero .sub{font-size:17px;color:#3A4653;margin:16px 0 18px;line-height:1.55}
+.checks{display:flex;flex-direction:column;gap:9px;margin-bottom:26px}
+.checks div{display:flex;align-items:center;gap:10px;font-weight:700;font-size:14.5px}
+.chk{width:22px;height:22px;border-radius:50%;background:var(--teal);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hero .cta{display:flex;gap:13px}
+.hb{padding:16px 30px;border-radius:13px;font-weight:800;font-size:14.5px;text-decoration:none;letter-spacing:.4px}
+.hb.p{background:var(--teal);color:#fff;box-shadow:0 8px 26px rgba(0,184,172,.35)}
+.hb.s{background:#fff;color:var(--ink);border:1.5px solid var(--line);display:inline-flex;align-items:center;gap:9px}
+.hero-ph{position:relative;height:470px}
+.hero-ph img{width:100%;height:100%;object-fit:cover;object-position:center;mask-image:linear-gradient(90deg,transparent 0,#000 14%)}
+.hero-ph::after{content:'';position:absolute;right:30px;top:22px;width:130px;height:150px;background:linear-gradient(160deg,rgba(27,39,51,.10),transparent);clip-path:polygon(50% 0,100% 13%,100% 56%,50% 100%,0 56%,0 13%)}
+/* ── статы ── */
+.stats{position:relative;z-index:3;margin-top:-44px}
+.stats-i{display:grid;grid-template-columns:repeat(5,1fr);background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 18px 50px rgba(15,23,32,.09);overflow:hidden}
+.st{display:flex;align-items:center;gap:13px;padding:24px 22px;border-right:1px solid var(--line)}
+.st:last-child{border-right:0}
+.sico{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0}
+.st b{font-size:22px;font-weight:900;display:block;line-height:1}
+.st small{font-size:11px;color:var(--mut);font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+/* ── направления ── */
+.dirs{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin:52px 0}
+.dcard{--c:var(--teal);border:1px solid var(--line);border-radius:20px;overflow:hidden;background:#fff;box-shadow:0 10px 34px rgba(15,23,32,.06);display:flex;flex-direction:column;transition:transform .25s,box-shadow .25s}
+.dcard:hover{transform:translateY(-5px);box-shadow:0 22px 54px rgba(15,23,32,.12)}
+.dbody{padding:24px 24px 18px;flex:1}
+.dcard h3{font-size:19px;font-weight:900;letter-spacing:.3px}
+.dcard h3 i{font-style:normal;color:var(--c)}
+.dcard .dsub{font-size:11px;font-weight:800;letter-spacing:1.6px;color:var(--c);text-transform:uppercase;margin:3px 0 16px}
+.dlist{display:flex;flex-direction:column;gap:9px}
+.dlist div{display:flex;gap:9px;font-size:13.5px;font-weight:600;color:#2B3642;align-items:flex-start}
+.dlist .chk{width:19px;height:19px;font-size:10px;background:var(--c);margin-top:1px}
+.dph{height:190px}
+.dph img{width:100%;height:100%;object-fit:cover}
+.dbtn{display:block;margin:18px 24px 22px;text-align:center;background:var(--c);color:#fff;font-weight:800;font-size:13px;letter-spacing:.8px;padding:14px;border-radius:12px;text-decoration:none}
+/* ── почему мы ── */
+.why{background:var(--bgs);padding:54px 0 60px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.why h2{text-align:center;font-size:26px;font-weight:900;text-transform:uppercase;letter-spacing:.4px;margin-bottom:38px}
+.why-g{display:grid;grid-template-columns:repeat(5,1fr);gap:18px}
+.wi{text-align:center}
+.wico{width:74px;height:74px;margin:0 auto 14px;border-radius:50%;border:2px solid var(--teal);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:30px;background:#fff}
+.wi b{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;display:block}
+.wi p{font-size:12px;color:var(--mut);margin-top:6px;line-height:1.45}
+/* ── футер ── */
+footer{padding:30px 0 36px}
+.f-i{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.fcell{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;color:#2B3642}
+.fsoc a{width:34px;height:34px;border-radius:10px;background:#101820;color:#fff;display:inline-flex;align-items:center;justify-content:center;margin-left:8px;text-decoration:none;font-size:15px}
+@media(max-width:960px){
+.hero-i{grid-template-columns:1fr;min-height:0;padding:34px 0 0}
+.hero-ph{height:300px;margin:20px -20px 0}
+.hero-ph img{mask-image:linear-gradient(180deg,transparent 0,#000 18%)}
+.hero h1{font-size:31px}
+.stats-i{grid-template-columns:1fr 1fr;border-radius:16px}
+.st{border-right:0;border-bottom:1px solid var(--line)}
+.dirs{grid-template-columns:1fr}
+.why-g{grid-template-columns:1fr 1fr}
+.top-i .tcell.hide-m{display:none}
+.menu-i{gap:22px}
+}
+</style></head><body>
+<div class="top"><div class="wrap top-i">
+<div class="lg"><div class="shield">LA</div><div><b>LEGAL AUTO GROUP</b><span>ФАКТЫ • КОНТРОЛЬ • РЕЗУЛЬТАТ</span></div></div>
+<div class="tcell"><div class="tico">📞</div><div><b>+7 938 515-24-29</b><small>WhatsApp / Telegram</small></div><div class="soc"><a class="wa" href="https://wa.me/79385152429">✆</a><a class="tg" href="https://t.me/LegalAuto247">✈</a></div></div>
+<div class="tcell hide-m"><div class="tico">📍</div><div><b>Москва и Минск</b><small>Склады в РФ и РБ</small></div></div>
+<a class="cta-top" href="https://t.me/LegalAutoAssist_bot">ОСТАВИТЬ ЗАЯВКУ</a>
+</div></div>
+<div class="menu"><div class="wrap menu-i"><a href="#about">О НАС</a><a href="#dirs">УСЛУГИ</a><a href="https://t.me/LegalAutoStore">АВТО В НАЛИЧИИ</a><a href="/catalog.html">ЗАПЧАСТИ</a><a href="#dirs">ДОКУМЕНТЫ</a><a href="https://t.me/LegalAuto24">ОТЗЫВЫ</a><a href="#contacts">КОНТАКТЫ</a></div></div>
+
+<section class="hero"><div class="wrap hero-i">
+<div>
+<h1>Ваш надёжный <span class="t">партнёр</span> в мире авто</h1>
+<p class="sub">Оформление документов, подбор авто и запчасти под ключ</p>
+<div class="checks">
+<div><div class="chk">✓</div>Законно</div>
+<div><div class="chk">✓</div>Быстро</div>
+<div><div class="chk">✓</div>Без лишних рисков</div>
+</div>
+<div class="cta"><a class="hb p" href="#dirs">НАШИ УСЛУГИ</a><a class="hb s" href="https://t.me/LegalAutoAssist_bot">СВЯЗАТЬСЯ С НАМИ <span style="color:var(--teal)">✈</span></a></div>
+</div>
+<div class="hero-ph"><img src="img/hero.jpg" alt="LEGAL AUTO"></div>
+</div></section>
+
+<div class="wrap stats" id="about"><div class="stats-i">
+<div class="st"><div class="sico" style="background:rgba(0,184,172,.1);color:var(--teal)">🏆</div><div><b>5+</b><small>лет опыта</small></div></div>
+<div class="st"><div class="sico" style="background:rgba(0,184,172,.1);color:var(--teal)">👥</div><div><b>1000+</b><small>довольных клиентов</small></div></div>
+<div class="st"><div class="sico" style="background:rgba(212,175,55,.12);color:var(--gold)">🛡</div><div><b>3</b><small>направления</small></div></div>
+<div class="st"><div class="sico" style="background:rgba(212,175,55,.12);color:var(--gold)">📍</div><div><b>2</b><small>склада (Москва / Минск)</small></div></div>
+<div class="st"><div class="sico" style="background:rgba(255,107,0,.1);color:var(--orange)">🚚</div><div><b>ВСЯ РОССИЯ</b><small>доставка</small></div></div>
+</div></div>
+
+<div class="wrap dirs" id="dirs">
+<div class="dcard" style="--c:var(--teal)">
+<div class="dbody"><h3>LEGAL AUTO</h3><div class="dsub">Документы</div>
+<div class="dlist"><div><div class="chk">✓</div>СБКТС / ЭПТС</div><div><div class="chk">✓</div>Таможня и растаможка</div><div><div class="chk">✓</div>Утильсбор</div><div><div class="chk">✓</div>Сопровождение под ключ</div></div></div>
+<div class="dph"><img src="img/docs.jpg" alt="Документы"></div>
+<a class="dbtn" href="https://t.me/LegalAutoAssist_bot">ПОДРОБНЕЕ</a>
+</div>
+<div class="dcard" style="--c:var(--gold)">
+<div class="dbody"><h3>LEGAL AUTO <i>STORE</i></h3><div class="dsub">Подбор и продажа авто</div>
+<div class="dlist"><div><div class="chk">✓</div>Подбор авто под заказ</div><div><div class="chk">✓</div>Проверка и диагностика</div><div><div class="chk">✓</div>Доставка и растаможка</div><div><div class="chk">✓</div>Гарантия юридической чистоты</div></div></div>
+<div class="dph"><img src="img/store.jpg" alt="Авто"></div>
+<a class="dbtn" href="https://t.me/LegalAutoStore">ПОДРОБНЕЕ</a>
+</div>
+<div class="dcard" style="--c:var(--orange)">
+<div class="dbody"><h3>LEGAL AUTO <i>PARTS</i></h3><div class="dsub">Запчасти и комплектующие</div>
+<div class="dlist"><div><div class="chk">✓</div>Оригинальные запчасти</div><div><div class="chk">✓</div>Б/У из Европы</div><div><div class="chk">✓</div>Новые и реплика</div><div><div class="chk">✓</div>Доставка по всей России</div></div></div>
+<div class="dph"><img src="img/parts.jpg" alt="Запчасти"></div>
+<a class="dbtn" href="/catalog.html">ПОДРОБНЕЕ</a>
+</div>
+</div>
+
+<section class="why"><div class="wrap">
+<h2>Почему выбирают LEGAL AUTO GROUP</h2>
+<div class="why-g">
+<div class="wi"><div class="wico">🎯</div><b>Экспертность</b><p>Глубокое знание рынка и законодательства</p></div>
+<div class="wi"><div class="wico">🔍</div><b>Полная прозрачность</b><p>Работаем по договору, без скрытых платежей</p></div>
+<div class="wi"><div class="wico">🤝</div><b>Индивидуальный подход</b><p>Решаем задачи любой сложности</p></div>
+<div class="wi"><div class="wico">⚡</div><b>Скорость</b><p>Оформление от 1 дня, доставка по РФ</p></div>
+<div class="wi"><div class="wico">🛡</div><b>Гарантия</b><p>Гарантия на услуги и запчасти</p></div>
+</div>
+</div></section>
+
+<footer id="contacts"><div class="wrap f-i">
+<div class="lg"><div class="shield">LA</div><div><b>LEGAL AUTO GROUP</b><span>ФАКТЫ • КОНТРОЛЬ • РЕЗУЛЬТАТ</span></div></div>
+<div class="fcell"><div class="tico">📞</div><div><b>+7 938 515-24-29</b><br><small style="color:var(--mut)">WhatsApp / Telegram</small></div></div>
+<div class="fcell"><div class="tico">✉</div><div><b>@LegalAuto247</b><br><small style="color:var(--mut)">Напишите нам</small></div></div>
+<div class="fcell"><div class="tico">📍</div><div><b>Москва и Минск</b><br><small style="color:var(--mut)">Работаем по всей России</small></div></div>
+<div class="fsoc"><a href="https://t.me/LegalAuto24">✈</a><a href="https://youtube.com/@LegalAuto">▶</a></div>
+</div></footer>
+</body></html>
