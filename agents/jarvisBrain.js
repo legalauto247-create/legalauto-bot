@@ -110,6 +110,7 @@ const TOOLS = [
   { name: 'get_analytics', description: 'Аналитика бизнеса: запчасти, публикации, лиды, выручка.', input_schema: { type: 'object', properties: { period: { type: 'string', enum: ['today','week','month','all'] } } } },
   { name: 'calc_customs', description: 'Рассчитать растаможку+утильсбор авто (РФ 2026).', input_schema: { type: 'object', properties: { engineCc: { type: 'number' }, hp: { type: 'number' }, ageYears: { type: 'number' }, priceEur: { type: 'number' } }, required: ['engineCc','hp','ageYears','priceEur'] } },
   { name: 'generate_image', description: 'Нарисовать изображение через OpenAI gpt-image (фон, баннер, иллюстрация). Сразу отправляет картинку Эдо.', input_schema: { type: 'object', properties: { prompt: { type: 'string' } }, required: ['prompt'] } },
+  { name: 'media_collections', description: 'MEDIA_FACTORY: показать готовые смысловые коллекции для роликов (Оптика BMW X5 G05, Двери и молдинги BMW X7...) с составом и рейтингом. Вызывай, когда Эдо спрашивает «какие темы для роликов / что снять» или перед выбором темы.', input_schema: { type: 'object', properties: {} } },
   { name: 'scan_news', description: 'Просканировать свежие новости (6 живых RSS: авто + деловые) и отфильтровать ПОЛЕЗНЫЕ для импортёров (таможня/утиль/авторынок/импорт). Возвращает список заголовков с ссылками. Используй на «что нового / есть ли новости / проверь новости». Дальше можешь предложить Эдо сделать из лучшей новости ролик (make_cinematic с direction=docs и темой новости) или пост.', input_schema: { type: 'object', properties: { max: { type: 'number' } } } },
   { name: 'scan_partner_cars', description: 'Просканировать канал партнёра и прислать свежие авто на одобрение.', input_schema: { type: 'object', properties: {} } },
   { name: 'post_part', description: 'Опубликовать одну запчасть в канал запчастей сейчас.', input_schema: { type: 'object', properties: {} } },
@@ -153,6 +154,15 @@ async function runTool(name, input, ctx) {
           return 'Картинка сгенерирована и отправлена Эдо.';
         }
         return img?.url ? `Картинка: ${img.url}` : 'Не удалось сгенерировать изображение.';
+      }
+      case 'media_collections': {
+        const { listCollections } = await import('../services/mediaFactory.js');
+        const { gasCatalogForJarvis } = await import('./contentAgent.js').catch(() => ({}));
+        // каталог берём тем же путём, что и завод
+        const mod = await import('./contentAgent.js');
+        const parts = await (mod.getCatalogParts ? mod.getCatalogParts() : Promise.resolve([]));
+        if (!parts.length) return 'Каталог недоступен.';
+        return 'Готовые коллекции MEDIA_FACTORY:\n' + listCollections(parts, 10).map((c, i) => `${i + 1}. ${c}`).join('\n');
       }
       case 'scan_news': {
         const news = await fetchFreshNews(Math.min(input.max || 5, 8));

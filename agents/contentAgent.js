@@ -15,6 +15,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { renderProduct, renderInfo, renderCinematic, renderNewsCard, renderStoreCard, renderStoreShorts } from './videoAgent.js';
 import { createTask, taskProcessing, taskDone, taskFailed, persistentPath } from '../services/stateService.js';
 import { reviewContent } from '../services/qualityGate.js';
+import { pickCollection, markCollectionUsed, listCollections, buildCollections } from '../services/mediaFactory.js';
 import { uploadShort, LINKS_BLOCK } from './youtubeUpload.js';
 import { HEAVY } from './models.js';
 
@@ -83,6 +84,8 @@ async function catalogFromSheet() {
     };
   });
 }
+
+export async function getCatalogParts() { return gasCatalog(250); }
 
 async function gasCatalog(limit = 40) {
   // 1) прямое чтение таблицы (полный каталог, все марки)
@@ -179,6 +182,17 @@ async function _makeProductShort({ platforms = ['youtube'], theme = '', lengthSe
     pool = brandParts;
   }
 
+  // 0) БЕЗ явной темы → MEDIA_FACTORY: смысловая коллекция (тема дня), не случайные детали
+  let collection = null;
+  if (!String(theme || '').trim()) {
+    collection = pickCollection(pool, { platform: platforms[0] || 'youtube' });
+    if (collection) {
+      pool = collection.parts.slice();
+      pool._picked = true;
+      console.log(`[MediaFactory] 🎯 Коллекция: «${collection.title}» (${collection.parts.length} дет., score ${collection.score})`);
+    }
+  }
+
   // 1b) КОРЗИНЫ по запрошенным категориям → round-robin (каждая тема представлена)
   const buckets = themeBuckets(theme);
   if (buckets.length) {
@@ -226,6 +240,19 @@ async function _makeProductShort({ platforms = ['youtube'], theme = '', lengthSe
   }
   if (parts.length < 3) return { ok: false, error: theme ? `Мало фото по теме «${theme}» в каталоге` : 'Мало фото запчастей в каталоге' };
 
+  // ПРЕВАЛИДАЦИЯ ФОТО: photo_count в таблице врёт (02.jpg может не существовать) —
+  // проверяем каждый URL HEAD'ом, битые выкидываем; деталь без фото — вон из ролика
+  const headOk = async (u) => { try { const r = await Promise.race([fetch(u, { method: 'HEAD' }), new Promise((_, rej) => setTimeout(() => rej(new Error('t')), 6000))]); return r.ok; } catch { return false; } };
+  await Promise.all(parts.map(async (p) => {
+    const candidates = (p.photos && p.photos.length ? p.photos : [p.photo]).filter(Boolean);
+    const checks = await Promise.all(candidates.map(headOk));
+    p.photos = candidates.filter((_, i) => checks[i]);
+    p.photo = p.photos[0] || null;
+  }));
+  const validParts = parts.filter(p => p.photo);
+  if (validParts.length < 3) return { ok: false, error: 'Мало деталей с рабочими фото (битые ссылки в облаке)' };
+  parts.length = 0; parts.push(...validParts);
+
   // items: КАЖДАЯ запчасть со своим названием и ценой (текст совпадает с фото)
   const items = parts.map(p => ({
     photo: p.photo || p.photo_cover,
@@ -252,9 +279,11 @@ async function _makeProductShort({ platforms = ['youtube'], theme = '', lengthSe
   const conds = [...new Set(parts.map(p => String(p.condition || '').trim()).filter(Boolean))];
   const condLabel = conds.length === 1 ? conds[0] : '';   // смешанное состояние — не заявляем одно
 
+  const collectionTheme = collection ? collection.title : theme;
+
   // 2) хук + заголовок (на «вы», без «золотых гор» — по брендбуку)
   const m = await claude.messages.create({ model: HEAVY, max_tokens: 350, messages: [{ role: 'user', content:
-`Короткий вирусный хук и заголовок для Shorts про запчасти ${brandLabel}${originLabel ? ' ' + originLabel : ''} (LegalAuto Parts). Состояние деталей СТРОГО из каталога: "${condLabel || 'разное — не указывай состояние'}". НЕ пиши «б/у», если в состоянии этого нет; НЕ пиши «новые», если не написано «Новый». Тон по брендбуку: на «вы», прямо и по фактам, БЕЗ обещаний «золотых гор» и слова «копейки». НЕ выдумывай страну происхождения — используй только "${originLabel || 'без указания страны'}".
+`Короткий вирусный хук и заголовок для Shorts. ТЕМА РОЛИКА: «${collectionTheme || 'оригинальные запчасти'}» — заголовок и хук строго вокруг неё. Запчасти ${brandLabel}${originLabel ? ' ' + originLabel : ''} (LegalAuto Parts). Состояние деталей СТРОГО из каталога: "${condLabel || 'разное — не указывай состояние'}". НЕ пиши «б/у», если в состоянии этого нет; НЕ пиши «новые», если не написано «Новый». Тон по брендбуку: на «вы», прямо и по фактам, БЕЗ обещаний «золотых гор» и слова «копейки». НЕ выдумывай страну происхождения — используй только "${originLabel || 'без указания страны'}".
 JSON: {"title":"до 80 симв, 1 эмодзи","description":"2 строки + 3 хэштега (#shorts #запчасти #${brandTag})","hook":"3-4 слова крупно (интрига/выгода)"}
 запчасти в ролике: ${parts.map(p => `${p.name}${p.condition ? ' (' + p.condition + ')' : ''}`).join(', ')}` }] });
   const s = JSON.parse(m.content[0].text.trim().replace(/^```json?|```$/g, ''));
@@ -298,6 +327,7 @@ JSON: {"title":"до 80 симв, 1 эмодзи","description":"2 строки 
     used[key] = Array.from(new Set([...(used[key] || []), ...platforms]));
   }
   saveUsed(used);
+  if (collection) { markCollectionUsed(collection.id, platforms[0] || 'youtube'); result.collection = collection.title; }
   cleanup();
   return result;
 }
