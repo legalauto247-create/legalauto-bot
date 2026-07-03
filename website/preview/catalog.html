@@ -1,42 +1,69 @@
 <!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+<title>Каталог — LEGAL AUTO PARTS</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0B0F14;--surface:#1A222B;--teal:#00D1C2;--gold:#D4AF37;--orange:#FF6B00;--muted:#9BA3AF}
-*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:#fff;font-family:Montserrat,sans-serif;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.025) 0 2px,transparent 2px 24px)}
-.wrap{max-width:420px;margin:0 auto;padding:0 16px 90px}
-header{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
+:root{--bg:#0B0F14;--s:#131A23;--teal:#00D1C2;--gold:#D4AF37;--orange:#FF6B00;--mut:#8B95A1;--tx:#F2F5F7}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font-family:Montserrat,sans-serif;padding-bottom:96px}
+.bgfx{position:fixed;inset:0;z-index:-2;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:42px 42px;mask-image:radial-gradient(ellipse 100% 55% at 50% 0%,#000 55%,transparent 100%)}
+.glow{position:fixed;z-index:-1;filter:blur(90px);opacity:.35;border-radius:50%}
+.g1{width:420px;height:420px;top:-160px;right:-120px;background:radial-gradient(circle,#FF6B00,transparent 62%)}
+.g2{width:360px;height:360px;bottom:10%;left:-140px;background:radial-gradient(circle,#00D1C2,transparent 62%);opacity:.22}
+.wrap{max-width:430px;margin:0 auto;padding:0 16px}
+header{position:sticky;top:0;z-index:40;backdrop-filter:blur(16px);background:rgba(11,15,20,.78);border-bottom:1px solid rgba(255,255,255,.06)}
+.hi{display:flex;align-items:center;justify-content:space-between;padding:13px 0}
 .lg{display:flex;align-items:center;gap:10px}
-.shield{width:38px;height:43px;border:2.5px solid var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:var(--orange);background:#0d0d0d;clip-path:polygon(50% 0,100% 14%,100% 55%,50% 100%,0 55%,0 14%)}
-.lg b{font-size:15px}.lg b i{color:var(--orange);font-style:normal}
-.lg span{display:block;font-size:8px;letter-spacing:1.8px;color:var(--muted);font-weight:600}
-.fav{width:38px;height:38px;border-radius:12px;border:1.5px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center}
-.search{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:13px 16px;color:var(--muted);font-size:14px;margin-bottom:12px}
-.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:14px}
-.chip{flex-shrink:0;padding:9px 16px;border-radius:999px;font-size:12.5px;font-weight:600;border:1.5px solid rgba(255,255,255,.15);color:#c8cdd2}
-.chip.on{border-color:var(--teal);color:var(--teal);background:rgba(0,209,194,.08)}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.card{background:var(--surface);border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.07)}
-.ph{height:110px;background:#11161D center/cover;position:relative}
-.ph .st{position:absolute;top:8px;left:8px;background:rgba(11,15,20,.85);border:1px solid var(--teal);color:var(--teal);font-size:9px;font-weight:700;padding:3px 8px;border-radius:7px}
+.shield{width:36px;height:41px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--orange);background:linear-gradient(160deg,#1a1410,#0b0f14);border:2px solid var(--orange);clip-path:polygon(50% 0,100% 13%,100% 56%,50% 100%,0 56%,0 13%);box-shadow:0 0 18px rgba(255,107,0,.35)}
+.lg b{font-size:14.5px;font-weight:800}.lg b i{color:var(--orange);font-style:normal}
+.lg span{display:block;font-size:7.8px;letter-spacing:2px;color:var(--mut);font-weight:700}
+.hbtn{width:38px;height:38px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:center;font-size:16px}
+.search{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:15px;padding:14px 16px;color:var(--mut);font-size:13.5px;margin:12px 0;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.search b{margin-left:auto;font-size:10px;color:var(--teal);border:1px solid rgba(0,209,194,.4);border-radius:7px;padding:3px 8px;font-weight:700}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:13px;scrollbar-width:none}
+.chip{flex-shrink:0;padding:9px 16px;border-radius:999px;font-size:12.5px;font-weight:700;border:1px solid rgba(255,255,255,.14);color:#C4CBD3;background:rgba(255,255,255,.03)}
+.chip.on{border-color:var(--orange);color:#0B0F14;background:linear-gradient(135deg,#FF8A33,var(--orange));box-shadow:0 4px 16px rgba(255,107,0,.35)}
+.count{font-size:11.5px;color:var(--mut);margin:2px 2px 12px}
+.count b{color:var(--tx)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.card{border-radius:19px;padding:1px;background:linear-gradient(165deg,rgba(255,255,255,.14),rgba(255,255,255,.03));transition:transform .2s}
+.card:active{transform:scale(.97)}
+.ci{border-radius:18px;overflow:hidden;background:linear-gradient(170deg,#151C26,#0F151C);height:100%}
+.ph{height:118px;background:#0d1218 center/cover no-repeat;position:relative}
+.ph::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(15,21,28,.9))}
+.st{position:absolute;top:9px;left:9px;z-index:2;background:rgba(11,15,20,.85);border:1px solid var(--teal);color:var(--teal);font-size:8.5px;font-weight:800;letter-spacing:.5px;padding:4px 8px;border-radius:8px;backdrop-filter:blur(4px)}
+.hot{position:absolute;top:9px;right:9px;z-index:2;font-size:13px}
 .bd{padding:11px 12px 13px}
 .nm{font-size:13px;font-weight:700;line-height:1.25;min-height:33px}
-.fit{font-size:10.5px;color:var(--teal);font-weight:600;margin-top:3px}
-.oem{font-size:9.5px;color:var(--muted);margin-top:4px}
-.rw{display:flex;justify-content:space-between;align-items:center;margin-top:9px}
-.pr{font-size:15px;font-weight:800;color:var(--orange)}
-.buy{width:30px;height:30px;border-radius:10px;background:var(--orange);color:#0B0F14;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px}
-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(13,17,22,.97);border-top:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-around;padding:10px 0 22px;backdrop-filter:blur(10px)}
-nav div{text-align:center;font-size:10px;color:var(--muted)}nav div.on{color:var(--teal)}
-nav i{font-style:normal;font-size:19px;display:block;margin-bottom:2px}
-</style></head><body><div class="wrap">
-<header><div class="lg"><div class="shield">LA</div><div><b>LEGAL AUTO <i>PARTS</i></b><span>ОРИГИНАЛЬНЫЕ ЗАПЧАСТИ</span></div></div><div class="fav">♡</div></header>
-<div class="search">⌕ Поиск по названию, OEM или VIN…</div>
-<div class="chips"><div class="chip on">Все</div><div class="chip">BMW</div><div class="chip">Geely</div><div class="chip">Li Auto</div><div class="chip">Оптика</div><div class="chip">Кузов</div></div>
+.fit{display:inline-block;font-size:10px;color:var(--teal);font-weight:700;margin-top:5px;background:rgba(0,209,194,.09);border:1px solid rgba(0,209,194,.28);padding:3px 8px;border-radius:7px}
+.oem{font-size:9px;color:#6B7683;margin-top:6px;letter-spacing:.3px}
+.rw{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+.pr{font-size:15.5px;font-weight:900;color:var(--orange)}
+.buy{width:32px;height:32px;border-radius:11px;background:linear-gradient(135deg,#FF8A33,var(--orange));color:#0B0F14;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:17px;box-shadow:0 4px 14px rgba(255,107,0,.4)}
+nav.bottom{position:fixed;bottom:0;left:0;right:0;z-index:50;background:rgba(13,17,22,.95);border-top:1px solid rgba(255,255,255,.08);backdrop-filter:blur(18px);display:flex;justify-content:space-around;padding:10px 0 24px}
+nav.bottom div{text-align:center;font-size:9.5px;color:var(--mut);font-weight:600}
+nav.bottom div.on{color:var(--teal)}
+nav.bottom i{font-style:normal;font-size:19px;display:block;margin-bottom:3px}
+.fab{position:fixed;right:16px;bottom:96px;z-index:49;display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#00E5D4,#00B5A8);color:#062522;font-weight:800;font-size:13.5px;padding:13px 18px;border-radius:999px;box-shadow:0 10px 30px rgba(0,209,194,.45);text-decoration:none}
+.rv{opacity:0;transform:translateY(22px);transition:all .6s cubic-bezier(.22,1,.36,1)}
+.rv.on{opacity:1;transform:none}
+</style></head><body>
+<div class="bgfx"></div><div class="glow g1"></div><div class="glow g2"></div>
+<header><div class="wrap hi"><div class="lg"><div class="shield">LA</div><div><b>LEGAL AUTO <i>PARTS</i></b><span>ОРИГИНАЛЬНЫЕ ЗАПЧАСТИ</span></div></div><div class="hbtn">♡</div></div></header>
+<div class="wrap">
+<div class="search">⌕ Поиск: название, OEM или VIN…<b>VIN</b></div>
+<div class="chips"><div class="chip on">Все</div><div class="chip">BMW</div><div class="chip">Geely</div><div class="chip">Li Auto</div><div class="chip">Оптика</div><div class="chip">Кузов</div><div class="chip">Подвеска</div></div>
+<div class="count">Найдено: <b>1 201</b> запчастей · всё в наличии</div>
 <div class="grid">
-<div class="card"><div class="ph" style="background-image:url('https://storage.yandexcloud.net/bmw-parts-photos/51125A5C8E8/01.jpg')"><div class="st">В НАЛИЧИИ</div></div><div class="bd"><div class="nm">Насадка на глушитель</div><div class="fit">BMW X5 · X6 · X7</div><div class="oem">OEM: 51125A5C8E8</div><div class="rw"><div class="pr">6 000 ₽</div><div class="buy">+</div></div></div></div>
-<div class="card"><div class="ph" style="background-image:url('https://storage.yandexcloud.net/bmw-parts-photos/51769465542/01.jpg')"><div class="st">В НАЛИЧИИ</div></div><div class="bd"><div class="nm">Уплотнитель двери</div><div class="fit">BMW X7 G07</div><div class="oem">OEM: 51769465542</div><div class="rw"><div class="pr">2 000 ₽</div><div class="buy">+</div></div></div></div>
-<div class="card"><div class="ph" style="background-image:url('https://storage.yandexcloud.net/bmw-parts-photos/51747421675/01.jpg')"><div class="st">В НАЛИЧИИ</div></div><div class="bd"><div class="nm">Воздуховод радиатора</div><div class="fit">BMW X5 G05</div><div class="oem">OEM: 51747421675</div><div class="rw"><div class="pr">7 000 ₽</div><div class="buy">+</div></div></div></div>
-<div class="card"><div class="ph" style="background:#11161D;display:flex;align-items:center;justify-content:center;color:#3D4654;font-size:30px">📷</div><div class="bd"><div class="nm">Капот Geely Coolray</div><div class="fit">Geely COOLRAY</div><div class="oem">OEM: 5032069100C15</div><div class="rw"><div class="pr">12 000 ₽</div><div class="buy">+</div></div></div></div>
-</div></div>
-<nav><div class="on"><i>▦</i>Каталог</div><div><i>⌕</i>Поиск VIN</div><div><i>✈</i>Запросить</div><div><i>♡</i>Избранное</div><div><i>👤</i>Профиль</div></nav>
+<div class="card rv"><div class="ci"><div class="ph" style="background-image:url('https://storage.yandexcloud.net/bmw-parts-photos/51125A5C8E8/01.jpg')"><div class="st">В НАЛИЧИИ</div><div class="hot">🔥</div></div><div class="bd"><div class="nm">Насадка на глушитель</div><div class="fit">BMW X5 · X6 · X7</div><div class="oem">OEM 51125A5C8E8</div><div class="rw"><div class="pr">6 000 ₽</div><div class="buy">+</div></div></div></div></div>
+<div class="card rv"><div class="ci"><div class="ph" style="background-image:url('https://storage.yandexcloud.net/bmw-parts-photos/51769465542/01.jpg')"><div class="st">В НАЛИЧИИ</div></div><div class="bd"><div class="nm">Уплотнитель двери</div><div class="fit">BMW X7 G07</div><div class="oem">OEM 51769465542</div><div class="rw"><div class="pr">2 000 ₽</div><div class="buy">+</div></div></div></div></div>
+<div class="card rv"><div class="ci"><div class="ph" style="background-image:url('https://storage.yandexcloud.net/bmw-parts-photos/51747421675/01.jpg')"><div class="st">В НАЛИЧИИ</div></div><div class="bd"><div class="nm">Воздуховод радиатора</div><div class="fit">BMW X5 G05</div><div class="oem">OEM 51747421675</div><div class="rw"><div class="pr">7 000 ₽</div><div class="buy">+</div></div></div></div></div>
+<div class="card rv"><div class="ci"><div class="ph" style="background-image:url('https://storage.yandexcloud.net/bmw-parts-photos/geely/5032069100C15/01.jpg')"><div class="st">В НАЛИЧИИ</div><div class="hot">🔥</div></div><div class="bd"><div class="nm">Капот Geely Coolray</div><div class="fit">Geely COOLRAY</div><div class="oem">OEM 5032069100C15</div><div class="rw"><div class="pr">12 000 ₽</div><div class="buy">+</div></div></div></div></div>
+</div>
+</div>
+<a class="fab" href="https://t.me/LegalAutoAssist_bot">✈ Запросить деталь</a>
+<nav class="bottom"><div class="on"><i>▦</i>Каталог</div><div><i>⌕</i>VIN-поиск</div><div><i>♡</i>Избранное</div><div><i>👤</i>Профиль</div></nav>
+<script>
+const io=new IntersectionObserver(es=>es.forEach(e=>e.isIntersecting&&e.target.classList.add('on')),{threshold:.1});
+document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+</script>
 </body></html>
