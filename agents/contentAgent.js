@@ -105,21 +105,35 @@ async function gasCatalog(limit = 40) {
   return (d.products || d.parts || []).filter(p => (p.photo || p.photo_cover || '').includes('yandexcloud'));
 }
 
-// Тема из запроса Эдо → ключевые слова категории (фильтруем каталог)
-function themeKeywords(theme = '') {
+// Тема из запроса Эдо → КОРЗИНЫ (по одной на каждую запрошенную категорию/термин).
+// «фары, пневмоподвеска, бампера» = 3 корзины → в ролик попадает КАЖДАЯ (round-robin),
+// а не та, что набрала больше совпадений слов.
+const THEME_GROUPS = [
+  { on: ['кузов','крыл','бампер','капот','двер','порог','молдинг','накладк','крыш','багажник'], kw: ['кузов','крыл','бампер','капот','двер','порог','молдинг','накладк','крыш','багажник','лонжерон','арк'] },
+  { on: ['оптик','фар','фонар','свет','птф','лампа'], kw: ['фар','фонар','оптик','птф','лампа','ксенон','led','повторител'] },
+  { on: ['двигат','мотор','двс'], kw: ['двигат','мотор','цеп','форсунк','поршн','клапан','турбин','насос','патрубок','коллектор','грм'] },
+  { on: ['подвеск','ходов','амортизат','рычаг','пневмо'], kw: ['подвеск','амортизат','рычаг','стойк','пружин','сайлентблок','ступиц','шаров','стабилизат','пневмо'] },
+  { on: ['тормоз','колодк','суппорт'], kw: ['тормоз','колодк','суппорт'] },
+  { on: ['электр','проводк','датчик','блок'], kw: ['электр','проводк','датчик','блок','реле','катушк','генератор','стартер'] },
+  { on: ['салон','интерьер','сиден','обшивк','торпед'], kw: ['салон','обшивк','сиден','подлокот','торпед','руль','airbag','подушк безоп'] },
+  { on: ['трансмисс','кпп','коробк','сцеплен'], kw: ['кпп','коробк','сцеплен','привод','шрус','кардан','дифференциал'] },
+];
+const THEME_STOP = ['запчаст','разн','премиум','ролик','шорт','маркИ','крут','классн','хорош','сдела'];
+
+function themeBuckets(theme = '') {
   const t = String(theme).toLowerCase();
-  const groups = [
-    { on: ['кузов','крыл','бампер','капот','двер','порог','молдинг','накладк','крыш','багажник','стойк кузов'], kw: ['кузов','крыл','бампер','капот','двер','порог','молдинг','накладк','крыш','багажник','лонжерон','арк'] },
-    { on: ['оптик','фар','фонар','свет','птф','лампа'], kw: ['фар','фонар','оптик','птф','лампа','ксенон','led','повторител'] },
-    { on: ['двигат','мотор','двс'], kw: ['двигат','мотор','цеп','форсунк','поршн','клапан','турбин','насос','патрубок','коллектор','грм'] },
-    { on: ['подвеск','ходов','амортизат','рычаг'], kw: ['подвеск','амортизат','рычаг','стойк','пружин','сайлентблок','ступиц','шаров','стабилизат'] },
-    { on: ['тормоз','колодк','суппорт'], kw: ['тормоз','колодк','суппорт','диск тормоз'] },
-    { on: ['электр','проводк','датчик','блок'], kw: ['электр','проводк','датчик','блок','реле','катушк','генератор','стартер'] },
-    { on: ['салон','интерьер','сиден','обшивк','торпед'], kw: ['салон','обшивк','сиден','подлокот','торпед','панел прибор','руль','airbag','подушк безоп'] },
-    { on: ['трансмисс','кпп','коробк','сцеплен'], kw: ['кпп','коробк','сцеплен','привод','шрус','кардан','дифференциал'] },
-  ];
-  for (const g of groups) if (g.on.some(w => t.includes(w))) return g.kw;
-  return null;   // не узнали категорию — не сужаем по категории (марка отфильтрует отдельно)
+  const buckets = [];
+  const usedGroups = new Set();
+  // 1) явные термины запроса → своя корзина (точнее группы: «бампер» ≠ вся кузовщина)
+  for (const raw of t.split(/[\s,.!+]+/)) {
+    if (raw.length < 4 || THEME_STOP.some(x => raw.startsWith(x.toLowerCase()))) continue;
+    const stem = raw.replace(/[ыиеаяуов]+$/, '').slice(0, 8);
+    if (stem.length < 3) continue;
+    const grp = THEME_GROUPS.find(g => g.on.some(w => raw.startsWith(w) || w.startsWith(stem)));
+    buckets.push({ stem, groupKw: grp ? grp.kw : null });
+    if (grp) usedGroups.add(grp);
+  }
+  return buckets;
 }
 
 // Марка из запроса Эдо → канон (для фильтра по brand в каталоге)
@@ -135,8 +149,8 @@ function brandFromTheme(theme = '') {
     { kw: ['zeekr', 'зикр', 'зиикр'], label: 'Zeekr' },
     { kw: ['chery', 'чери', 'черри'], label: 'Chery' },
   ];
-  for (const b of brands) if (b.kw.some(k => t.includes(k))) return b;
-  return null;
+  const hits = brands.filter(b => b.kw.some(k => t.includes(k)));
+  return hits.length ? hits : null;   // все упомянутые марки
 }
 function shuffle(a) { const x = a.slice(); for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; }
 
@@ -151,28 +165,44 @@ async function _makeProductShort({ platforms = ['youtube'], theme = '', lengthSe
 
   let pool = all;
 
-  // 1a) фильтр по МАРКЕ — если Эдо назвал марку, а её в каталоге нет, честно откажемся
-  const wantBrand = brandFromTheme(theme);
-  if (wantBrand) {
+  // 1a) фильтр по МАРКАМ — все упомянутые («BMW Geely» = обе); нет в каталоге → честный отказ
+  const wantBrands = brandFromTheme(theme);
+  if (wantBrands) {
     const brandParts = all.filter(p => {
       const b = String(p.brand || '').toLowerCase();
-      return wantBrand.kw.some(k => b.includes(k)) || b.includes(wantBrand.label.toLowerCase());
+      return wantBrands.some(wb => wb.kw.some(k => b.includes(k)) || b.includes(wb.label.toLowerCase()));
     });
     if (!brandParts.length) {
       const have = [...new Set(all.map(p => String(p.brand || '').trim()).filter(Boolean))];
-      return { ok: false, error: `В каталоге нет запчастей ${wantBrand.label}. Сейчас в наличии с фото только: ${have.join(', ') || '—'}. Могу сделать ролик по ним или добавь позиции ${wantBrand.label} в таблицу.` };
+      return { ok: false, error: `В каталоге нет запчастей ${wantBrands.map(b => b.label).join('/')}. В наличии с фото: ${have.join(', ') || '—'}.` };
     }
     pool = brandParts;
   }
 
-  // 1b) фильтр по КАТЕГОРИИ (в пределах марки, если она задана)
-  const kws = themeKeywords(theme);
-  if (kws) {
-    const matched = pool.filter(p => {
-      const hay = (String(p.category || '') + ' ' + String(p.name || '') + ' ' + String(p.title || '')).toLowerCase();
-      return kws.some(k => hay.includes(k));
-    });
-    if (matched.length >= 3) pool = matched;   // если по категории мало — оставляем пул марки
+  // 1b) КОРЗИНЫ по запрошенным категориям → round-robin (каждая тема представлена)
+  const buckets = themeBuckets(theme);
+  if (buckets.length) {
+    const hayOf = (p) => (String(p.category || '') + ' ' + String(p.name || '') + ' ' + String(p.title || '')).toLowerCase();
+    const used = loadUsed();
+    const freshOf = (p) => { const u = used[String(p.oem || p.id || p.name)] || []; return !platforms.every(pl => u.includes(pl)); };
+    const filled = [];
+    const takenNames = new Set();
+    for (const b of buckets) {
+      // точный термин («бампер»), пусто → вся группа («подвеска» для «пневмо»)
+      let items = pool.filter(p => hayOf(p).includes(b.stem));
+      if (!items.length && b.groupKw) items = pool.filter(p => b.groupKw.some(k => hayOf(p).includes(k)));
+      items = shuffle(items.filter(freshOf).length >= 1 ? items.filter(freshOf) : items)
+        .filter(p => { const k = String(p.name || '').toLowerCase().trim(); if (takenNames.has(k)) return false; takenNames.add(k); return true; });
+      if (items.length) filled.push(items);
+    }
+    if (filled.length) {
+      // round-robin: по одной из каждой корзины, затем по второй...
+      const picked = [];
+      for (let round = 0; picked.length < 6 && round < 6; round++) {
+        for (const items of filled) { if (items[round] && picked.length < 6) picked.push(items[round]); }
+      }
+      if (picked.length >= 3) { pool = picked; pool._picked = true; }
+    }
   }
 
   let fresh = pool.filter(p => {
@@ -182,7 +212,18 @@ async function _makeProductShort({ platforms = ['youtube'], theme = '', lengthSe
   });
   if (fresh.length < 4) fresh = pool;                 // если свежих мало — берём весь пул темы
 
-  const parts = shuffle(fresh).slice(0, 6);           // перемешиваем → без повторов от ролика к ролику
+  // корзины уже отобрали разнообразный сет; иначе — shuffle + дедуп по названию
+  let parts;
+  if (pool._picked) {
+    parts = pool.slice(0, 6);
+  } else {
+    const seen = new Set();
+    parts = shuffle(fresh).filter(p => {
+      const key = String(p.name || '').toLowerCase().trim();
+      if (seen.has(key)) return false;
+      seen.add(key); return true;
+    }).slice(0, 6);
+  }
   if (parts.length < 3) return { ok: false, error: theme ? `Мало фото по теме «${theme}» в каталоге` : 'Мало фото запчастей в каталоге' };
 
   // items: КАЖДАЯ запчасть со своим названием и ценой (текст совпадает с фото)
