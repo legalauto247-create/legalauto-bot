@@ -1,0 +1,42 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0B0F14;--surface:#1A222B;--teal:#00D1C2;--gold:#D4AF37;--orange:#FF6B00;--muted:#9BA3AF}
+*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:#fff;font-family:Montserrat,sans-serif;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.025) 0 2px,transparent 2px 24px)}
+.wrap{max-width:420px;margin:0 auto;padding:0 16px 90px}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
+.lg{display:flex;align-items:center;gap:10px}
+.shield{width:38px;height:43px;border:2.5px solid var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:var(--orange);background:#0d0d0d;clip-path:polygon(50% 0,100% 14%,100% 55%,50% 100%,0 55%,0 14%)}
+.lg b{font-size:15px}.lg b i{color:var(--orange);font-style:normal}
+.lg span{display:block;font-size:8px;letter-spacing:1.8px;color:var(--muted);font-weight:600}
+.fav{width:38px;height:38px;border-radius:12px;border:1.5px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center}
+.search{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:13px 16px;color:var(--muted);font-size:14px;margin-bottom:12px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:14px}
+.chip{flex-shrink:0;padding:9px 16px;border-radius:999px;font-size:12.5px;font-weight:600;border:1.5px solid rgba(255,255,255,.15);color:#c8cdd2}
+.chip.on{border-color:var(--teal);color:var(--teal);background:rgba(0,209,194,.08)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{background:var(--surface);border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.07)}
+.ph{height:110px;background:#11161D center/cover;position:relative}
+.ph .st{position:absolute;top:8px;left:8px;background:rgba(11,15,20,.85);border:1px solid var(--teal);color:var(--teal);font-size:9px;font-weight:700;padding:3px 8px;border-radius:7px}
+.bd{padding:11px 12px 13px}
+.nm{font-size:13px;font-weight:700;line-height:1.25;min-height:33px}
+.fit{font-size:10.5px;color:var(--teal);font-weight:600;margin-top:3px}
+.oem{font-size:9.5px;color:var(--muted);margin-top:4px}
+.rw{display:flex;justify-content:space-between;align-items:center;margin-top:9px}
+.pr{font-size:15px;font-weight:800;color:var(--orange)}
+.buy{width:30px;height:30px;border-radius:10px;background:var(--orange);color:#0B0F14;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px}
+nav{position:fixed;bottom:0;left:0;right:0;background:rgba(13,17,22,.97);border-top:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-around;padding:10px 0 22px;backdrop-filter:blur(10px)}
+nav div{text-align:center;font-size:10px;color:var(--muted)}nav div.on{color:var(--teal)}
+nav i{font-style:normal;font-size:19px;display:block;margin-bottom:2px}
+</style></head><body><div class="wrap">
+<header><div class="lg"><div class="shield">LA</div><div><b>LEGAL AUTO <i>PARTS</i></b><span>ОРИГИНАЛЬНЫЕ ЗАПЧАСТИ</span></div></div><div class="fav">♡</div></header>
+<div class="search">⌕ Поиск по названию, OEM или VIN…</div>
+<div class="chips"><div class="chip on">Все</div><div class="chip">BMW</div><div class="chip">Geely</div><div class="chip">Li Auto</div><div class="chip">Оптика</div><div class="chip">Кузов</div></div>
+<div class="grid">
+<div class="card"><div class="ph" style="background-image:url('https://storage.yandexcloud.net/bmw-parts-photos/51125A5C8E8/01.jpg')"><div class="st">В НАЛИЧИИ</div></div><div class="bd"><div class="nm">Насадка на глушитель</div><div class="fit">BMW X5 · X6 · X7</div><div class="oem">OEM: 51125A5C8E8</div><div class="rw"><div class="pr">6 000 ₽</div><div class="buy">+</div></div></div></div>
+<div class="card"><div class="ph" style="background-image:url('https://storage.yandexcloud.net/bmw-parts-photos/51769465542/01.jpg')"><div class="st">В НАЛИЧИИ</div></div><div class="bd"><div class="nm">Уплотнитель двери</div><div class="fit">BMW X7 G07</div><div class="oem">OEM: 51769465542</div><div class="rw"><div class="pr">2 000 ₽</div><div class="buy">+</div></div></div></div>
+<div class="card"><div class="ph" style="background-image:url('https://storage.yandexcloud.net/bmw-parts-photos/51747421675/01.jpg')"><div class="st">В НАЛИЧИИ</div></div><div class="bd"><div class="nm">Воздуховод радиатора</div><div class="fit">BMW X5 G05</div><div class="oem">OEM: 51747421675</div><div class="rw"><div class="pr">7 000 ₽</div><div class="buy">+</div></div></div></div>
+<div class="card"><div class="ph" style="background:#11161D;display:flex;align-items:center;justify-content:center;color:#3D4654;font-size:30px">📷</div><div class="bd"><div class="nm">Капот Geely Coolray</div><div class="fit">Geely COOLRAY</div><div class="oem">OEM: 5032069100C15</div><div class="rw"><div class="pr">12 000 ₽</div><div class="buy">+</div></div></div></div>
+</div></div>
+<nav><div class="on"><i>▦</i>Каталог</div><div><i>⌕</i>Поиск VIN</div><div><i>✈</i>Запросить</div><div><i>♡</i>Избранное</div><div><i>👤</i>Профиль</div></nav>
+</body></html>

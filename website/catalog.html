@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Каталог запчастей — LegalAuto: BMW, Geely, Li Auto, Mercedes б/у</title>
+<meta name="description" content="Каталог б/у запчастей с разборки: BMW, Geely, Li Auto, Mercedes, Audi. Оригинальные детали дешевле нового в 2–3 раза. Доставка по России.">
+<meta name="keywords" content="купить запчасть BMW, Geely запчасти каталог, Li Auto детали, запчасти с разборки онлайн">
+<link rel="canonical" href="https://legalauto247-create.github.io/legalauto-bot/catalog.html">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --text:#111820;
+  --muted:#66707c;
+  --line:#e4e8ee;
+  --deep:#003b42;
+  --deep2:#07272e;
+  --teal:#008c8c;
+  --teal-soft:#e7f7f6;
+  --gold:#d4af37;
+  --gold2:#f4c33e;
+  --shadow:0 18px 45px rgba(16,24,40,.10);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  background:radial-gradient(circle at top right,rgba(0,140,140,.12),transparent 30%),linear-gradient(180deg,#ffffff 0%,#f7f8fb 55%,#eef2f6 100%);
+  color:var(--text);
+  padding-bottom:105px;
+}
+button,select,input{font-family:inherit}
+button{cursor:pointer}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+.header{
+  padding:26px 22px 18px;
+  display:grid;
+  grid-template-columns:230px 1fr auto;
+  gap:24px;
+  align-items:center;
+  max-width:1180px;
+  margin:0 auto;
+}
+.logo{font-size:46px;line-height:.82;font-weight:950;font-style:italic;letter-spacing:-2px;color:#17212a}
+.logo span{display:block;color:var(--gold);padding-left:36px}
+.logo-sub{font-size:11px;text-transform:uppercase;font-weight:900;color:#3d4854;margin-top:8px;letter-spacing:.4px}
+.head-text{border-left:1px solid var(--line);padding-left:25px}
+.head-text h1{font-size:24px;line-height:1.16;margin:0;font-weight:950}
+.benefits{display:flex;gap:18px;flex-wrap:wrap;margin-top:13px;color:#394753;font-size:12px}
+.benefits b{color:var(--teal);font-size:16px;margin-right:5px}
+.head-actions{display:flex;gap:12px}
+.top-btn{height:62px;border:1px solid var(--line);border-radius:17px;background:#fff;padding:0 18px;font-weight:900;box-shadow:0 10px 25px rgba(16,24,40,.08);font-size:17px}
+.top-btn.primary{background:linear-gradient(135deg,var(--deep),var(--deep2));color:#fff;border:0}
+.bubble{background:var(--gold2);color:#111;border-radius:999px;padding:3px 8px;font-size:12px;margin-left:5px}
+.search-row{display:grid;grid-template-columns:1fr 140px;gap:12px;margin:10px 0 22px}
+.search-box{position:relative}
+.search-ico{position:absolute;left:19px;top:50%;transform:translateY(-50%);font-size:25px;color:#64707c}
+.search{width:100%;height:66px;border:1px solid var(--line);border-radius:18px;background:#fff;font-size:18px;padding:0 20px 0 58px;outline:0;box-shadow:0 10px 28px rgba(16,24,40,.06)}
+.search:focus{border-color:var(--teal);box-shadow:0 0 0 4px rgba(0,140,140,.13)}
+.find{border:0;border-radius:17px;background:linear-gradient(135deg,var(--deep),#00545d);color:#fff;font-size:17px;font-weight:950;box-shadow:0 12px 25px rgba(0,60,66,.22)}
+.filters{background:#fff;border:1px solid var(--line);border-radius:22px;padding:14px;box-shadow:var(--shadow);margin-bottom:18px}
+.filter-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.filter{border:1px solid var(--line);border-radius:17px;background:#fff;min-height:74px;padding:11px 12px;display:flex;align-items:center;gap:10px}
+.filter-icon{font-size:25px;color:var(--teal)}
+.filter label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+.select{width:100%;border:0;background:transparent;outline:0;font-size:16px;font-weight:900;color:#111}
+.reset{border:0;border-radius:17px;background:linear-gradient(135deg,var(--deep),#00545d);color:#fff;font-weight:950;font-size:16px}
+.cat-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:0 0 24px}
+.cat{border:1px solid var(--line);border-radius:17px;background:#fff;min-height:92px;padding:15px;box-shadow:0 8px 20px rgba(16,24,40,.06);text-align:left}
+.cat.active{background:linear-gradient(135deg,var(--deep),#00545d);color:#fff;border:0}
+.cat-ico{font-size:28px}
+.cat-name{font-weight:950;margin-top:8px}
+.cat-count{font-size:13px;color:var(--muted);margin-top:3px}
+.cat.active .cat-count{color:#d6eeee}
+.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
+.hero{position:relative;overflow:hidden;border-radius:24px;min-height:260px;padding:28px;color:#fff;background:radial-gradient(circle at 75% 45%,rgba(255,255,255,.12),transparent 22%),linear-gradient(135deg,#003b42,#00282e);box-shadow:var(--shadow)}
+.hero.gold{background:linear-gradient(135deg,#fff2c9,#fffaf0);color:#111;border:1px solid #eedfb3}
+.tag{display:inline-block;background:var(--gold2);border-radius:6px;padding:6px 9px;font-size:12px;font-weight:950;color:#111}
+.hero h2{font-size:27px;line-height:1.12;margin:16px 0 10px}
+.hero p{line-height:1.55;margin:0 0 14px}
+.hero ul{list-style:none;padding:0;margin:0 0 14px}
+.hero li{margin:6px 0}
+.hero li:before{content:"✓";color:var(--gold2);font-weight:950;margin-right:8px}
+.hero-btn{border:0;border-radius:13px;background:var(--gold2);padding:13px 20px;font-weight:950}
+.hero-art{position:absolute;right:18px;bottom:14px;font-size:95px;opacity:.25}
+.hero.gold .hero-art{opacity:.18}
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin:4px 0 15px}
+.count{font-size:18px;font-weight:900}
+.tools{display:flex;gap:10px}
+.sort{border:1px solid var(--line);background:#fff;border-radius:15px;padding:13px 16px;color:#4c5661}
+.view-btn{width:46px;border:0;border-radius:14px;background:var(--deep);color:#fff;font-size:19px}
+.view-btn.light{background:#fff;color:var(--deep);border:1px solid var(--line)}
+.products{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:24px}
+.card{background:#fff;border:1px solid var(--line);border-radius:24px;overflow:hidden;box-shadow:var(--shadow)}
+.photo{position:relative;background:#eef2f5;min-height:260px}
+.photo img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+.placeholder{height:270px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#8b949f;background:linear-gradient(135deg,#f3f5f7,#e7ebef);text-align:center;padding:20px}
+.placeholder strong{color:#4e5965}
+.stock{position:absolute;top:13px;left:13px;background:var(--teal);color:#fff;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:950}
+.fav{position:absolute;top:13px;right:13px;width:40px;height:40px;border:0;background:#fff;border-radius:50%;font-size:21px;box-shadow:0 8px 18px rgba(0,0,0,.13)}
+.fav.active{background:var(--gold2)}
+.photos{position:absolute;right:13px;bottom:13px;background:rgba(17,19,24,.84);color:#fff;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:900}
+.body{padding:18px}
+.car{font-size:19px;font-weight:950;color:#d19200;margin-bottom:9px}
+.badges{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.badge{padding:6px 10px;border-radius:999px;background:#f1f3f5;font-size:12px;font-weight:900;color:#4c535c}
+.badge.teal{background:var(--teal-soft);color:#007b7b}
+.title{font-size:18px;font-weight:950;line-height:1.25;margin-bottom:10px}
+.meta{font-size:14px;color:#555d67;line-height:1.56}
+.price-row{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-top:14px}
+.price{font-size:29px;font-weight:950}
+.oem{text-align:right;color:var(--muted);font-size:12px;word-break:break-word}
+.btn-row{display:grid;grid-template-columns:1fr 50px;gap:10px;margin-top:15px}
+.btn{border:0;border-radius:15px;background:linear-gradient(135deg,#f1b61c,var(--gold2));padding:15px;font-size:15px;font-weight:950;box-shadow:0 10px 22px rgba(212,175,55,.25)}
+.save{border:1px solid #b9cbd0;background:#fff;border-radius:15px;font-size:22px}
+.empty{background:#fff;border:1px solid var(--line);border-radius:24px;text-align:center;color:var(--muted);padding:55px 10px}
+.trust{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;background:#fff;border:1px solid var(--line);border-radius:22px;padding:16px;margin:26px 0;box-shadow:var(--shadow)}
+.trust-item{display:flex;gap:12px;align-items:center;border-right:1px solid var(--line);padding-right:10px}
+.trust-item:last-child{border-right:0}
+.trust-ico{font-size:29px;color:var(--teal)}
+.trust-title{font-size:13px;font-weight:950}
+.trust-text{font-size:12px;color:var(--muted);margin-top:3px}
+.bottom{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);width:calc(100% - 24px);max-width:760px;height:74px;border-radius:25px;background:linear-gradient(135deg,#06292f,#101318);display:grid;grid-template-columns:1fr 1fr 92px 1fr 1fr;align-items:center;text-align:center;color:#d7e2e6;box-shadow:0 18px 42px rgba(0,0,0,.30);z-index:20}
+.nav{font-size:12px}
+.nav i{display:block;font-style:normal;font-size:23px;margin-bottom:4px}
+.main-nav{width:84px;height:84px;border-radius:50%;background:radial-gradient(circle,#f8d66e,var(--gold));margin:-30px auto 0;color:#111;font-weight:950;display:flex;flex-direction:column;align-items:center;justify-content:center;border:3px solid rgba(255,255,255,.35);box-shadow:0 10px 28px rgba(212,175,55,.4)}
+@media(max-width:860px){.header{grid-template-columns:1fr;text-align:center}.head-text{border-left:0;padding-left:0}.head-actions{justify-content:center}.filter-grid{grid-template-columns:1fr 1fr}.cat-row{grid-template-columns:repeat(3,1fr)}.hero-grid{grid-template-columns:1fr}.products{grid-template-columns:1fr}.search-row{grid-template-columns:1fr}.find{display:none}.trust{grid-template-columns:1fr 1fr}.trust-item{border-right:0}}
+@media(max-width:520px){.wrap{padding:0 12px}.header{padding:18px 12px 14px}.logo{font-size:38px}.filter-grid{grid-template-columns:1fr}.cat-row{grid-template-columns:1fr 1fr}.hero-grid{display:none}.toolbar{align-items:flex-start;gap:10px;flex-direction:column}.trust{display:none}.products{gap:16px}.bottom{height:68px}.card{border-radius:20px}}
+</style>
+</head>
+<body>
+<header class="header">
+  <div><div class="logo">LEGAL<span>AUTO</span></div><div class="logo-sub">Премиальные автозапчасти</div></div>
+  <div class="head-text"><h1>Премиальные автозапчасти<br>с гарантией качества</h1><div class="benefits"><span><b>✓</b>Гарантия качества</span><span><b>✓</b>Проверенные поставщики</span><span><b>✓</b>Экспертная поддержка</span><span><b>✓</b>Честные цены</span></div></div>
+  <div class="head-actions"><button class="top-btn primary" onclick="openManager()">💬 Запросы <span class="bubble" id="requestBubble">0</span></button><button class="top-btn" onclick="showFavoritesOnly()">♡</button></div>
+</header>
+<main class="wrap">
+  <div class="search-row"><div class="search-box"><span class="search-ico">⌕</span><input id="search" class="search" placeholder="Поиск запчасти по OEM, коду или названию..."></div><button class="find" onclick="renderProducts()">Найти</button></div>
+  <section class="filters"><div class="filter-grid"><div class="filter"><div class="filter-icon">🚘</div><div><label>Марка</label><select id="brandSelect" class="select"></select></div></div><div class="filter"><div class="filter-icon">🚗</div><div><label>Модель / серия</label><select id="seriesSelect" class="select"></select></div></div><div class="filter"><div class="filter-icon">📚</div><div><label>Категория</label><select id="categorySelect" class="select"></select></div></div><div class="filter"><div class="filter-icon">🛡</div><div><label>Состояние</label><select id="conditionSelect" class="select"></select></div></div><button class="reset" onclick="resetFilters()">⟳ Сбросить</button></div></section>
+  <section id="categoryTiles" class="cat-row"></section>
+  <section class="hero-grid"><div class="hero"><span class="tag">NEW</span><h2>ПНЕВМОПОДВЕСКА</h2><p>Оригинальные компоненты и совместимые решения.</p><ul><li>Гарантия надежности</li><li>Длительный ресурс</li><li>Проверено экспертами</li></ul><button class="hero-btn" onclick="quickSearch('пневмо')">Подробнее →</button><div class="hero-art">⚙</div></div><div class="hero gold"><span class="tag">ПРЕМИУМ КАЧЕСТВО</span><h2>ИНТЕГРИРОВАННАЯ АКТИВНАЯ ЗАДНЯЯ ОСЬ</h2><p>Повышенная управляемость и устойчивость автомобиля.</p><ul><li>Только проверенные компоненты</li><li>Доступно в наличии</li><li>Точность и долговечность</li></ul><button class="hero-btn" onclick="quickSearch('активная задняя ось')">Подробнее →</button><div class="hero-art">🛞</div></div></section>
+  <div class="toolbar"><div id="count" class="count"></div><div class="tools"><select id="sortSelect" class="sort"><option value="popular">Сортировка: по популярности</option><option value="priceAsc">Цена: сначала дешевле</option><option value="priceDesc">Цена: сначала дороже</option></select><button class="view-btn">▦</button><button class="view-btn light">☰</button></div></div>
+  <div id="products" class="products"></div>
+  <section class="trust"><div class="trust-item"><div class="trust-ico">✅</div><div><div class="trust-title">Гарантия качества</div><div class="trust-text">Проверенные запчасти с гарантией</div></div></div><div class="trust-item"><div class="trust-ico">🚚</div><div><div class="trust-title">Быстрая доставка</div><div class="trust-text">Доставка по всей России и СНГ</div></div></div><div class="trust-item"><div class="trust-ico">🎧</div><div><div class="trust-title">Экспертная поддержка</div><div class="trust-text">Поможем подобрать нужную деталь</div></div></div><div class="trust-item"><div class="trust-ico">🏷</div><div><div class="trust-title">Прозрачность</div><div class="trust-text">Честные цены и полная информация</div></div></div></section>
+</main>
+<nav class="bottom"><div class="nav" onclick="resetFilters()"><i>🏠</i>Главная</div><div class="nav" onclick="scrollToCatalog()"><i>▦</i>Каталог</div><div class="main-nav" onclick="openManager()"><i>💬</i>Запросить</div><div class="nav" onclick="showFavoritesOnly()"><i>♡</i>Избранное</div><div class="nav" onclick="openManager()"><i>♙</i>Профиль</div></nav>
+<script>
+const API_URL="https://script.google.com/macros/s/AKfycbxNBDCC5_NPKf7p76XSSPlYS3uBhg2VrVjceGLuJsi-KXMgDQqq9WXxiqYE0J4VHadZ/exec";
+const MANAGER_USERNAME="LegalAuto247";
+let allProducts=[],selectedBrand="",selectedSeries="",selectedCategory="",selectedCondition="",searchQuery="",favoritesOnly=false;
+let favorites=JSON.parse(localStorage.getItem("legalauto_favorites")||"[]");
+async function loadProducts(){const r=await fetch(API_URL);const d=await r.json();allProducts=d.products||[];renderFilters();renderCategoryTiles();renderProducts()}
+function splitValues(v){return String(v||"").split("|").map(x=>x.trim()).filter(Boolean)}
+function uniqueSorted(v){return[...new Set(v.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),"ru"))}
+function escapeHtml(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
+function setOptions(id,all,values,selected){document.getElementById(id).innerHTML=`<option value="">${all}</option>`+values.map(v=>`<option value="${escapeHtml(v)}" ${selected===v?"selected":""}>${escapeHtml(v)}</option>`).join("")}
+function base(){return selectedBrand?allProducts.filter(p=>p.brand===selectedBrand):allProducts}
+function bySeries(){return base().filter(p=>!selectedSeries||splitValues(p.series).includes(selectedSeries))}
+function renderFilters(){setOptions("brandSelect","Все марки",uniqueSorted(allProducts.map(p=>p.brand)),selectedBrand);setOptions("seriesSelect","Все модели",uniqueSorted(base().flatMap(p=>splitValues(p.series))),selectedSeries);setOptions("categorySelect","Все категории",uniqueSorted(bySeries().map(p=>p.category)),selectedCategory);setOptions("conditionSelect","Все",uniqueSorted(bySeries().map(p=>p.condition)),selectedCondition)}
+function renderCategoryTiles(){const items=["Кузов","Подвеска","Пневмоподвеска","Активная задняя ось","Тормозная система","Прочее"];document.getElementById("categoryTiles").innerHTML=items.map(c=>{const count=allProducts.filter(p=>String(p.category||"").toLowerCase().includes(c.toLowerCase())||String(p.search_text||"").toLowerCase().includes(c.toLowerCase())).length;return `<button class="cat ${selectedCategory===c?"active":""}" onclick="selectCategory('${escapeHtml(c)}')"><div class="cat-ico">${c==='Кузов'?'🚘':c==='Подвеска'?'🛠':c==='Прочее'?'•••':'⚙'}</div><div class="cat-name">${c}</div><div class="cat-count">${count}</div></button>`}).join("")}
+function selectCategory(c){selectedCategory=c;renderFilters();renderCategoryTiles();renderProducts()}
+function resetFilters(){selectedBrand="";selectedSeries="";selectedCategory="";selectedCondition="";searchQuery="";favoritesOnly=false;document.getElementById("search").value="";renderFilters();renderCategoryTiles();renderProducts();scrollTo({top:0,behavior:"smooth"})}
+function quickSearch(q){document.getElementById("search").value=q;searchQuery=q;renderProducts();scrollToCatalog()}
+function getFiltered(){let a=allProducts.filter(p=>{const q=searchQuery.toLowerCase(),st=String(p.search_text||JSON.stringify(p)).toLowerCase();if(String(p.miniapp_visible).toUpperCase()==="FALSE")return false;if(selectedBrand&&p.brand!==selectedBrand)return false;if(selectedSeries&&!splitValues(p.series).includes(selectedSeries))return false;if(selectedCategory&&!(p.category===selectedCategory||st.includes(selectedCategory.toLowerCase())))return false;if(selectedCondition&&p.condition!==selectedCondition)return false;if(q&&!st.includes(q))return false;if(favoritesOnly&&!favorites.includes(String(p.id)))return false;return true});const s=document.getElementById("sortSelect")?.value||"popular";if(s==="priceAsc")a.sort((x,y)=>Number(x.price||0)-Number(y.price||0));if(s==="priceDesc")a.sort((x,y)=>Number(y.price||0)-Number(x.price||0));return a}
+function renderProducts(){const products=getFiltered();document.getElementById("count").innerText=`Найдено: ${products.length} позиций`;document.getElementById("requestBubble").innerText=favorites.length;const c=document.getElementById("products");if(!products.length){c.innerHTML=`<div class="empty">Ничего не найдено</div>`;return}c.innerHTML=products.slice(0,120).map(p=>{const photos=[p.photo_cover,p.photo_1,p.photo_2,p.photo_3,p.photo_4,p.photo_5,p.photo].filter(Boolean);const photo=photos[0]||"";const price=Number(p.price||0).toLocaleString("ru-RU");const inStock=Number(p.qty||0)>0;const fav=favorites.includes(String(p.id));const msg=`Здравствуйте! Интересует запчасть:\n\n${p.display_car||p.brand||""}\n\n${p.name||""}\n\nOEM: ${p.oem||"—"}\n\nСовместимость: ${p.compatibility||"—"}\n\nЦена: ${price} ₽`;const link=`https://t.me/${MANAGER_USERNAME}?text=${encodeURIComponent(msg)}`;return `<div class="card"><div class="photo">${photo?`<img src="${escapeHtml(photo)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">`:""}<div class="placeholder" style="${photo?'display:none':'display:flex'}"><strong>Фото скоро будет</strong><span>OEM ${escapeHtml(p.oem||'')}</span></div><div class="stock">${inStock?'В наличии':'Нет в наличии'}</div><button class="fav ${fav?'active':''}" onclick="toggleFavorite('${escapeHtml(p.id)}')">♡</button>${photos.length>1?`<div class="photos">📷 ${photos.length} фото</div>`:""}</div><div class="body"><div class="car">${escapeHtml(p.display_car||p.brand||"")}</div><div class="badges"><span class="badge">${escapeHtml(p.condition||"Состояние не указано")}</span><span class="badge teal">${escapeHtml(p.category||"Категория")}</span></div><div class="title">${escapeHtml(p.name||"")}</div><div class="meta">🚘 Совместимость: ${escapeHtml(p.compatibility||"—")}<br>🏷 Категория: ${escapeHtml(p.category||"—")}<br>📦 Остаток: ${escapeHtml(p.qty||0)} шт.</div><div class="price-row"><div class="price">${price} ₽</div><div class="oem">OEM<br>${escapeHtml(p.oem||"—")}</div></div><div class="btn-row"><button class="btn" onclick="window.open('${link}','_blank')">💬 Запросить запчасть</button><button class="save" onclick="toggleFavorite('${escapeHtml(p.id)}')">♡</button></div></div></div>`}).join("")}
+function toggleFavorite(id){id=String(id);favorites=favorites.includes(id)?favorites.filter(x=>x!==id):[...favorites,id];localStorage.setItem("legalauto_favorites",JSON.stringify(favorites));renderProducts()}
+function showFavoritesOnly(){favoritesOnly=!favoritesOnly;renderProducts();scrollToCatalog()}
+function openManager(){window.open(`https://t.me/${MANAGER_USERNAME}`,"_blank")}
+function scrollToCatalog(){document.getElementById("products").scrollIntoView({behavior:"smooth"})}
+document.getElementById("brandSelect").addEventListener("change",e=>{selectedBrand=e.target.value;selectedSeries="";selectedCategory="";selectedCondition="";renderFilters();renderCategoryTiles();renderProducts()});
+document.getElementById("seriesSelect").addEventListener("change",e=>{selectedSeries=e.target.value;selectedCategory="";selectedCondition="";renderFilters();renderCategoryTiles();renderProducts()});
+document.getElementById("categorySelect").addEventListener("change",e=>{selectedCategory=e.target.value;renderCategoryTiles();renderProducts()});
+document.getElementById("conditionSelect").addEventListener("change",e=>{selectedCondition=e.target.value;renderProducts()});
+document.getElementById("sortSelect").addEventListener("change",renderProducts);
+document.getElementById("search").addEventListener("input",e=>{searchQuery=e.target.value;renderProducts()});
+if(window.Telegram&&Telegram.WebApp){Telegram.WebApp.expand()}
+loadProducts();
+</script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0B0F14;--surface:#1A222B;--teal:#00D1C2;--gold:#D4AF37;--orange:#FF6B00;--muted:#9BA3AF;--text:#fff}
+*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--text);font-family:Montserrat,sans-serif}
+.carbon{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.03) 0 2px,transparent 2px 24px)}
+.wrap{max-width:420px;margin:0 auto;padding:0 18px}
+header{display:flex;align-items:center;gap:12px;padding:16px 0}
+.shield{width:44px;height:50px;border:3px solid var(--teal);border-radius:8px 8px 16px 16px;display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--teal);background:#0d0d0d;clip-path:polygon(50% 0,100% 14%,100% 55%,50% 100%,0 55%,0 14%)}
+.logo b{font-size:19px;letter-spacing:.5px}.logo span{display:block;font-size:9.5px;letter-spacing:2.5px;color:var(--teal);font-weight:600}
+.hero{padding:26px 0 20px;position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;right:-60px;top:-20px;width:260px;height:260px;background:radial-gradient(circle,rgba(0,209,194,.18),transparent 65%);filter:blur(10px)}
+h1{font-size:34px;font-weight:800;line-height:1.12;text-transform:uppercase}
+h1 .t{color:var(--teal)}
+.sub{color:#c8cdd2;font-size:15px;line-height:1.5;margin:14px 0 20px}
+.cta{display:flex;gap:10px}
+.btn{flex:1;text-align:center;padding:15px 10px;border-radius:14px;font-weight:700;font-size:15px;text-decoration:none}
+.btn.p{background:var(--teal);color:#0B0F14}.btn.s{border:1.5px solid rgba(255,255,255,.25);color:#fff}
+.dirs{display:flex;flex-direction:column;gap:12px;margin:26px 0}
+.dir{background:var(--surface);border-radius:18px;padding:18px;border-left:4px solid var(--c);display:flex;justify-content:space-between;align-items:center}
+.dir h3{font-size:17px;font-weight:800;text-transform:uppercase;color:var(--c)}
+.dir p{font-size:12.5px;color:var(--muted);margin-top:4px}
+.dir .go{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--c);display:flex;align-items:center;justify-content:center;color:var(--c);font-size:18px;flex-shrink:0}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 26px}
+.st{background:var(--surface);border-radius:16px;padding:16px;text-align:center}
+.st b{font-size:26px;font-weight:800;color:var(--gold)}.st span{display:block;font-size:11.5px;color:var(--muted);margin-top:3px}
+.foot{border-top:1px solid rgba(255,255,255,.1);padding:18px 0 26px;text-align:center}
+.slogan{letter-spacing:3px;font-size:11px;color:var(--muted);font-weight:600}
+.tg{display:inline-block;margin-top:12px;background:var(--teal);color:#0B0F14;font-weight:700;padding:12px 26px;border-radius:12px;font-size:14px;text-decoration:none}
+</style></head><body class="carbon"><div class="wrap">
+<header><div class="shield">LA</div><div class="logo"><b>LEGAL AUTO</b><span>ФАКТЫ • КОНТРОЛЬ • РЕЗУЛЬТАТ</span></div></header>
+<section class="hero">
+<h1>Авто из-за границы <span class="t">под ключ</span></h1>
+<p class="sub">Пригон, оригинальные запчасти и оформление документов. Всё решается профессионально, быстро и без лишних рисков.</p>
+<div class="cta"><a class="btn p">✈ Оставить заявку</a><a class="btn s">Каталог запчастей</a></div>
+</section>
+<div class="dirs">
+<div class="dir" style="--c:#D4AF37"><div><h3>Пригон авто</h3><p>Китай · Корея · Европа — подбор, проверка, доставка</p></div><div class="go">→</div></div>
+<div class="dir" style="--c:#FF6B00"><div><h3>Запчасти</h3><p>1200+ оригинальных деталей BMW · Geely · Li Auto</p></div><div class="go">→</div></div>
+<div class="dir" style="--c:#00D1C2"><div><h3>Документы</h3><p>СБКТС · ЭПТС · утильсбор · растаможка от 1 дня</p></div><div class="go">→</div></div>
+</div>
+<div class="stats">
+<div class="st"><b>1 200+</b><span>запчастей в наличии</span></div>
+<div class="st"><b>100+</b><span>пунктов проверки авто</span></div>
+<div class="st"><b>от 1 дня</b><span>оформление документов</span></div>
+<div class="st"><b>2-3×</b><span>дешевле нового</span></div>
+</div>
+<div class="foot"><div class="slogan">ВАШ НАДЁЖНЫЙ ПАРТНЁР В МИРЕ АВТОМОБИЛЕЙ</div><a class="tg">✈ @LegalAutoAssist_bot</a></div>
+</div></body></html>
