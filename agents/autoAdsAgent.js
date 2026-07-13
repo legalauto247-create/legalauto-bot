@@ -504,13 +504,17 @@ function parsePublicFeed(html, channel) {
 
 export async function fetchPublicFeed(channel) {
   const handle = channel.replace(/^@/, '').replace(/^https?:\/\/t\.me\//, '').replace(/\/s\//, '');
-  const url = `https://t.me/s/${handle}`;
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status} для ${url}`);
-  const html = await res.text();
-  return parsePublicFeed(html, handle);
+  // t.me иногда не резолвится (DNS/сеть) — telegram.me это тот же Telegram, запасной хост
+  const hosts = ['https://t.me/s/', 'https://telegram.me/s/'];
+  let lastErr = null;
+  for (const base of hosts) {
+    try {
+      const res = await fetch(base + handle, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } });
+      if (!res.ok) { lastErr = new Error(`HTTP ${res.status}`); continue; }
+      return parsePublicFeed(await res.text(), handle);
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error('канал недоступен');
 }
 
 let pollerRunning = false;
