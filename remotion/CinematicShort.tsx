@@ -17,6 +17,7 @@ export type CineProps = {
   groupUrl?: string;
   accent: string;
   musicFile?: string;
+  photoFit?: 'cover' | 'contain';   // 'contain' для реальных фото машин
 };
 
 const FPS = 30;
@@ -35,13 +36,23 @@ const Shield: React.FC<{ accent: string; size?: number }> = ({ accent, size = 64
   </svg>
 );
 
-// Full-bleed кино-кадр с Ken Burns
-const KenBurns: React.FC<{ image: string; dur: number; dir?: number }> = ({ image, dur, dir = 1 }) => {
+// Кино-кадр с Ken Burns. fit='contain' — реальные фото (машина ЦЕЛИКОМ на блюр-подложке);
+// fit='cover' — вертикальные AI-hero-кадры (заполняют весь экран без потерь).
+const KenBurns: React.FC<{ image: string; dur: number; dir?: number; fit?: 'cover' | 'contain' }> = ({ image, dur, dir = 1, fit = 'cover' }) => {
   const f = useCurrentFrame();
   const scale = interpolate(f, [0, dur], [1.08, 1.22]);
   const panX = interpolate(f, [0, dur], [0, 26 * dir]);
   const panY = interpolate(f, [0, dur], [0, -18]);
   const src = /^https?:/.test(image) ? image : staticFile(image);
+  if (fit === 'contain') {
+    const s2 = interpolate(f, [0, dur], [1.02, 1.1]);
+    return (
+      <AbsoluteFill>
+        <Img src={src} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(40px) brightness(0.4) saturate(1.1)', transform: 'scale(1.3)' }} />
+        <Img src={src} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', transform: `scale(${s2}) translateX(${panX * 0.5}px)`, filter: 'drop-shadow(0 24px 44px rgba(0,0,0,.6))' }} />
+      </AbsoluteFill>
+    );
+  }
   return <Img src={src} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${scale}) translate(${panX}px, ${panY}px)` }} />;
 };
 
@@ -65,7 +76,7 @@ const BrandHeader: React.FC<{ accent: string; brandLine: string }> = ({ accent, 
   </div>
 );
 
-const Scene: React.FC<{ s: CineScene; idx: number; accent: string; channel: string; groupUrl?: string; brandLine: string }> = ({ s, idx, accent, channel, groupUrl, brandLine }) => {
+const Scene: React.FC<{ s: CineScene; idx: number; accent: string; channel: string; groupUrl?: string; brandLine: string; fit?: 'cover' | 'contain' }> = ({ s, idx, accent, channel, groupUrl, brandLine, fit }) => {
   const f = useCurrentFrame();
   const inOp = interpolate(f, [0, TR], [0, 1], { extrapolateRight: 'clamp', easing: ease });
   const outOp = interpolate(f, [PER, PER + TR], [1, 0], { extrapolateLeft: 'clamp', easing: ease });
@@ -74,7 +85,7 @@ const Scene: React.FC<{ s: CineScene; idx: number; accent: string; channel: stri
 
   return (
     <AbsoluteFill style={{ opacity }}>
-      <KenBurns image={s.image} dur={PER + TR} dir={idx % 2 === 0 ? 1 : -1} />
+      <KenBurns image={s.image} dur={PER + TR} dir={idx % 2 === 0 ? 1 : -1} fit={fit} />
       {/* кино-скрим снизу для читаемости текста */}
       <AbsoluteFill style={{ background: `linear-gradient(to bottom, rgba(6,6,8,0.45) 0%, transparent 26%, transparent 44%, rgba(6,6,8,0.72) 78%, rgba(6,6,8,0.94) 100%)` }} />
       {/* лёгкая цветовая подсветка бренда */}
@@ -104,13 +115,13 @@ const Scene: React.FC<{ s: CineScene; idx: number; accent: string; channel: stri
   );
 };
 
-const Intro: React.FC<{ heroImage?: string; hook: string; tagline: string; accent: string; brandLine: string }> = ({ heroImage, hook, tagline, accent, brandLine }) => {
+const Intro: React.FC<{ heroImage?: string; hook: string; tagline: string; accent: string; brandLine: string; fit?: 'cover' | 'contain' }> = ({ heroImage, hook, tagline, accent, brandLine, fit }) => {
   const f = useCurrentFrame();
   const s = spring({ frame: f, fps: FPS, config: { damping: 16, stiffness: 80 } });
   const out = interpolate(f, [INTRO - 10, INTRO], [1, 0], { extrapolateLeft: 'clamp' });
   return (
     <AbsoluteFill style={{ opacity: out }}>
-      {heroImage ? <KenBurns image={heroImage} dur={INTRO + TR} /> : <AbsoluteFill style={{ background: theme.bg }} />}
+      {heroImage ? <KenBurns image={heroImage} dur={INTRO + TR} fit={fit} /> : <AbsoluteFill style={{ background: theme.bg }} />}
       <AbsoluteFill style={{ background: `linear-gradient(to bottom, rgba(6,6,8,0.55), rgba(6,6,8,0.35) 40%, rgba(6,6,8,0.9))` }} />
       <AbsoluteFill style={{ background: `radial-gradient(70% 50% at 50% 55%, ${accent}22, transparent 60%)`, mixBlendMode: 'screen' }} />
       <BrandHeader accent={accent} brandLine={brandLine} />
@@ -125,12 +136,12 @@ const Intro: React.FC<{ heroImage?: string; hook: string; tagline: string; accen
   );
 };
 
-const Outro: React.FC<{ heroImage?: string; cta: string; channel: string; groupUrl?: string; accent: string; brandLine: string }> = ({ heroImage, cta, channel, groupUrl, accent, brandLine }) => {
+const Outro: React.FC<{ heroImage?: string; cta: string; channel: string; groupUrl?: string; accent: string; brandLine: string; fit?: 'cover' | 'contain' }> = ({ heroImage, cta, channel, groupUrl, accent, brandLine, fit }) => {
   const f = useCurrentFrame();
   const s = spring({ frame: f, fps: FPS, config: { damping: 14 } });
   return (
     <AbsoluteFill>
-      {heroImage ? <KenBurns image={heroImage} dur={OUTRO} dir={-1} /> : <AbsoluteFill style={{ background: theme.bg }} />}
+      {heroImage ? <KenBurns image={heroImage} dur={OUTRO} dir={-1} fit={fit} /> : <AbsoluteFill style={{ background: theme.bg }} />}
       <AbsoluteFill style={{ background: 'rgba(6,6,8,0.72)' }} />
       <AbsoluteFill style={{ background: `radial-gradient(70% 50% at 50% 50%, ${accent}2e, transparent 62%)`, mixBlendMode: 'screen' }} />
       <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', padding: 72, textAlign: 'center' }}>
@@ -153,15 +164,15 @@ export const CinematicShort: React.FC<CineProps> = (p) => {
     <AbsoluteFill style={{ background: theme.bg }}>
       {p.musicFile ? <Audio src={staticFile(p.musicFile)} volume={0.5} /> : null}
 
-      <Sequence durationInFrames={INTRO + TR}><Intro heroImage={p.heroImage} hook={p.hook} tagline={p.tagline} accent={p.accent} brandLine={p.brandLine} /></Sequence>
+      <Sequence durationInFrames={INTRO + TR}><Intro heroImage={p.heroImage} hook={p.hook} tagline={p.tagline} accent={p.accent} brandLine={p.brandLine} fit={p.photoFit} /></Sequence>
 
       {scenes.map((s, i) => (
         <Sequence key={i} from={INTRO + i * PER} durationInFrames={PER + TR}>
-          <Scene s={s} idx={i} accent={p.accent} channel={p.channel} groupUrl={p.groupUrl} brandLine={p.brandLine} />
+          <Scene s={s} idx={i} accent={p.accent} channel={p.channel} groupUrl={p.groupUrl} brandLine={p.brandLine} fit={p.photoFit} />
         </Sequence>
       ))}
 
-      <Sequence from={INTRO + n * PER} durationInFrames={OUTRO}><Outro heroImage={p.heroImage} cta={p.cta} channel={p.channel} groupUrl={p.groupUrl} accent={p.accent} brandLine={p.brandLine} /></Sequence>
+      <Sequence from={INTRO + n * PER} durationInFrames={OUTRO}><Outro heroImage={p.heroImage} cta={p.cta} channel={p.channel} groupUrl={p.groupUrl} accent={p.accent} brandLine={p.brandLine} fit={p.photoFit} /></Sequence>
     </AbsoluteFill>
   );
 };

@@ -164,7 +164,7 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
 
       {/* 01 ХУК 0-3с: эмоц. заголовок + бейдж модели */}
       <Sequence durationInFrames={F[1]}>
-        <Photo src={ph(0)} dur={F[1]} mode="in" /><Scrim /><Gold /><Sweep color="#D4AF37" /><Flash color="#D4AF37" />
+        <Photo src={ph(0)} dur={F[1]} mode="in" /><Scrim /><Flash color="#D4AF37" />
         <AbsoluteFill style={{ justifyContent: 'flex-start', alignItems: 'center', paddingTop: 200, textAlign: 'center', padding: '200px 70px 0' }}>
           <In><H white={p.hook} size={86} /></In>
           <In delay={8}>
@@ -178,7 +178,7 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
 
       {/* 02 МОЩЬ 3-6с */}
       <Sequence from={F[1]} durationInFrames={F[2] - F[1]}>
-        <Photo src={ph(1)} dur={F[2] - F[1]} mode="pan" /><Scrim /><Gold /><Sweep /><Flash />
+        <Photo src={ph(1)} dur={F[2] - F[1]} mode="pan" /><Scrim /><Flash />
         <AbsoluteFill style={{ justifyContent: 'flex-start', padding: '220px 70px 0', textAlign: 'center', alignItems: 'center' }}>
           <In><H white="МОЩЬ" size={92} /></In>
           <In delay={6}><div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 52, color: ACC, marginTop: 18, textShadow: '0 3px 20px rgba(0,0,0,.9)' }}>{p.power}</div></In>
@@ -188,7 +188,7 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
 
       {/* 03 КОМПЛЕКТАЦИЯ 6-12с: чек-лист опций */}
       <Sequence from={F[2]} durationInFrames={F[3] - F[2]}>
-        <Photo src={ph(2)} dur={F[3] - F[2]} mode="in" /><Scrim /><Gold /><Sweep /><Flash />
+        <Photo src={ph(2)} dur={F[3] - F[2]} mode="in" /><Scrim /><Flash />
         <AbsoluteFill style={{ padding: '190px 80px 0' }}>
           <In><H white="МАКСИМАЛЬНАЯ" accent="КОМПЛЕКТАЦИЯ" size={62} /></In>
           <div style={{ marginTop: 44 }}><Check items={(p.options || []).slice(0, 6)} /></div>
@@ -198,7 +198,7 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
 
       {/* 04 СОСТОЯНИЕ 12-18с: крупный план */}
       <Sequence from={F[3]} durationInFrames={F[4] - F[3]}>
-        <Photo src={ph(3)} dur={F[4] - F[3]} mode="out" /><Scrim /><Gold /><Sweep color="#D4AF37" /><Flash color="#D4AF37" />
+        <Photo src={ph(3)} dur={F[4] - F[3]} mode="out" /><Scrim /><Flash color="#D4AF37" />
         <AbsoluteFill style={{ justifyContent: 'flex-start', padding: '220px 70px 0', textAlign: 'center', alignItems: 'center' }}>
           <In><H white="ИДЕАЛЬНОЕ" accent="СОСТОЯНИЕ" size={72} /></In>
           <In delay={8}><div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 44, color: '#F0F2F4', marginTop: 22, textShadow: '0 3px 18px rgba(0,0,0,.9)' }}>{p.condition}</div></In>
@@ -208,7 +208,7 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
 
       {/* 05 ДОВЕРИЕ 18-24с: чек-лист гарантий */}
       <Sequence from={F[4]} durationInFrames={F[5] - F[4]}>
-        <Photo src={ph(4)} dur={F[5] - F[4]} mode="pan" /><Scrim /><Gold /><Sweep /><Flash />
+        <Photo src={ph(4)} dur={F[5] - F[4]} mode="pan" /><Scrim /><Flash />
         <AbsoluteFill style={{ padding: '190px 80px 0' }}>
           <In><H white="ПРОВЕРЕН И ГОТОВ" accent="К НОВОМУ ВЛАДЕЛЬЦУ" size={58} /></In>
           <div style={{ marginTop: 44 }}><Check items={(p.trust || []).slice(0, 4)} /></div>
@@ -218,7 +218,7 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
 
       {/* 06 ФИНАЛ CTA 24-30с */}
       <Sequence from={F[5]} durationInFrames={F[6] - F[5]}>
-        <Photo src={ph(0)} dur={F[6] - F[5]} mode="out" /><Scrim /><Gold /><Sweep color="#D4AF37" /><Flash color="#D4AF37" />
+        <Photo src={ph(0)} dur={F[6] - F[5]} mode="out" /><Scrim /><Flash color="#D4AF37" />
         <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 70px' }}>
           <In><H white={`ТВОЙ НОВЫЙ ${p.model.toUpperCase()}`} accent="ЖДЁТ ТЕБЯ" size={68} /></In>
           {p.price ? (

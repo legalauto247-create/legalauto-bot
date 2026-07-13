@@ -707,7 +707,7 @@ async function _makeStoreDigest({ posts = [], platforms = ['youtube'] } = {}) {
     musicPath: music, images: digestImages,
     brandLine: 'LEGAL AUTO STORE', heroImage: cars[0].image,
     hook: `ТОП-${cars.length} АВТО В НАЛИЧИИ`, tagline: 'подбор и продажа под ключ',
-    scenes: okCars, cta: 'Подберём ваше авто — заявка в 1 минуту',
+    scenes: okCars, photoFit: 'contain', cta: 'Подберём ваше авто — заявка в 1 минуту',
     channel: '@LegalAutoStore', groupUrl: 't.me/LegalAutoStore', accent: '#D4AF37',
   });
   const result = { ok: true, title, cars: cars.map(c => c.title) };
