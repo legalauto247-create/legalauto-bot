@@ -624,10 +624,11 @@ specs — только реально указанные, до 5.
   });
   if (!gate.pass) return { ok: false, error: `Quality Gate: ${gate.fails.join('; ')}` };
 
-  // 3) фото байтами (t.me CDN блокируется в рендере) → локальные файлы
-  const buffers = (await Promise.all(photos.slice(0, 6).map(fetchImage)));
-  const images = buffers.map((b, i) => b ? { name: `car-${i}.jpg`, buffer: b } : null).filter(Boolean);
-  if (!images.length) return { ok: false, error: 'Не удалось скачать фото из поста' };
+  // 3) ФОТО-РЕДАКТОР: сам отбирает лучшие фото (без чужих клейм, машина целиком)
+  const { curatePhotos } = await import('../services/photoCurator.js');
+  const curated = await curatePhotos(photos, { want: 6 });
+  if (!curated.length) return { ok: false, error: 'Нет пригодных фото (все с чужими клеймами или битые)' };
+  const images = curated.map((c, i) => ({ name: `car-${i}.jpg`, buffer: c.buffer }));
   const localNames = images.map(im => im.name);
 
   // эталонная карточка (ЛИСТ 4)
@@ -676,7 +677,7 @@ async function _makeStoreDigest({ posts = [], platforms = ['youtube'] } = {}) {
     const d = await extractReelData(post.text, 'car');
     if (!d || !d.brand) continue;
     cars.push({
-      image: post.photos[0],   // заменим на локальное имя ниже
+      _photos: post.photos,   // весь альбом — фото-редактор выберет лучшее ниже
       kicker: d.price || '',
       title: `${d.brand} ${d.model}`.trim(),
       text: (d.specs || []).slice(0, 2).map(s => `${s.label}: ${s.value}`).join(' · ') || d.tagline || '',
@@ -693,14 +694,15 @@ async function _makeStoreDigest({ posts = [], platforms = ['youtube'] } = {}) {
   });
   if (!gate.pass) return { ok: false, error: `Quality Gate: ${gate.fails.join('; ')}` };
 
-  // фото байтами (обход ORB)
+  // ФОТО-РЕДАКТОР: для каждого авто сам выбирает лучший кадр (без клейм, машина целиком)
+  const { curatePhotos } = await import('../services/photoCurator.js');
   const digestImages = [];
   for (let i = 0; i < cars.length; i++) {
-    const b = await fetchImage(cars[i].image);
-    if (b) { digestImages.push({ name: `digest-${i}.jpg`, buffer: b }); cars[i].image = `digest-${i}.jpg`; }
+    const best = await curatePhotos(cars[i]._photos || [], { want: 1 });
+    if (best.length) { digestImages.push({ name: `digest-${i}.jpg`, buffer: best[0].buffer }); cars[i].image = `digest-${i}.jpg`; }
   }
-  const okCars = cars.filter(c => c.image.startsWith('digest-'));
-  if (okCars.length < 2) return { ok: false, error: 'Не удалось скачать фото постов' };
+  const okCars = cars.filter(c => c.image && c.image.startsWith('digest-'));
+  if (okCars.length < 2) return { ok: false, error: 'Мало пригодных фото (клейма/битые)' };
 
   const music = pickMusic(['cinematic', 'sport']);
   const video = await renderCinematic({
