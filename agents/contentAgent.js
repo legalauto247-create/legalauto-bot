@@ -17,7 +17,7 @@ import { createTask, taskProcessing, taskDone, taskFailed, persistentPath } from
 import { reviewContent } from '../services/qualityGate.js';
 import { pickCollection, markCollectionUsed, listCollections, buildCollections } from '../services/mediaFactory.js';
 import { uploadShort, LINKS_BLOCK } from './youtubeUpload.js';
-import { HEAVY } from './models.js';
+import { HEAVY, SMART } from './models.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const USED_FILE = persistentPath('video_used.json');
@@ -282,7 +282,7 @@ async function _makeProductShort({ platforms = ['youtube'], theme = '', lengthSe
   const collectionTheme = collection ? collection.title : theme;
 
   // 2) хук + заголовок (на «вы», без «золотых гор» — по брендбуку)
-  const m = await claude.messages.create({ model: HEAVY, max_tokens: 350, messages: [{ role: 'user', content:
+  const m = await claude.messages.create({ model: SMART, max_tokens: 350, messages: [{ role: 'user', content:
 `Короткий вирусный хук и заголовок для Shorts. ТЕМА РОЛИКА: «${collectionTheme || 'оригинальные запчасти'}» — заголовок и хук строго вокруг неё. Запчасти ${brandLabel}${originLabel ? ' ' + originLabel : ''} (LegalAuto Parts). Состояние деталей СТРОГО из каталога: "${condLabel || 'разное — не указывай состояние'}". НЕ пиши «б/у», если в состоянии этого нет; НЕ пиши «новые», если не написано «Новый». Тон по брендбуку: на «вы», прямо и по фактам, БЕЗ обещаний «золотых гор» и слова «копейки». НЕ выдумывай страну происхождения — используй только "${originLabel || 'без указания страны'}".
 JSON: {"title":"до 80 симв, 1 эмодзи","description":"2 строки + 3 хэштега (#shorts #запчасти #${brandTag})","hook":"3-4 слова крупно (интрига/выгода)"}
 запчасти в ролике: ${parts.map(p => `${p.name}${p.condition ? ' (' + p.condition + ')' : ''}`).join(', ')}` }] });
@@ -354,7 +354,7 @@ async function _makeInfoShort({ topic, direction = 'docs', platforms = ['youtube
   const gurl = groupUrl || dir.groupUrl;
 
   // 1) сценарий: хук + 4-5 шагов/пунктов + CTA (тон по брендбуку, на «вы», факты не выдумывать)
-  const m = await claude.messages.create({ model: HEAVY, max_tokens: 900, messages: [{ role: 'user', content:
+  const m = await claude.messages.create({ model: SMART, max_tokens: 900, messages: [{ role: 'user', content:
 `Ты — сценарист вирусных вертикальных Shorts для LegalAuto (${dir.theme}).
 Сделай короткий информативный ролик по теме: "${topic}".
 Тон брендбука: на «вы», уверенно, по фактам, без «золотых гор» и воды. Каждый пункт — реально полезный.
@@ -432,7 +432,7 @@ async function genCineImage(prompt, direction = 'auto') {
   const full = `${prompt}. ${CINE_STYLE[direction] || CINE_STYLE.auto}. ${IMG_BASE}.`;
   const r = await fetch('https://api.openai.com/v1/images/generations', {
     method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, prompt: full, n: 1, size: '1024x1536' }),
+    body: JSON.stringify({ model, prompt: full, n: 1, size: '1024x1536', quality: process.env.IMAGE_QUALITY || 'medium' }),
   });
   if (!r.ok) throw new Error('gpt-image: ' + (await r.text()).slice(0, 160));
   const d = await r.json();
@@ -459,7 +459,7 @@ async function _makeCinematicShort({ topic, direction = 'auto', platforms = ['yo
   const gurl = groupUrl || dir.groupUrl;
 
   // 1) сценарий: hook + 3-4 сцены (заголовок/текст/kicker + промпт кино-картинки) + CTA
-  const m = await claude.messages.create({ model: HEAVY, max_tokens: 1100, messages: [{ role: 'user', content:
+  const m = await claude.messages.create({ model: SMART, max_tokens: 1100, messages: [{ role: 'user', content:
 `Ты — креативный директор премиум-роликов LegalAuto (${dir.theme}).
 Сделай сценарий вертикального кино-Shorts по теме: "${topic}".
 Тон брендбука: на «вы», уверенно, по фактам, без «золотых гор».
@@ -556,7 +556,7 @@ export async function makeNewsCard({ newsText, date }) {
   if (!claude) return { ok: false, error: 'CLAUDE_API_KEY не задан' };
   if (!newsText) return { ok: false, error: 'Нет текста новости' };
   // 1) структурируем в эталонный layout
-  const m = await claude.messages.create({ model: HEAVY, max_tokens: 700, messages: [{ role: 'user', content:
+  const m = await claude.messages.create({ model: SMART, max_tokens: 700, messages: [{ role: 'user', content:
 `Разложи новость в эталонный шаблон новостного поста LegalAuto (аудитория: импортёры авто и владельцы ввезённых авто). СТРОГО по фактам из текста, ничего не выдумывай.
 Верни ТОЛЬКО JSON:
 {"title":"суть КРАТКО, 3-6 слов (будет капсом, ≤3 строк)","titleAccent":"дата/ключевой факт 2-4 слова (бирюзой) или пусто","subtitle":"1-2 предложения: что это значит","facts":[{"icon":"1 эмодзи","label":"ЧТО ИЗМЕНИТСЯ?","text":"до 12 слов"},{"icon":"1 эмодзи","label":"КОГО КАСАЕТСЯ?","text":"до 12 слов"},{"icon":"1 эмодзи","label":"ЧТО ДЕЛАТЬ?","text":"до 12 слов, конкретное действие"}],"imagePrompt":"english: cinematic scene matching the news topic (cars/customs/port/city), bright professional","caption":"текст поста для Telegram: 3-5 предложений по фактам + в конце «Вопрос по вашей ситуации → @LegalAutoAssist_bot»"}
@@ -603,7 +603,7 @@ async function _makeCarPromo({ text, photos = [], platforms = ['youtube'] } = {}
   if (!text || photos.length < 1) return { ok: false, error: 'Нужен текст поста и хотя бы 1 фото' };
 
   // 1) структурируем СТРОГО из текста (context-engineering: ничего не выдумывать)
-  const m = await claude.messages.create({ model: HEAVY, max_tokens: 800, messages: [{ role: 'user', content:
+  const m = await claude.messages.create({ model: SMART, max_tokens: 800, messages: [{ role: 'user', content:
 `Разложи объявление о продаже/пригоне авто в структуру для карточки и Shorts LegalAuto Store. СТРОГО из текста, чего нет — пропусти/пустая строка. Верни ТОЛЬКО JSON:
 {"brand":"МАРКА","model":"Модель (кратко)","year":"2019 или пусто","hook":"эмоц. хук 2-4 слова КАПСОМ (Премиум который впечатляет / Мощь и статус)","power":"двигатель/л.с./привод/коробка одной строкой из текста","options":["4-6 опций ИЗ ТЕКСТА, кратко"],"condition":"пробег + состояние одной строкой из текста","trust":["3-4 пункта доверия ИЗ ТЕКСТА или стандартные: Юридическая чистота/Проверка перед покупкой/Полный пакет документов"],"specs":[{"label":"Пробег","value":"..."},{"label":"Двигатель","value":"..."},{"label":"Привод","value":"..."},{"label":"Коробка","value":"..."},{"label":"Состояние","value":"..."}],"badge":"ПОДБОР ПОД КЛЮЧ или В НАЛИЧИИ (по смыслу)","title":"YouTube-заголовок до 80 симв: марка модель год + суть, 1 эмодзи","description":"2 строки + 3 хэштега"}
 specs — только реально указанные, до 5.

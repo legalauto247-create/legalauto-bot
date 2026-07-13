@@ -38,14 +38,20 @@ const Shield: React.FC<{ size?: number }> = ({ size = 64 }) => (
 // Фото-фон кадра: Ken Burns, направление чередуется
 const Photo: React.FC<{ src: string; dur: number; mode?: 'in' | 'pan' | 'out' }> = ({ src, dur, mode = 'in' }) => {
   const f = useCurrentFrame();
-  // ЛИСТ 7: панч-въезд (snappy) → медленный дрейф. Удар в начале кадра = «эффект топ»
-  const punch = spring({ frame: f, fps: FPS, config: { damping: 14, stiffness: 120 } });
-  const base = interpolate(punch, [0, 1], [1.32, 1.12]);
-  const drift = interpolate(f, [0, dur], [0, mode === 'out' ? -0.05 : 0.07]);
-  const panX = mode === 'pan' ? interpolate(f, [0, dur], [-34, 34]) : 0;
-  const rot = interpolate(punch, [0, 1], [mode === 'out' ? -1.2 : 1.2, 0]);
+  // Машина ВСЕГДА ЦЕЛИКОМ: contain на размытой подложке (Эдо: «кроп — непонятно какая машина»).
+  // Панч-въезд (ЛИСТ 7) — на самом фото, мягкий, без обрезки.
+  const punch = spring({ frame: f, fps: FPS, config: { damping: 15, stiffness: 110 } });
+  const scale = interpolate(punch, [0, 1], [1.14, 1.0]) + interpolate(f, [0, dur], [0, 0.05]);
+  const panX = mode === 'pan' ? interpolate(f, [0, dur], [-16, 16]) : 0;
   const url = /^https?:/.test(src) ? src : staticFile(src);
-  return <Img src={url} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${base + drift}) translateX(${panX}px) rotate(${rot}deg)` }} />;
+  return (
+    <AbsoluteFill>
+      {/* подложка: то же фото, blur + затемнение — заполняет вертикаль без обрезки авто */}
+      <Img src={url} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(38px) brightness(0.42) saturate(1.1)', transform: 'scale(1.3)' }} />
+      {/* само фото: ЦЕЛИКОМ, по центру, лёгкий панч и дрейф */}
+      <Img src={url} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', transform: `scale(${scale}) translateX(${panX}px)`, filter: 'drop-shadow(0 24px 44px rgba(0,0,0,.6))' }} />
+    </AbsoluteFill>
+  );
 };
 
 // ЛИСТ 7: световой штрих (light streak) — проходит по кадру в начале сцены

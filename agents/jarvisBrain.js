@@ -111,7 +111,7 @@ const TOOLS = [
   { name: 'calc_customs', description: 'Рассчитать растаможку+утильсбор авто (РФ 2026).', input_schema: { type: 'object', properties: { engineCc: { type: 'number' }, hp: { type: 'number' }, ageYears: { type: 'number' }, priceEur: { type: 'number' } }, required: ['engineCc','hp','ageYears','priceEur'] } },
   { name: 'generate_image', description: 'Нарисовать изображение через OpenAI gpt-image (фон, баннер, иллюстрация). Сразу отправляет картинку Эдо.', input_schema: { type: 'object', properties: { prompt: { type: 'string' } }, required: ['prompt'] } },
   { name: 'store_shorts', description: 'Сделать YouTube Shorts из постов ТВОЕГО канала @LegalAutoStore (пригон/продажа авто). count=1 → эталонный 6-кадровый ролик про одно авто (последний пост или по запросу «про BMW M2»); count=2-4 → ролик-ПОДБОРКА из нескольких постов (ТОП авто в наличии). Вызывай на «сделай шортс про авто из стора / выложи машину в ютуб / подборка авто».', input_schema: { type: 'object', properties: { query: { type: 'string', description: 'какое авто (слова из поста: марка/модель), пусто = последние' }, count: { type: 'number', description: '1 = одно авто (по умолч.), 2-4 = подборка' } } } },
-  { name: 'set_autopilot', description: 'ВКЛ/ВЫКЛ автовыставление роликов (автопилот 11:00/17:00). Эдо: «выключи автопилот / не выкладывай ролики сам / включи обратно». off = ролики только по явной команде Эдо (экономия денег, фокус на качестве).', input_schema: { type: 'object', properties: { mode: { type: 'string', enum: ['on', 'off'] } }, required: ['mode'] } },
+  { name: 'set_autopilot', description: 'ВКЛ/ВЫКЛ ВСЁ авто-выставление роликов: автопилот 11:00/17:00 И авто-Shorts после одобрения машин (firePromo). Эдо: «выключи/приостанови автовыставление, не выкладывай сам» → mode=off НЕМЕДЛЕННО. off = ролики только по явной команде Эдо.', input_schema: { type: 'object', properties: { mode: { type: 'string', enum: ['on', 'off'] } }, required: ['mode'] } },
   { name: 'media_collections', description: 'MEDIA_FACTORY: показать готовые смысловые коллекции для роликов (Оптика BMW X5 G05, Двери и молдинги BMW X7...) с составом и рейтингом. Вызывай, когда Эдо спрашивает «какие темы для роликов / что снять» или перед выбором темы.', input_schema: { type: 'object', properties: {} } },
   { name: 'scan_news', description: 'Просканировать свежие новости (6 живых RSS: авто + деловые) и отфильтровать ПОЛЕЗНЫЕ для импортёров (таможня/утиль/авторынок/импорт). Возвращает список заголовков с ссылками. Используй на «что нового / есть ли новости / проверь новости». Дальше можешь предложить Эдо сделать из лучшей новости ролик (make_cinematic с direction=docs и темой новости) или пост.', input_schema: { type: 'object', properties: { max: { type: 'number' } } } },
   { name: 'scan_partner_cars', description: 'Просканировать канал партнёра и прислать свежие авто на одобрение.', input_schema: { type: 'object', properties: {} } },
@@ -185,11 +185,12 @@ async function runTool(name, input, ctx) {
       }
       case 'set_autopilot': {
         const cur = getSection('settings') || {};
-        setSection('settings', { ...cur, video_autopilot: input.mode });
+        // off глушит ВСЕ авто-публикации: автопилот (11:00/17:00) И авто-Shorts после одобрения машин
+        setSection('settings', { ...cur, video_autopilot: input.mode, store_promo: input.mode });
         stateEvent('autopilot_toggle', { note: input.mode });
         return input.mode === 'off'
-          ? 'Автопилот роликов ВЫКЛЮЧЕН. Ролики теперь только по твоей команде — деньги не тратятся. Включить обратно: «включи автопилот».'
-          : 'Автопилот роликов ВКЛЮЧЁН: 11:00 запчасти, 17:00 кино (МСК).';
+          ? 'ВСЁ авто-выставление роликов ВЫКЛЮЧЕНО: и автопилот (11:00/17:00), и авто-Shorts после одобрения машин. Ролики теперь ТОЛЬКО по твоей явной команде. Включить: «включи автопилот».'
+          : 'Авто-выставление ВКЛЮЧЕНО: автопилот 11:00/17:00 + авто-Shorts после одобрения авто.';
       }
       case 'media_collections': {
         const { listCollections } = await import('../services/mediaFactory.js');

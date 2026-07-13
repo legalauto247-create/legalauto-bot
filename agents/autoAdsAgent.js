@@ -358,7 +358,10 @@ export async function publishAd(text, photos = []) {
 // ── Промо после публикации: эталонная карточка (ЛИСТ 4) + Shorts (ЛИСТ 6) → YouTube ──
 function firePromo(text, photos = []) {
   if (process.env.STORE_PROMO !== 'false') {
-    import('./contentAgent.js').then(async ({ makeCarPromo }) => {
+    import('../services/stateService.js').then(async ({ getSection }) => {
+      // Пауза Эдо («выключи автовыставление») действует и на авто-Shorts после одобрения
+      if (getSection('settings')?.store_promo === 'off') { console.log('[AutoAds] promo: пауза Эдо — пропускаю'); return; }
+      const { makeCarPromo } = await import('./contentAgent.js');
       const r = await makeCarPromo({ text, photos, platforms: ['youtube'], source: 'autoads' });
       const token = ADMIN_BOT_TOKEN, chat = ADMIN_CHAT_ID;
       if (!token || !chat) { r?.cardCleanup?.(); return; }
