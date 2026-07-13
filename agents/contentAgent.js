@@ -640,7 +640,7 @@ specs — только реально указанные, до 5.
   });
 
   // 4) Shorts 6 кадров / 30 сек (ЛИСТ 6)
-  const music = pickMusic(['sport', 'rock']);
+  const music = pickMusic(['cinematic', 'sport']);
   const result = { ok: true, cardPath: card.path, cardCleanup: card.cleanup, title: d.title || `${d.brand} ${d.model}` };
   if (platforms.includes('youtube')) {
     const video = await renderStoreShorts({
@@ -702,7 +702,7 @@ async function _makeStoreDigest({ posts = [], platforms = ['youtube'] } = {}) {
   const okCars = cars.filter(c => c.image.startsWith('digest-'));
   if (okCars.length < 2) return { ok: false, error: 'Не удалось скачать фото постов' };
 
-  const music = pickMusic(['sport', 'rock']);
+  const music = pickMusic(['cinematic', 'sport']);
   const video = await renderCinematic({
     musicPath: music, images: digestImages,
     brandLine: 'LEGAL AUTO STORE', heroImage: cars[0].image,

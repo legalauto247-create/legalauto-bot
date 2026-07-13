@@ -18,6 +18,8 @@ export type StoreShortsProps = {
   photos: string[];             // фото авто из поста (URL)
   channel?: string;             // @LegalAutoStore
   musicFile?: string;
+  sfxWhoosh?: string;           // звук перехода
+  sfxImpact?: string;           // удар на хуке
 };
 
 const FPS = 30;
@@ -82,6 +84,32 @@ const Scrim: React.FC = () => (
   <AbsoluteFill style={{ background: 'linear-gradient(to bottom, rgba(10,10,10,0.42) 0%, transparent 30%, transparent 48%, rgba(10,10,10,0.78) 76%, rgba(10,10,10,0.95) 100%)' }} />
 );
 
+// Вспышка на входе сцены (первые кадры) — кинематографичный переход whoosh
+const Flash: React.FC<{ color?: string }> = ({ color = '#FFFFFF' }) => {
+  const f = useCurrentFrame();
+  const op = interpolate(f, [0, 4, 10], [0.55, 0.22, 0], { extrapolateRight: 'clamp' });
+  return op > 0.01 ? <AbsoluteFill style={{ background: color, opacity: op, mixBlendMode: 'screen' }} /> : null;
+};
+
+// Прогресс-бар всего ролика (6 сегментов) — верх кадра
+const Progress: React.FC = () => {
+  const f = useCurrentFrame();
+  const seg = 6;
+  return (
+    <div style={{ position: 'absolute', top: 40, left: 56, right: 56, display: 'flex', gap: 7, zIndex: 20 }}>
+      {Array.from({ length: seg }).map((_, i) => {
+        const from = F[i], to = F[i + 1];
+        const fill = f <= from ? 0 : f >= to ? 1 : (f - from) / (to - from);
+        return (
+          <div key={i} style={{ flex: 1, height: 4, borderRadius: 3, background: 'rgba(255,255,255,0.18)', overflow: 'hidden' }}>
+            <div style={{ width: `${fill * 100}%`, height: '100%', borderRadius: 3, background: i % 2 ? GOLD : ACC, boxShadow: `0 0 8px ${i % 2 ? GOLD : ACC}` }} />
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 // Лого по эталону: низ кадра, отступ ≥5%
 const LogoBottom: React.FC<{ line?: string }> = ({ line }) => (
   <div style={{ position: 'absolute', bottom: 96, left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
@@ -127,11 +155,16 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
 
   return (
     <AbsoluteFill style={{ background: '#0A0A0A' }}>
-      {p.musicFile ? <Audio src={staticFile(p.musicFile)} volume={0.55} /> : null}
+      {p.musicFile ? <Audio src={staticFile(p.musicFile)} volume={0.6} /> : null}
+      {/* SFX: удар на хуке + whoosh на каждой смене кадра — «дорогое» звучание */}
+      {p.sfxImpact ? <Sequence from={2} durationInFrames={40}><Audio src={staticFile(p.sfxImpact)} volume={0.85} /></Sequence> : null}
+      {p.sfxWhoosh ? [1, 2, 3, 4, 5].map((i) => (
+        <Sequence key={i} from={F[i] - 6} durationInFrames={30}><Audio src={staticFile(p.sfxWhoosh!)} volume={0.5} /></Sequence>
+      )) : null}
 
       {/* 01 ХУК 0-3с: эмоц. заголовок + бейдж модели */}
       <Sequence durationInFrames={F[1]}>
-        <Photo src={ph(0)} dur={F[1]} mode="in" /><Scrim /><Gold /><Sweep color="#D4AF37" />
+        <Photo src={ph(0)} dur={F[1]} mode="in" /><Scrim /><Gold /><Sweep color="#D4AF37" /><Flash color="#D4AF37" />
         <AbsoluteFill style={{ justifyContent: 'flex-start', alignItems: 'center', paddingTop: 200, textAlign: 'center', padding: '200px 70px 0' }}>
           <In><H white={p.hook} size={86} /></In>
           <In delay={8}>
@@ -145,7 +178,7 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
 
       {/* 02 МОЩЬ 3-6с */}
       <Sequence from={F[1]} durationInFrames={F[2] - F[1]}>
-        <Photo src={ph(1)} dur={F[2] - F[1]} mode="pan" /><Scrim /><Gold /><Sweep />
+        <Photo src={ph(1)} dur={F[2] - F[1]} mode="pan" /><Scrim /><Gold /><Sweep /><Flash />
         <AbsoluteFill style={{ justifyContent: 'flex-start', padding: '220px 70px 0', textAlign: 'center', alignItems: 'center' }}>
           <In><H white="МОЩЬ" size={92} /></In>
           <In delay={6}><div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 52, color: ACC, marginTop: 18, textShadow: '0 3px 20px rgba(0,0,0,.9)' }}>{p.power}</div></In>
@@ -155,7 +188,7 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
 
       {/* 03 КОМПЛЕКТАЦИЯ 6-12с: чек-лист опций */}
       <Sequence from={F[2]} durationInFrames={F[3] - F[2]}>
-        <Photo src={ph(2)} dur={F[3] - F[2]} mode="in" /><Scrim /><Gold /><Sweep />
+        <Photo src={ph(2)} dur={F[3] - F[2]} mode="in" /><Scrim /><Gold /><Sweep /><Flash />
         <AbsoluteFill style={{ padding: '190px 80px 0' }}>
           <In><H white="МАКСИМАЛЬНАЯ" accent="КОМПЛЕКТАЦИЯ" size={62} /></In>
           <div style={{ marginTop: 44 }}><Check items={(p.options || []).slice(0, 6)} /></div>
@@ -165,7 +198,7 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
 
       {/* 04 СОСТОЯНИЕ 12-18с: крупный план */}
       <Sequence from={F[3]} durationInFrames={F[4] - F[3]}>
-        <Photo src={ph(3)} dur={F[4] - F[3]} mode="out" /><Scrim /><Gold /><Sweep color="#D4AF37" />
+        <Photo src={ph(3)} dur={F[4] - F[3]} mode="out" /><Scrim /><Gold /><Sweep color="#D4AF37" /><Flash color="#D4AF37" />
         <AbsoluteFill style={{ justifyContent: 'flex-start', padding: '220px 70px 0', textAlign: 'center', alignItems: 'center' }}>
           <In><H white="ИДЕАЛЬНОЕ" accent="СОСТОЯНИЕ" size={72} /></In>
           <In delay={8}><div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 44, color: '#F0F2F4', marginTop: 22, textShadow: '0 3px 18px rgba(0,0,0,.9)' }}>{p.condition}</div></In>
@@ -175,7 +208,7 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
 
       {/* 05 ДОВЕРИЕ 18-24с: чек-лист гарантий */}
       <Sequence from={F[4]} durationInFrames={F[5] - F[4]}>
-        <Photo src={ph(4)} dur={F[5] - F[4]} mode="pan" /><Scrim /><Gold /><Sweep />
+        <Photo src={ph(4)} dur={F[5] - F[4]} mode="pan" /><Scrim /><Gold /><Sweep /><Flash />
         <AbsoluteFill style={{ padding: '190px 80px 0' }}>
           <In><H white="ПРОВЕРЕН И ГОТОВ" accent="К НОВОМУ ВЛАДЕЛЬЦУ" size={58} /></In>
           <div style={{ marginTop: 44 }}><Check items={(p.trust || []).slice(0, 4)} /></div>
@@ -185,7 +218,7 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
 
       {/* 06 ФИНАЛ CTA 24-30с */}
       <Sequence from={F[5]} durationInFrames={F[6] - F[5]}>
-        <Photo src={ph(0)} dur={F[6] - F[5]} mode="out" /><Scrim /><Gold /><Sweep color="#D4AF37" />
+        <Photo src={ph(0)} dur={F[6] - F[5]} mode="out" /><Scrim /><Gold /><Sweep color="#D4AF37" /><Flash color="#D4AF37" />
         <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 70px' }}>
           <In><H white={`ТВОЙ НОВЫЙ ${p.model.toUpperCase()}`} accent="ЖДЁТ ТЕБЯ" size={68} /></In>
           {p.price ? (
@@ -200,6 +233,8 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
         </AbsoluteFill>
         <LogoBottom line="ФАКТЫ • КОНТРОЛЬ • РЕЗУЛЬТАТ" />
       </Sequence>
+
+      <Progress />
     </AbsoluteFill>
   );
 };

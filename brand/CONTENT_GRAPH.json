@@ -38,8 +38,8 @@
     "video_template": "cinematic_v1",
     "image_style": "auto",
     "music_genre": [
-      "sport",
-      "rock"
+      "cinematic",
+      "sport"
     ],
     "cta": "car_request",
     "deep_link_source": "yt_store",
@@ -70,6 +70,7 @@
     "video_template": "car_reel_v1",
     "image_style": "auto",
     "music_genre": [
+      "cinematic",
       "sport"
     ],
     "cta": "car_request",

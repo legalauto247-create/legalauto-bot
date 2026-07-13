@@ -227,10 +227,16 @@ export async function renderStoreShorts({ musicPath, images = [], ...props }) {
     if (!existsSync(PUBLIC_DIR)) mkdirSync(PUBLIC_DIR, { recursive: true });
     if (musicPath && existsSync(musicPath)) cpSync(musicPath, join(PUBLIC_DIR, 'music.mp3'));
     for (const im of images) { if (im?.name && im?.buffer) writeFileSync(join(PUBLIC_DIR, im.name), im.buffer); }
+    // SFX для «дорогого» звучания: whoosh на переходах + impact на хуке
+    const whooshSrc = join(ROOT, 'assets', 'sfx', 'whoosh.mp3');
+    const impactSrc = join(ROOT, 'assets', 'sfx', 'impact.mp3');
+    const hasWhoosh = existsSync(whooshSrc), hasImpact = existsSync(impactSrc);
+    if (hasWhoosh) cpSync(whooshSrc, join(PUBLIC_DIR, 'whoosh.mp3'));
+    if (hasImpact) cpSync(impactSrc, join(PUBLIC_DIR, 'impact.mp3'));
     const exec = chromePath();
     await ensureBrowser(exec ? { browserExecutable: exec } : undefined).catch(() => {});
     const serveUrl = await bundle({ entryPoint: ENTRY, publicDir: PUBLIC_DIR });
-    const inputProps = { musicFile: musicPath ? 'music.mp3' : undefined, ...props };
+    const inputProps = { musicFile: musicPath ? 'music.mp3' : undefined, sfxWhoosh: hasWhoosh ? 'whoosh.mp3' : undefined, sfxImpact: hasImpact ? 'impact.mp3' : undefined, ...props };
     const composition = await selectComposition({ serveUrl, id: 'StoreShorts', inputProps, browserExecutable: exec });
     await renderMedia({
       composition, serveUrl, codec: 'h264', outputLocation: out, inputProps,
