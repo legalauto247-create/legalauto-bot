@@ -605,8 +605,9 @@ async function _makeCarPromo({ text, photos = [], platforms = ['youtube'] } = {}
   // 1) структурируем СТРОГО из текста (context-engineering: ничего не выдумывать)
   const m = await claude.messages.create({ model: SMART, max_tokens: 800, messages: [{ role: 'user', content:
 `Разложи объявление о продаже/пригоне авто в структуру для карточки и Shorts LegalAuto Store. СТРОГО из текста, чего нет — пропусти/пустая строка. Верни ТОЛЬКО JSON:
-{"brand":"МАРКА","model":"Модель (кратко)","year":"2019 или пусто","hook":"эмоц. хук 2-4 слова КАПСОМ (Премиум который впечатляет / Мощь и статус)","power":"двигатель/л.с./привод/коробка одной строкой из текста","options":["4-6 опций ИЗ ТЕКСТА, кратко"],"condition":"пробег + состояние одной строкой из текста","trust":["3-4 пункта доверия ИЗ ТЕКСТА или стандартные: Юридическая чистота/Проверка перед покупкой/Полный пакет документов"],"specs":[{"label":"Пробег","value":"..."},{"label":"Двигатель","value":"..."},{"label":"Привод","value":"..."},{"label":"Коробка","value":"..."},{"label":"Состояние","value":"..."}],"badge":"ПОДБОР ПОД КЛЮЧ или В НАЛИЧИИ (по смыслу)","title":"YouTube-заголовок до 80 симв: марка модель год + суть, 1 эмодзи","description":"2 строки + 3 хэштега"}
+{"brand":"МАРКА","model":"Модель (кратко)","year":"2019 или пусто","hook":"эмоц. хук 2-4 слова КАПСОМ (Премиум который впечатляет / Мощь и статус)","power":"двигатель/л.с./привод/коробка одной строкой из текста","options":["4-6 опций ИЗ ТЕКСТА, кратко"],"condition":"пробег + состояние одной строкой из текста","trust":["3-4 пункта доверия ИЗ ТЕКСТА или стандартные: Юридическая чистота/Проверка перед покупкой/Полный пакет документов"],"specs":[{"label":"Пробег","value":"..."},{"label":"Двигатель","value":"..."},{"label":"Привод","value":"..."},{"label":"Коробка","value":"..."},{"label":"Состояние","value":"..."}],"avail":"stock или order","eta":"срок поставки из текста (30-45 дней) или пусто","title":"YouTube-заголовок до 80 симв: марка модель год + суть, 1 эмодзи","description":"2 строки + 3 хэштега"}
 specs — только реально указанные, до 5.
+avail — КЛЮЧЕВОЕ ПОЛЕ, определи строго по тексту: "stock" ТОЛЬКО если явно сказано «в наличии», «в Москве/РФ/России», «можно посмотреть», «забирай сегодня». "order" если «под заказ», «пригон», «в пути», «из Китая/Кореи/Японии/ОАЭ/Европы», «срок поставки», «привезём» — ИЛИ если непонятно (по умолчанию order, мы пригоняем).
 
 Объявление:
 "${String(text).slice(0, 1100)}"` }] });
@@ -615,6 +616,13 @@ specs — только реально указанные, до 5.
   catch { return { ok: false, error: 'Структура авто не собралась' }; }
   const price = (await import('./priceUtil.js')).extractPriceFromText(text) || '';
   if (!d.brand || !d.model) return { ok: false, error: 'Не распознаны марка/модель' };
+
+  // Наличие: страховка-регэксп поверх AI (явное «в наличии» в тексте всегда побеждает)
+  const low = String(text).toLowerCase();
+  if (/в наличии|в москве|в россии|в рф|можно посмотреть|забирай сегодня/.test(low)) d.avail = 'stock';
+  else if (/под заказ|в пути|пригон|срок поставки|привез[её]м|из кита|из коре|из япон|из оаэ|из европ/.test(low)) d.avail = 'order';
+  if (d.avail !== 'stock') d.avail = 'order';   // по умолчанию — под заказ, мы пригоняем
+  if (!d.eta) { const em = String(text).match(/(\d{1,2}\s*[-–—]\s*\d{1,3}|\d{1,3})\s*дн/); if (em) d.eta = `${em[1].replace(/\s/g, '')} дней`; }
 
   // 2) Quality Gate против исходного поста
   const gate = await reviewContent({
@@ -637,11 +645,11 @@ specs — только реально указанные, до 5.
     brand: d.brand, model: d.model, year: d.year || '',
     photo: localNames[0], specs: (d.specs || []).slice(0, 6),
     price: price || 'Цена по запросу',
-    badge: d.badge || 'ПОДБОР ПОД КЛЮЧ',
+    badge: d.avail === 'stock' ? 'В НАЛИЧИИ В РФ' : 'ПРИГОН ПОД КЛЮЧ',
   });
 
-  // 4) Shorts 6 кадров / 30 сек (ЛИСТ 6)
-  const music = pickMusic(['cinematic', 'sport']);
+  // 4) Shorts 6 кадров / 30 сек (ЛИСТ 6). Фонк — фирменный саунд авто-контента
+  const music = pickMusic(['phonk', 'sport']);
   const result = { ok: true, cardPath: card.path, cardCleanup: card.cleanup, title: d.title || `${d.brand} ${d.model}` };
   if (platforms.includes('youtube')) {
     const video = await renderStoreShorts({
@@ -651,6 +659,7 @@ specs — только реально указанные, до 5.
       power: d.power || price, options: d.options || [],
       condition: d.condition || '', trust: (d.trust && d.trust.length ? d.trust : ['Юридическая чистота', 'Проверка перед покупкой', 'Полный пакет документов']),
       price: price || '', photos: localNames, images, channel: '@LegalAutoStore',
+      avail: d.avail, eta: d.eta || '',
     });
     try {
       const desc = `${d.description || ''}\n\n✅ ЗАКАЗАТЬ (бот, 1 минута): https://t.me/LegalAutoAssist_bot?start=yt_store\n🚗 Канал: https://t.me/LegalAutoStore`;

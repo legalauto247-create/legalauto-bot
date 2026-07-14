@@ -17,6 +17,8 @@ export type StoreShortsProps = {
   price?: string;               // «14 500 000 ₽» — показываем на финале
   photos: string[];             // фото авто из поста (URL)
   channel?: string;             // @LegalAutoStore
+  avail?: 'stock' | 'order';    // stock = в наличии в РФ, order = под заказ/пригон
+  eta?: string;                 // срок поставки из поста («30-45 дней»), если под заказ
   musicFile?: string;
   sfxWhoosh?: string;           // звук перехода
   sfxImpact?: string;           // удар на хуке
@@ -152,6 +154,12 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
   const ph = (i: number) => (p.photos && p.photos.length ? p.photos[i % p.photos.length] : '');
   const carName = `${p.brand} ${p.model}`.trim();
   const channel = p.channel || '@LegalAutoStore';
+  // Наличие определяет всю подачу: в наличии = «забирай сегодня», под заказ = «привезём под ключ»
+  const inStock = p.avail === 'stock';
+  const availLabel = inStock ? '✓ В НАЛИЧИИ В РФ' : `✈ ПОД ЗАКАЗ${p.eta ? ` • ${p.eta}` : ' • ПРИГОН ПОД КЛЮЧ'}`;
+  const availColor = inStock ? ACC : GOLD;
+  const ctaWhite = inStock ? `${p.model.toUpperCase()} УЖЕ В РФ —` : `ПРИВЕЗЁМ ТВОЙ ${p.model.toUpperCase()}`;
+  const ctaAccent = inStock ? 'ЗАБИРАЙ СЕГОДНЯ' : 'ПОД КЛЮЧ';
 
   return (
     <AbsoluteFill style={{ background: '#0A0A0A' }}>
@@ -170,6 +178,11 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
           <In delay={8}>
             <div style={{ marginTop: 34, display: 'inline-flex', alignItems: 'center', gap: 12, border: `2px solid ${GOLD}`, borderRadius: 12, padding: '12px 26px', fontFamily: FONT, fontWeight: 700, fontSize: 34, color: '#fff', background: 'rgba(10,10,10,0.6)' }}>
               {carName}{p.year ? <span style={{ color: GOLD }}>{p.year}</span> : null}
+            </div>
+          </In>
+          <In delay={13}>
+            <div style={{ marginTop: 18, display: 'inline-block', borderRadius: 10, padding: '10px 24px', fontFamily: FONT, fontWeight: 700, fontSize: 30, color: '#0A0A0A', background: availColor, boxShadow: `0 8px 30px ${availColor}55` }}>
+              {availLabel}
             </div>
           </In>
         </AbsoluteFill>
@@ -222,7 +235,10 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
         {/* доп. затемнение по центру — CTA-текст читается на любом (даже белом) фото */}
         <AbsoluteFill style={{ background: 'radial-gradient(ellipse 90% 62% at 50% 50%, rgba(10,10,10,0.72) 0%, rgba(10,10,10,0.45) 55%, transparent 100%)' }} />
         <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 70px' }}>
-          <In><H white={`ТВОЙ НОВЫЙ ${p.model.toUpperCase()}`} accent="ЖДЁТ ТЕБЯ" size={68} /></In>
+          <In><H white={ctaWhite} accent={ctaAccent} size={68} /></In>
+          {!inStock && p.eta ? (
+            <In delay={6}><div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 32, color: GOLD, marginTop: 16 }}>Срок поставки: {p.eta}</div></In>
+          ) : null}
           {p.price ? (
             <In delay={8}>
               <div style={{ marginTop: 30, display: 'inline-block', border: `2.5px solid ${GOLD}`, borderRadius: 16, padding: '14px 36px', fontFamily: FONT, fontWeight: 700, fontSize: 52, color: GOLD, background: 'rgba(10,10,10,0.75)', boxShadow: `0 0 44px ${GOLD}40` }}>{p.price}</div>
