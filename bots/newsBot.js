@@ -111,7 +111,8 @@ function parseRss(xml) {
     const title = de(get('title'));
     const link  = get('link') || get('guid');
     const desc  = de(get('description'));
-    if (title && link) items.push({ title, link, desc });
+    const pub   = Date.parse(get('pubDate') || get('dc:date') || '') || 0;
+    if (title && link) items.push({ title, link, desc, pub });
   }
   return items.slice(0, 8);
 }
@@ -406,7 +407,10 @@ export async function fetchFreshNews(maxItems = 5) {
       all.push(...parseRss(await fetchXml(feed.url)));
     } catch {}
   }
-  const fresh = all.filter(i => !publishedUrls.has(i.link));
+  // ТОЛЬКО свежее: не старше 7 дней (RSS отдаёт и архив 2024 — режем по дате)
+  const weekAgo = Date.now() - 7 * 864e5;
+  const fresh = all.filter(i => !publishedUrls.has(i.link) && (i.pub === 0 || i.pub > weekAgo))
+    .sort((a, b) => b.pub - a.pub);
   const useful = [];
   for (const item of fresh) {
     if (useful.length >= maxItems) break;

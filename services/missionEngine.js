@@ -114,18 +114,80 @@ export async function dailyReport() {
   return txt;
 }
 
+// ── 4б. АНАЛИТИК РАЗВИТИЯ: сам учится на данных недели и ищет пути заработка ──
+// Раз в неделю (вс 19:00 МСК): анализ статистики + свежие новости → чему научились,
+// что внедрить, где деньги. Отчёт Эдо. Уроки копятся в State (lessons) — память растёт.
+export async function growthReport() {
+  if (!claude) return null;
+  const { HEAVY } = await import('../agents/models.js');
+  const mission = getSection('mission') || {};
+  const week = Object.entries(mission).filter(([k]) => /^\d{4}-/.test(k)).slice(-7);
+  const lessons = (getSection('lessons') || {}).list || [];
+  let news = [];
+  try { const nb = await import('../bots/newsBot.js'); news = await nb.fetchFreshNews(5); } catch {}
+  const { docsTotals } = await import('./docsCrm.js');
+  const dt = docsTotals();
+
+  const m = await claude.messages.create({ model: HEAVY, max_tokens: 900, messages: [{ role: 'user', content:
+`Ты — аналитик развития LegalAuto (пригон авто из Китая/Кореи, б/у запчасти BMW/Geely/Li, документы СБКТС/ЭПТС/утиль). Проанализируй неделю и предложи, где заработать.
+
+ДАННЫЕ НЕДЕЛИ (день: просмотрено постов партнёров / отобрано / опубликовано / роликов):
+${week.map(([d, v]) => `${d}: ${v.scanned || 0}/${v.picked || 0}/${v.published || 0}/${v.video || 0}`).join('\n') || 'данных мало'}
+Подписчики: ${JSON.stringify(mission.subs || {})}
+Документы: заказов ${dt.count}, выручка ${dt.total.revenue}₽, маржа ${dt.total.margin}₽
+Прошлые уроки (не повторяй их): ${lessons.slice(-5).map(l => l.text).join(' | ') || 'нет'}
+Свежие новости рынка: ${news.map(n => n.title).join(' | ') || 'нет'}
+
+Верни ТОЛЬКО JSON:
+{"learned":["2-3 конкретных урока из ЭТИХ цифр (что работает/не работает)"],"ideas":[{"idea":"конкретная идея заработка/роста","why":"почему сработает — из данных или новостей","first_step":"первый шаг на этой неделе"}],"warning":"главный риск недели или пусто"}
+Идей — 3, конкретных для этого бизнеса. Без воды.` }] });
+
+  let r;
+  try { r = JSON.parse(m.content[0].text.match(/\{[\s\S]*\}/)[0]); } catch { return null; }
+  // копим уроки — «сам учится»
+  const cur = getSection('lessons') || {};
+  const list = Array.isArray(cur.list) ? cur.list : [];
+  for (const t of r.learned || []) list.push({ at: new Date().toISOString().slice(0, 10), text: t });
+  setSection('lessons', { list: list.slice(-60) });
+
+  const txt = [
+    '🧠 Аналитик развития — недельный отчёт',
+    '',
+    '📚 Чему научился на этой неделе:',
+    ...(r.learned || []).map(l => `• ${l}`),
+    '',
+    '💡 Где заработать (внедряем?):',
+    ...(r.ideas || []).map((i, n) => `${n + 1}. ${i.idea}\n   Почему: ${i.why}\n   Первый шаг: ${i.first_step}`),
+    r.warning ? `\n⚠️ Риск: ${r.warning}` : '',
+  ].filter(Boolean).join('\n');
+
+  if (ADMIN_BOT_TOKEN && ADMIN_CHAT_ID) {
+    await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: ADMIN_CHAT_ID, text: txt }),
+    }).catch(() => {});
+  }
+  stateEvent('growth_report', { note: (r.ideas || []).map(i => i.idea).join('; ').slice(0, 120) });
+  return txt;
+}
+
 // ── 5. Запуск: отчёт в 20:00 МСК ─────────────────────────────────────────────
 let started = false;
 export function startMissionEngine() {
   if (started) return; started = true;
   console.log(`[Mission] 🎯 Engine запущен: отбор score≥${MIN_SCORE}, отчёт в 20:00 МСК, каналы: ${MY_CHANNELS.join(', ')}`);
-  let lastReport = '';
+  let lastReport = '', lastGrowth = '';
   setInterval(async () => {
     const msk = new Date(Date.now() + 3 * 3600e3);
     const hh = msk.getUTCHours(), key = msk.toISOString().slice(0, 10);
     if (hh === 20 && lastReport !== key) {
       lastReport = key;
       try { await dailyReport(); } catch (e) { console.error('[Mission] report:', e.message); }
+    }
+    // Аналитик развития: воскресенье 19:00 МСК
+    if (msk.getUTCDay() === 0 && hh === 19 && lastGrowth !== key) {
+      lastGrowth = key;
+      try { await growthReport(); } catch (e) { console.error('[Mission] growth:', e.message); }
     }
   }, 60_000);
 }

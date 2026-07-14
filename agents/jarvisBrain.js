@@ -115,7 +115,8 @@ const TOOLS = [
   { name: 'media_collections', description: 'MEDIA_FACTORY: показать готовые смысловые коллекции для роликов (Оптика BMW X5 G05, Двери и молдинги BMW X7...) с составом и рейтингом. Вызывай, когда Эдо спрашивает «какие темы для роликов / что снять» или перед выбором темы.', input_schema: { type: 'object', properties: {} } },
   { name: 'scan_news', description: 'Просканировать свежие новости (6 живых RSS: авто + деловые) и отфильтровать ПОЛЕЗНЫЕ для импортёров (таможня/утиль/авторынок/импорт). Возвращает список заголовков с ссылками. Используй на «что нового / есть ли новости / проверь новости». Дальше можешь предложить Эдо сделать из лучшей новости ролик (make_cinematic с direction=docs и темой новости) или пост.', input_schema: { type: 'object', properties: { max: { type: 'number' } } } },
   { name: 'scan_partner_cars', description: 'Просканировать канал партнёра и прислать свежие авто на одобрение.', input_schema: { type: 'object', properties: {} } },
-  { name: 'docs_crm', description: 'CRM направления ДОКУМЕНТЫ (СБКТС/ЭПТС/утильсбор): учёт заказов — клиент, авто, VIN, услуга, деньги (price_client=что берём, cost=себестоимость, add_extra=доп-услуги → маржа считается сама), стадия (новая→авто в лаборатории→документы оформляются→готово→выдано клиенту), оплаты (клиент нам / мы лаборатории). action: add (новый заказ; id по клиенту: А1, А2 — тот же клиент, Б1 — новый), update (стадия/оплаты/цена/себестоимость/доп-услуга add_extra, по id типа А1), list (все активные + предупреждения о неоплате/простое). Вызывай на «запиши клиента на СБКТС», «машина заехала в лабораторию», «клиент оплатил», «что по документам».', input_schema: { type: 'object', properties: { action: { type: 'string', enum: ['add', 'update', 'list'] }, id: { type: 'string' }, client: { type: 'string' }, phone: { type: 'string' }, car: { type: 'string' }, vin: { type: 'string' }, service: { type: 'string' }, stage: { type: 'string' }, client_paid: { type: 'boolean' }, lab_paid: { type: 'boolean' }, price_client: { type: 'number', description: 'что берём с клиента, ₽' }, cost: { type: 'number', description: 'себестоимость (лаборатория и пр.), ₽' }, add_extra: { type: 'object', properties: { name: { type: 'string' }, price: { type: 'number' } }, description: 'доп-услуга {name, price}' }, notes: { type: 'string' } }, required: ['action'] } },
+  { name: 'docs_crm', description: 'CRM ДОКУМЕНТЫ по таблице Эдо «работы СБКТС». Заказ = МАШИНА клиента, у машины НЕСКОЛЬКО работ (СБКТС/ЭПТС/Утиль/Внесение), у каждой: СРМ-номер, цена клиенту, себестоимость (сама берётся из базы знаний по лаборатории), статус: Ожидание→Макет→Печать→Эптс→Выпущено→Оплачено/Отмена. id машины по клиенту: А1, А2 (тот же клиент), Б1 (новый). action: add (новая машина+работы), update (статус работы/цены/лаборатория/добавить работу add_work/всё оплачено all_paid), list. Примеры: «запиши: Влад, Geely Monjaro, VIN LB378..., лаборатория Одинцово 13.09, СБКТС 30000 и ЭПТС 2000» → add. «по А1 СБКТС выпущено» / «А1 всё оплачено» → update.', input_schema: { type: 'object', properties: { action: { type: 'string', enum: ['add', 'update', 'list'] }, id: { type: 'string' }, client: { type: 'string' }, phone: { type: 'string' }, car: { type: 'string' }, vin: { type: 'string' }, lab: { type: 'string', description: 'лаборатория (Одинцово)' }, lab_date: { type: 'string', description: 'дата лаборатории (13.09)' }, works: { type: 'array', items: { type: 'object', properties: { crm: { type: 'string' }, type: { type: 'string', enum: ['СБКТС', 'ЭПТС', 'Утиль', 'Внесение'] }, price: { type: 'number' }, cost: { type: 'number' }, status: { type: 'string' } } }, description: 'работы машины при add' }, work: { type: 'object', properties: { type: { type: 'string' }, crm: { type: 'string' }, status: { type: 'string' }, price: { type: 'number' }, cost: { type: 'number' }, set_crm: { type: 'string' } }, description: 'обновить одну работу (по type или crm)' }, add_work: { type: 'object', properties: { type: { type: 'string' }, price: { type: 'number' }, cost: { type: 'number' }, crm: { type: 'string' } } }, all_paid: { type: 'boolean' }, notes: { type: 'string' } }, required: ['action'] } },
+  { name: 'docs_knowledge', description: 'БАЗА ЗНАНИЙ направления документов. Лаборатории (у Серконс ~20 лабораторий, у сотрудницы Кати — свои, цены другие) с СЕБЕСТОИМОСТЯМИ по услугам; растаможка под ключ по таможенным постам. action: add_lab («запомни: лаборатория Одинцово, Серконс, себес СБКТС 15000, ЭПТС 800»), add_customs («растаможка под ключ на посту Забайкальск 120000 с СБКТС и ЭПТС»), list (вся база). Себестоимость из базы сама подставляется в новые заказы CRM.', input_schema: { type: 'object', properties: { action: { type: 'string', enum: ['add_lab', 'add_customs', 'list'] }, name: { type: 'string', description: 'название лаборатории' }, owner: { type: 'string', description: 'Серконс / Катя / другое' }, costs: { type: 'object', description: 'себестоимости {"СБКТС":15000,"ЭПТС":800,"Утиль":0}' }, post: { type: 'string', description: 'таможенный пост' }, price: { type: 'number', description: 'цена под ключ' }, includes: { type: 'string', description: 'что входит' }, notes: { type: 'string' } }, required: ['action'] } },
   { name: 'manage_partners', description: 'ПОДКЛЮЧИТЬ/отключить партнёрские Telegram-каналы для наблюдения (Mission Engine: боты следят, отбирают лучшие посты score≥7, шлют Эдо на одобрение). Эдо присылает @каналы и цель («следи за этими по пригону») → action=add. Также list (показать) и remove.', input_schema: { type: 'object', properties: { action: { type: 'string', enum: ['add', 'remove', 'list'] }, channels: { type: 'array', items: { type: 'string' }, description: '@юзернеймы каналов' }, purpose: { type: 'string', description: 'цель наблюдения, напр. «пригон авто из Китая»' } }, required: ['action'] } },
   { name: 'post_part', description: 'Опубликовать одну запчасть в канал запчастей сейчас.', input_schema: { type: 'object', properties: {} } },
   { name: 'ask_gemini', description: 'Спросить Gemini (длинный контекст, второе мнение, анализ больших данных).', input_schema: { type: 'object', properties: { prompt: { type: 'string' } }, required: ['prompt'] } },
@@ -211,19 +212,45 @@ async function runTool(name, input, ctx) {
       case 'docs_crm': {
         const crm = await import('../services/docsCrm.js');
         if (input.action === 'add') {
-          if (!input.client || !input.car) return 'Для нового заказа нужны минимум клиент и авто.';
+          if (!input.client || !input.car) return 'Для новой машины нужны минимум клиент и авто.';
           const o = crm.addOrder(input);
-          return `Заказ создан:\n${crm.fmtOrder(o)}`;
+          return `Машина записана:\n${crm.fmtOrder(o)}`;
         }
         if (input.action === 'update') {
-          if (!input.id) return 'Укажи номер заказа (D001).';
+          if (!input.id) return 'Укажи номер машины (А1).';
           const o = crm.updateOrder(input.id, input);
-          return o ? `Обновил:\n${crm.fmtOrder(o)}` : `Заказ ${input.id} не найден.`;
+          return o ? `Обновил:\n${crm.fmtOrder(o)}` : `Машина ${input.id} не найдена.`;
         }
         const list = crm.listOrders();
         const alerts = crm.docsAlerts();
-        if (!list.length) return 'Активных заказов по документам нет.';
-        return [alerts.length ? '🔔 Требует внимания:\n' + alerts.join('\n') + '\n' : '', ...list.map(crm.fmtOrder)].filter(Boolean).join('\n\n');
+        const t = crm.docsTotals();
+        if (!list.length) return 'Активных машин по документам нет.';
+        return [
+          `💼 Активных машин: ${list.length} · выручка ${t.active.revenue.toLocaleString('ru-RU')} ₽ · маржа ${t.active.margin.toLocaleString('ru-RU')} ₽`,
+          alerts.length ? '🔔 Внимание:\n' + alerts.join('\n') : '',
+          ...list.map(crm.fmtOrder),
+        ].filter(Boolean).join('\n\n');
+      }
+      case 'docs_knowledge': {
+        const kb = await import('../services/docsCrm.js');
+        if (input.action === 'add_lab') {
+          if (!input.name) return 'Нужно название лаборатории.';
+          const l = kb.upsertLab(input);
+          return `Лаборатория сохранена: ${l.name} (${l.owner || '—'}), себес: ${JSON.stringify(l.costs)}`;
+        }
+        if (input.action === 'add_customs') {
+          if (!input.post) return 'Нужно название таможенного поста.';
+          const c = kb.upsertCustoms(input);
+          return `Растаможка сохранена: ${c.post} — ${Number(c.price).toLocaleString('ru-RU')} ₽ (${c.includes || 'состав не указан'})`;
+        }
+        const k = kb.getKnowledge();
+        return [
+          '🏭 Лаборатории:',
+          ...(k.labs.length ? k.labs.map(l => `• ${l.name} (${l.owner || '—'}): ${Object.entries(l.costs || {}).map(([a, b]) => `${a} ${Number(b).toLocaleString('ru-RU')}₽`).join(', ') || 'себес не заполнен'}`) : ['пока пусто — скажи «запомни лабораторию...»']),
+          '',
+          '🛃 Растаможка под ключ:',
+          ...(k.customs.length ? k.customs.map(c => `• ${c.post}: ${Number(c.price).toLocaleString('ru-RU')} ₽ — ${c.includes || ''}`) : ['пока пусто — скажи «запомни: растаможка на посту...»']),
+        ].join('\n');
       }
       case 'manage_partners': {
         const cur = getSection('partners') || {};

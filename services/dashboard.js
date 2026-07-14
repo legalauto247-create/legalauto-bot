@@ -87,7 +87,10 @@ async function tick(){
   const vids=d.videos.map(v=>'<div class="row"><a target="_blank" href="'+esc(v.url)+'">'+esc(v.title)+'</a><span class="mut">'+v.at.slice(5,16).replace('T',' ')+'</span></div>').join('')||'<div class="mut">пока нет</div>';
   const parts=d.partners.map(p=>'<div class="row"><span>'+esc(p.ch)+'</span><span class="mut">'+esc(p.purpose||'')+'</span></div>').join('')||'<div class="mut">каналы не подключены</div>';
   const fails=d.tasks.failed.map(t=>'<div class="row bad"><span>'+esc(t.type)+'</span><span>'+esc(t.error)+'</span></div>').join('');
-  const orders=d.docs.orders.map(o=>'<div class="row"><span><b>'+esc(o.id)+'</b> '+esc(o.client)+' · '+esc(o.car)+' <span class="tag">'+esc(o.service)+'</span></span><span>'+esc(o.stage)+' · '+(o.client_paid?'<span class=ok>клиент ✓</span>':'<span class=bad>клиент ✗</span>')+' '+(o.lab_paid?'<span class=ok>лаб ✓</span>':'<span class=bad>лаб ✗</span>')+' · маржа <b>'+(o.margin||0).toLocaleString('ru-RU')+' ₽</b></span></div>').join('')||'<div class="mut">заказов нет — добавь через Джарвиса: «новый заказ документов»</div>';
+  const orders=d.docs.orders.map(o=>{
+    const ws=(o.works||[]).map(w=>'<span class="tag" title="'+esc(w.status)+'">'+esc(w.type)+' '+(w.status==='Оплачено'?'✅':w.status==='Отмена'?'🚫':esc(w.status))+'</span>').join(' ');
+    return '<div class="row"><span><b>'+esc(o.id)+'</b> '+esc(o.client)+' · '+esc(o.car)+(o.lab?' · 🏭 '+esc(o.lab)+' '+esc(o.lab_date||''):'')+'</span><span>'+ws+' · маржа <b>'+(o.margin||0).toLocaleString('ru-RU')+' ₽</b></span></div>';
+  }).join('')||'<div class="mut">машин нет — скажи Джарвису: «запиши: Влад, Geely Monjaro, СБКТС 30000, ЭПТС 2000»</div>';
   const alerts=d.docs.alerts.map(a=>'<div class="row warn">'+esc(a)+'</div>').join('');
   const ev=d.events.map(e=>'<div class="row"><span class="mut">'+e.at.slice(11,16)+'</span><span>'+esc(e.kind)+'</span><span class="mut">'+esc(e.note)+'</span></div>').join('');
   const ap=d.settings.video_autopilot==='off'?'<span class="bad">ВЫКЛ</span>':'<span class="ok">ВКЛ</span>';

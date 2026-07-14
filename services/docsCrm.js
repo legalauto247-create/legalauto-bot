@@ -1,15 +1,22 @@
 /**
- * LegalAuto — CRM направления «Документы» (СБКТС / ЭПТС / утильсбор).
+ * LegalAuto — CRM «Документы» v2 (по реальной таблице Эдо «работы СБКТС»).
  *
- * Учёт заказов: клиент, авто, услуга, стадия, деньги (цена клиенту, себестоимость,
- * доп-услуги → маржа). Нумерация по клиенту: у каждого клиента своя буква,
- * авто нумеруются внутри — А1, А2 (первый клиент), Б1 (второй клиент).
- * Хранится ТОЛЬКО на сервере Эдо (Railway Volume). Управление — Джарвис или дашборд.
+ * Заказ = МАШИНА клиента. У машины НЕСКОЛЬКО работ (СБКТС, ЭПТС, Утиль, Внесение),
+ * у каждой работы: свой СРМ-номер, цена клиенту, себестоимость, статус.
+ * Статусы работы (из таблицы Эдо): Ожидание → Макет → Печать → Эптс → Выпущено → Оплачено / Отмена.
+ * Лаборатория: название + дата ("Одинцово 13.09").
+ * Нумерация машин по клиенту: А1, А2 (один клиент), Б1 (другой).
+ *
+ * + База знаний (docs_knowledge): лаборатории (Серконс ~20, у Кати свои), себестоимости
+ *   по услугам в каждой лаборатории, растаможка под ключ по таможенным постам.
+ *   Себестоимость работы подставляется из базы знаний автоматически, если не указана.
+ *
+ * Хранится ТОЛЬКО на сервере Эдо (Railway Volume).
  */
 import { getSection, setSection, logEvent } from './stateService.js';
 
-export const STAGES = ['новая', 'авто в лаборатории', 'документы оформляются', 'готово', 'выдано клиенту'];
-export const SERVICES = ['СБКТС', 'ЭПТС', 'СБКТС+ЭПТС', 'утильсбор', 'полный пакет'];
+export const WORK_TYPES = ['СБКТС', 'ЭПТС', 'Утиль', 'Внесение'];
+export const WORK_STATUSES = ['Ожидание', 'Макет', 'Печать', 'Эптс', 'Выпущено', 'Оплачено', 'Отмена'];
 
 function orders() {
   const cur = getSection('docs_orders') || {};
@@ -17,7 +24,38 @@ function orders() {
 }
 function save(list) { setSection('docs_orders', { list }); }
 
-// У каждого клиента — своя буква (А, Б, В...). Повторный клиент = та же буква.
+// ── База знаний: лаборатории, себестоимости, растаможка ─────────────────────
+function knowledge() {
+  const k = getSection('docs_knowledge') || {};
+  return { labs: k.labs || [], customs: k.customs || [] };
+}
+// lab: { name: 'Одинцово', owner: 'Серконс'|'Катя', costs: { 'СБКТС': 15000, 'ЭПТС': 800, 'Утиль': 0 }, notes }
+export function upsertLab({ name, owner = '', costs = {}, notes = '' }) {
+  const k = knowledge();
+  const i = k.labs.findIndex(l => l.name.toLowerCase() === String(name).toLowerCase());
+  if (i >= 0) k.labs[i] = { ...k.labs[i], owner: owner || k.labs[i].owner, costs: { ...k.labs[i].costs, ...costs }, notes: notes || k.labs[i].notes };
+  else k.labs.push({ name, owner, costs, notes });
+  setSection('docs_knowledge', k);
+  logEvent('docs_kb_lab', { note: `${name} (${owner})` });
+  return k.labs.find(l => l.name.toLowerCase() === String(name).toLowerCase());
+}
+// customs: { post: 'МАПП Забайкальск', price: 120000, includes: 'под ключ + СБКТС + ЭПТС', notes }
+export function upsertCustoms({ post, price = 0, includes = '', notes = '' }) {
+  const k = knowledge();
+  const i = k.customs.findIndex(c => c.post.toLowerCase() === String(post).toLowerCase());
+  if (i >= 0) k.customs[i] = { ...k.customs[i], price: price || k.customs[i].price, includes: includes || k.customs[i].includes, notes: notes || k.customs[i].notes };
+  else k.customs.push({ post, price, includes, notes });
+  setSection('docs_knowledge', k);
+  logEvent('docs_kb_customs', { note: post });
+  return k.customs.find(c => c.post.toLowerCase() === String(post).toLowerCase());
+}
+export function getKnowledge() { return knowledge(); }
+export function labCost(labName, workType) {
+  const lab = knowledge().labs.find(l => labName && l.name.toLowerCase() === String(labName).toLowerCase());
+  return lab?.costs?.[workType] ?? null;
+}
+
+// ── Нумерация по клиенту: А1, А2 / Б1 ────────────────────────────────────────
 const LETTERS = 'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯ';
 function clientLetter(client, list) {
   const key = String(client).trim().toLowerCase();
@@ -29,81 +67,99 @@ function clientLetter(client, list) {
   return 'Я';
 }
 
-export function addOrder({ client, phone = '', car, vin = '', service = 'СБКТС+ЭПТС', price_client = 0, cost = 0, extras = [], notes = '' }) {
+// ── Заказ-машина ─────────────────────────────────────────────────────────────
+// works: [{ crm, type, price, cost, status }]
+export function addOrder({ client, phone = '', car, vin = '', lab = '', lab_date = '', works = [], notes = '' }) {
   const list = orders();
   const letter = clientLetter(client, list);
   const n = list.filter(o => o.id.replace(/\d+$/, '') === letter).length + 1;
   const id = `${letter}${n}`;
   const now = new Date().toISOString();
-  const o = {
-    id, client_key: String(client).trim().toLowerCase(), client, phone, car, vin, service,
-    stage: STAGES[0], client_paid: false, lab_paid: false,
-    price_client, cost, extras, notes, created: now, updated: now,
-  };
+  const normWorks = (works.length ? works : [{ type: 'СБКТС' }, { type: 'ЭПТС' }]).map(w => ({
+    crm: w.crm || '', type: w.type, price: Number(w.price) || 0,
+    cost: w.cost !== undefined ? Number(w.cost) : (labCost(lab, w.type) ?? 0),
+    status: w.status || 'Ожидание',
+  }));
+  const o = { id, client_key: String(client).trim().toLowerCase(), client, phone, car, vin, lab, lab_date, works: normWorks, notes, created: now, updated: now };
   list.unshift(o); save(list);
-  logEvent('docs_order_new', { note: `${id}: ${client} — ${car} (${service})` });
+  logEvent('docs_order_new', { note: `${id}: ${client} — ${car} (${normWorks.map(w => w.type).join('+')})` });
   return o;
 }
 
-// Маржа = (цена клиенту + доп-услуги) − себестоимость
-export function orderMargin(o) {
-  const extrasSum = (o.extras || []).reduce((s, e) => s + (Number(e.price) || 0), 0);
-  return (Number(o.price_client) || 0) + extrasSum - (Number(o.cost) || 0);
-}
-
+// Обновление: полей машины и/или конкретной работы (по типу или СРМ)
 export function updateOrder(id, patch = {}) {
   const list = orders();
   const o = list.find(x => x.id.toLowerCase() === String(id).toLowerCase());
   if (!o) return null;
-  const allowed = ['stage', 'client_paid', 'lab_paid', 'price_client', 'cost', 'notes', 'vin', 'phone'];
-  for (const k of allowed) if (patch[k] !== undefined) o[k] = patch[k];
-  if (patch.add_extra?.name) (o.extras = o.extras || []).push({ name: patch.add_extra.name, price: Number(patch.add_extra.price) || 0 });
+  for (const k of ['lab', 'lab_date', 'notes', 'vin', 'phone']) if (patch[k] !== undefined) o[k] = patch[k];
+  if (patch.add_work) {
+    const w = patch.add_work;
+    o.works.push({ crm: w.crm || '', type: w.type, price: Number(w.price) || 0, cost: w.cost !== undefined ? Number(w.cost) : (labCost(o.lab, w.type) ?? 0), status: w.status || 'Ожидание' });
+  }
+  if (patch.work) {   // { type или crm, status?, price?, cost?, crm? }
+    const q = patch.work;
+    const w = o.works.find(x => (q.crm && x.crm === String(q.crm)) || (q.type && x.type.toLowerCase() === String(q.type).toLowerCase()));
+    if (w) {
+      if (q.status !== undefined) w.status = q.status;
+      if (q.price !== undefined) w.price = Number(q.price);
+      if (q.cost !== undefined) w.cost = Number(q.cost);
+      if (q.set_crm !== undefined) w.crm = String(q.set_crm);
+    }
+  }
+  if (patch.all_paid) o.works.forEach(w => { if (w.status !== 'Отмена') w.status = 'Оплачено'; });
   o.updated = new Date().toISOString();
   save(list);
-  logEvent('docs_order_upd', { note: `${o.id}: ${JSON.stringify(patch).slice(0, 100)}` });
+  logEvent('docs_order_upd', { note: `${o.id}: ${JSON.stringify(patch).slice(0, 110)}` });
   return o;
 }
 
 export function listOrders({ activeOnly = true } = {}) {
   const all = orders();
-  return activeOnly ? all.filter(o => o.stage !== 'выдано клиенту') : all;
+  return activeOnly ? all.filter(o => !o.works.every(w => ['Оплачено', 'Отмена'].includes(w.status))) : all;
+}
+export function getOrder(id) { return orders().find(x => x.id.toLowerCase() === String(id).toLowerCase()); }
+
+export function orderMargin(o) {
+  return (o.works || []).filter(w => w.status !== 'Отмена')
+    .reduce((s, w) => s + (Number(w.price) || 0) - (Number(w.cost) || 0), 0);
 }
 
 const rub = (n) => `${Number(n || 0).toLocaleString('ru-RU')} ₽`;
-
 export function fmtOrder(o) {
-  const extras = (o.extras || []).map(e => `${e.name} ${rub(e.price)}`).join(', ');
+  const works = (o.works || []).map(w =>
+    `  ${w.status === 'Оплачено' ? '✅' : w.status === 'Отмена' ? '🚫' : '▫️'} ${w.type}${w.crm ? ` (СРМ ${w.crm})` : ''}: ${rub(w.price)}${w.cost ? ` (себес ${rub(w.cost)})` : ''} — ${w.status}`
+  ).join('\n');
   return [
     `${o.id} · ${o.client}${o.phone ? ` (${o.phone})` : ''}`,
     `🚗 ${o.car}${o.vin ? ` · VIN ${o.vin}` : ''}`,
-    `📄 ${o.service} — стадия: ${o.stage}`,
-    `💰 Клиенту: ${rub(o.price_client)}${o.client_paid ? ' ✅ оплачено' : ' ❌ не оплачено'} · Себестоимость: ${rub(o.cost)}${o.lab_paid ? ' ✅ лаб. оплачена' : ' ❌ лаб. не оплачена'}`,
-    extras ? `➕ Доп: ${extras}` : '',
-    `📈 Маржа: ${rub(orderMargin(o))}`,
+    o.lab ? `🏭 Лаборатория: ${o.lab}${o.lab_date ? ` ${o.lab_date}` : ''}` : '',
+    works,
+    `📈 Маржа по машине: ${rub(orderMargin(o))}`,
     o.notes ? `📝 ${o.notes}` : '',
   ].filter(Boolean).join('\n');
 }
 
-// Сводка: что требует внимания
 export function docsAlerts() {
   const act = listOrders();
   const a = [];
   for (const o of act) {
-    if (!o.client_paid && o.stage !== 'новая') a.push(`⚠️ ${o.id} ${o.client}: авто в работе, клиент НЕ оплатил`);
-    if (o.client_paid && !o.lab_paid && ['документы оформляются', 'готово'].includes(o.stage)) a.push(`⚠️ ${o.id}: лаборатория не оплачена, а документы уже в работе`);
+    const unpaid = o.works.filter(w => w.status === 'Выпущено');
+    if (unpaid.length) a.push(`⚠️ ${o.id} ${o.client}: ${unpaid.map(w => w.type).join(', ')} выпущено, но НЕ оплачено`);
     const days = (Date.now() - Date.parse(o.updated)) / 864e5;
-    if (days > 3 && o.stage !== 'готово') a.push(`⏳ ${o.id} ${o.client}: без движения ${Math.floor(days)} дн. (${o.stage})`);
+    if (days > 4) a.push(`⏳ ${o.id} ${o.client}: без движения ${Math.floor(days)} дн.`);
   }
   return a;
 }
 
-// Итоги по деньгам (для дашборда): выручка/себестоимость/маржа по активным и за всё время
 export function docsTotals() {
   const all = orders();
-  const sum = (arr) => arr.reduce((s, o) => ({
-    revenue: s.revenue + (Number(o.price_client) || 0) + (o.extras || []).reduce((x, e) => x + (Number(e.price) || 0), 0),
-    cost: s.cost + (Number(o.cost) || 0),
-    margin: s.margin + orderMargin(o),
-  }), { revenue: 0, cost: 0, margin: 0 });
+  const sum = (arr) => arr.reduce((s, o) => {
+    const act = (o.works || []).filter(w => w.status !== 'Отмена');
+    return {
+      revenue: s.revenue + act.reduce((x, w) => x + (Number(w.price) || 0), 0),
+      cost: s.cost + act.reduce((x, w) => x + (Number(w.cost) || 0), 0),
+      margin: s.margin + orderMargin(o),
+    };
+  }, { revenue: 0, cost: 0, margin: 0 });
   return { active: sum(listOrders()), total: sum(all), count: all.length };
 }
