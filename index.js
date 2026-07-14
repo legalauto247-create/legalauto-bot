@@ -431,6 +431,8 @@ startAdScheduler();
 // Поэтому читаем партнёрские каналы через публичную ленту t.me/s/ (токен не
 // нужен), а публикуем одиночным sendMessage/sendPhoto (с getUpdates не конфликтует).
 startPublicChannelPoller(10);
+// Mission Engine: отбор лучших постов, слежение за подписчиками, вечерний отчёт Эдо
+import('./services/missionEngine.js').then(m => m.startMissionEngine()).catch(e => console.error('[Mission]', e.message));
 
 // ── Review Agent — запрос отзывов через 4 дня после заказа ────────────────
 setupReviewScheduler(clientBot);

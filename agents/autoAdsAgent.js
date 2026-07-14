@@ -214,7 +214,7 @@ function buildFallbackPost(text, channelName) {
 }
 
 // ── Отправить Эдо на одобрение ─────────────────────────────────────────────
-async function sendForApproval(rewrittenText, originalText, channelName, photos = []) {
+async function sendForApproval(rewrittenText, originalText, channelName, photos = [], scoreLine = '') {
   if (!ADMIN_BOT_TOKEN || !ADMIN_CHAT_ID) {
     console.log('[AutoAds] Нет ADMIN_BOT_TOKEN — публикую напрямую');
     return publishAd(rewrittenText, photos);
@@ -233,7 +233,7 @@ async function sendForApproval(rewrittenText, originalText, channelName, photos 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id:    ADMIN_CHAT_ID,
-        text:       `🚗 *Авто из канала "${channelName}"*\n\n${preview}`,
+        text:       `🚗 *Авто из канала "${channelName}"*${scoreLine ? `\n${scoreLine}` : ''}\n\n${preview}`,
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [[
@@ -343,6 +343,7 @@ export async function publishAd(text, photos = []) {
     const data = await apiForm('sendMediaGroup', fd);
     if (data.ok) {
       console.log(`[AutoAds] ✅ Опубликовано с ${buffers.length} фото`);
+      import('../services/missionEngine.js').then(m => m.recordMission('published')).catch(() => {});
       firePromo(text, photos);   // фоном: STORE-карточка + Shorts на YouTube
       return true;
     }
@@ -562,9 +563,16 @@ export async function pollPublicChannels() {
         const isListing = await isCarListing(post.text);
         if (!isListing) { console.log(`[AutoAds] ⏭ ${post.id} не авто`); continue; }
 
-        console.log(`[AutoAds] 🚗 ${post.id} — переписываю (${sent + 1}/${MAX_PER_RUN})`);
+        // Mission Engine: в работу идут ТОЛЬКО лучшие посты (ликвидность/цена/полнота)
+        const { scorePost, recordMission, MIN_SCORE } = await import('../services/missionEngine.js');
+        recordMission('scanned');
+        const { score, why } = await scorePost(post.text);
+        if (score < MIN_SCORE) { console.log(`[AutoAds] ⏭ ${post.id} score ${score}/10 (${why})`); continue; }
+        recordMission('picked', { note: `score ${score}: ${why}` });
+
+        console.log(`[AutoAds] 🚗 ${post.id} — score ${score}/10 (${why}), переписываю (${sent + 1}/${MAX_PER_RUN})`);
         const rewritten = await rewriteForChannel(post.text, ch);
-        await sendForApproval(rewritten, post.text, ch, post.photos);
+        await sendForApproval(rewritten, post.text, ch, post.photos, `⭐ ${score}/10 — ${why}`);
         sent++;
       }
       // seen двигаем только до реально просмотренных — непросмотренные останутся на след. прогон
