@@ -9,7 +9,7 @@
  */
 import http from 'http';
 import { getState, getSection } from './stateService.js';
-import { listOrders, docsAlerts } from './docsCrm.js';
+import { listOrders, docsAlerts, docsTotals, orderMargin } from './docsCrm.js';
 
 const KEY = process.env.DASHBOARD_KEY || process.env.ADMIN_CHAT_ID || 'legalauto';
 const GAS = process.env.APPS_SCRIPT_API_URL;
@@ -55,7 +55,7 @@ async function apiState() {
       active: Object.values(st.tasks || {}).filter(t => ['created', 'processing'].includes(t.status)).length,
       failed: Object.values(st.tasks || {}).filter(t => t.status === 'failed').slice(-5).map(t => ({ id: t.id.slice(0, 8), type: t.type, error: (t.error || '').slice(0, 90) })),
     },
-    docs: { orders: listOrders(), alerts: docsAlerts() },
+    docs: { orders: listOrders().map(o => ({ ...o, margin: orderMargin(o) })), alerts: docsAlerts(), totals: docsTotals() },
     events: (st.events || []).slice(-25).reverse().map(e => ({ at: e.at, kind: e.kind, note: e.note || '' })),
   };
 }
@@ -87,7 +87,7 @@ async function tick(){
   const vids=d.videos.map(v=>'<div class="row"><a target="_blank" href="'+esc(v.url)+'">'+esc(v.title)+'</a><span class="mut">'+v.at.slice(5,16).replace('T',' ')+'</span></div>').join('')||'<div class="mut">пока нет</div>';
   const parts=d.partners.map(p=>'<div class="row"><span>'+esc(p.ch)+'</span><span class="mut">'+esc(p.purpose||'')+'</span></div>').join('')||'<div class="mut">каналы не подключены</div>';
   const fails=d.tasks.failed.map(t=>'<div class="row bad"><span>'+esc(t.type)+'</span><span>'+esc(t.error)+'</span></div>').join('');
-  const orders=d.docs.orders.map(o=>'<div class="row"><span><b>'+esc(o.id)+'</b> '+esc(o.client)+' · '+esc(o.car)+' <span class="tag">'+esc(o.service)+'</span></span><span>'+esc(o.stage)+' · '+(o.client_paid?'<span class=ok>клиент ✓</span>':'<span class=bad>клиент ✗</span>')+' '+(o.lab_paid?'<span class=ok>лаб ✓</span>':'<span class=bad>лаб ✗</span>')+'</span></div>').join('')||'<div class="mut">заказов нет — добавь через Джарвиса: «новый заказ документов»</div>';
+  const orders=d.docs.orders.map(o=>'<div class="row"><span><b>'+esc(o.id)+'</b> '+esc(o.client)+' · '+esc(o.car)+' <span class="tag">'+esc(o.service)+'</span></span><span>'+esc(o.stage)+' · '+(o.client_paid?'<span class=ok>клиент ✓</span>':'<span class=bad>клиент ✗</span>')+' '+(o.lab_paid?'<span class=ok>лаб ✓</span>':'<span class=bad>лаб ✗</span>')+' · маржа <b>'+(o.margin||0).toLocaleString('ru-RU')+' ₽</b></span></div>').join('')||'<div class="mut">заказов нет — добавь через Джарвиса: «новый заказ документов»</div>';
   const alerts=d.docs.alerts.map(a=>'<div class="row warn">'+esc(a)+'</div>').join('');
   const ev=d.events.map(e=>'<div class="row"><span class="mut">'+e.at.slice(11,16)+'</span><span>'+esc(e.kind)+'</span><span class="mut">'+esc(e.note)+'</span></div>').join('');
   const ap=d.settings.video_autopilot==='off'?'<span class="bad">ВЫКЛ</span>':'<span class="ok">ВКЛ</span>';
@@ -102,7 +102,7 @@ async function tick(){
     '<div style="margin-top:10px" class="mut">Автопилот роликов: '+ap+' · Активных задач: '+d.tasks.active+'</div></div>'+
    '<div class="card"><h2>ИИ-сотрудники</h2>'+emp+'</div>'+
    '<div class="card"><h2>Подписчики каналов</h2>'+subs+'</div>'+
-   '<div class="card"><h2>Документы — СБКТС / ЭПТС / утиль</h2>'+alerts+orders+'</div>'+
+   '<div class="card"><h2>Документы — СБКТС / ЭПТС / утиль</h2><div class="kpi" style="margin-bottom:8px"><div><b>'+(d.docs.totals.active.revenue).toLocaleString('ru-RU')+'</b><span>выручка (актив), ₽</span></div><div><b>'+(d.docs.totals.active.margin).toLocaleString('ru-RU')+'</b><span>маржа (актив), ₽</span></div><div><b>'+(d.docs.totals.total.margin).toLocaleString('ru-RU')+'</b><span>маржа всего, ₽</span></div></div>'+alerts+orders+'</div>'+
    '<div class="card"><h2>Последние видео (YouTube)</h2>'+vids+'</div>'+
    '<div class="card"><h2>Каналы партнёров</h2>'+parts+'</div>'+
    (fails?'<div class="card"><h2>Провалы</h2>'+fails+'</div>':'')+

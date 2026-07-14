@@ -1,8 +1,10 @@
 /**
  * LegalAuto — CRM направления «Документы» (СБКТС / ЭПТС / утильсбор).
  *
- * Учёт заказов: клиент, авто, услуга, стадия, оплаты (клиент → нам, мы → лаборатории).
- * Хранится в Platform State (Railway Volume). Управление — через Джарвиса или дашборд.
+ * Учёт заказов: клиент, авто, услуга, стадия, деньги (цена клиенту, себестоимость,
+ * доп-услуги → маржа). Нумерация по клиенту: у каждого клиента своя буква,
+ * авто нумеруются внутри — А1, А2 (первый клиент), Б1 (второй клиент).
+ * Хранится ТОЛЬКО на сервере Эдо (Railway Volume). Управление — Джарвис или дашборд.
  */
 import { getSection, setSection, logEvent } from './stateService.js';
 
@@ -15,23 +17,47 @@ function orders() {
 }
 function save(list) { setSection('docs_orders', { list }); }
 
-export function addOrder({ client, phone = '', car, vin = '', service = 'СБКТС+ЭПТС', amount_client = 0, amount_lab = 0, notes = '' }) {
+// У каждого клиента — своя буква (А, Б, В...). Повторный клиент = та же буква.
+const LETTERS = 'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯ';
+function clientLetter(client, list) {
+  const key = String(client).trim().toLowerCase();
+  const known = {};
+  for (const o of list) if (o.client_key) known[o.client_key] = o.id.replace(/\d+$/, '');
+  if (known[key]) return known[key];
+  const used = new Set(Object.values(known));
+  for (const ch of LETTERS) if (!used.has(ch)) return ch;
+  return 'Я';
+}
+
+export function addOrder({ client, phone = '', car, vin = '', service = 'СБКТС+ЭПТС', price_client = 0, cost = 0, extras = [], notes = '' }) {
   const list = orders();
-  const id = 'D' + String(list.length + 1).padStart(3, '0');
+  const letter = clientLetter(client, list);
+  const n = list.filter(o => o.id.replace(/\d+$/, '') === letter).length + 1;
+  const id = `${letter}${n}`;
   const now = new Date().toISOString();
-  const o = { id, client, phone, car, vin, service, stage: STAGES[0], client_paid: false, lab_paid: false, amount_client, amount_lab, notes, created: now, updated: now };
+  const o = {
+    id, client_key: String(client).trim().toLowerCase(), client, phone, car, vin, service,
+    stage: STAGES[0], client_paid: false, lab_paid: false,
+    price_client, cost, extras, notes, created: now, updated: now,
+  };
   list.unshift(o); save(list);
   logEvent('docs_order_new', { note: `${id}: ${client} — ${car} (${service})` });
   return o;
+}
+
+// Маржа = (цена клиенту + доп-услуги) − себестоимость
+export function orderMargin(o) {
+  const extrasSum = (o.extras || []).reduce((s, e) => s + (Number(e.price) || 0), 0);
+  return (Number(o.price_client) || 0) + extrasSum - (Number(o.cost) || 0);
 }
 
 export function updateOrder(id, patch = {}) {
   const list = orders();
   const o = list.find(x => x.id.toLowerCase() === String(id).toLowerCase());
   if (!o) return null;
-  const allowed = ['stage', 'client_paid', 'lab_paid', 'amount_client', 'amount_lab', 'notes', 'vin', 'phone'];
+  const allowed = ['stage', 'client_paid', 'lab_paid', 'price_client', 'cost', 'notes', 'vin', 'phone'];
   for (const k of allowed) if (patch[k] !== undefined) o[k] = patch[k];
-  if (patch.stage && !STAGES.includes(patch.stage)) o.stage = patch.stage; // свободная стадия тоже ок
+  if (patch.add_extra?.name) (o.extras = o.extras || []).push({ name: patch.add_extra.name, price: Number(patch.add_extra.price) || 0 });
   o.updated = new Date().toISOString();
   save(list);
   logEvent('docs_order_upd', { note: `${o.id}: ${JSON.stringify(patch).slice(0, 100)}` });
@@ -43,17 +69,22 @@ export function listOrders({ activeOnly = true } = {}) {
   return activeOnly ? all.filter(o => o.stage !== 'выдано клиенту') : all;
 }
 
+const rub = (n) => `${Number(n || 0).toLocaleString('ru-RU')} ₽`;
+
 export function fmtOrder(o) {
+  const extras = (o.extras || []).map(e => `${e.name} ${rub(e.price)}`).join(', ');
   return [
     `${o.id} · ${o.client}${o.phone ? ` (${o.phone})` : ''}`,
     `🚗 ${o.car}${o.vin ? ` · VIN ${o.vin}` : ''}`,
     `📄 ${o.service} — стадия: ${o.stage}`,
-    `💰 Клиент: ${o.client_paid ? '✅ оплатил' : '❌ НЕ оплатил'}${o.amount_client ? ` (${Number(o.amount_client).toLocaleString('ru-RU')} ₽)` : ''} · Лаборатория: ${o.lab_paid ? '✅ оплачено' : '❌ НЕ оплачено'}${o.amount_lab ? ` (${Number(o.amount_lab).toLocaleString('ru-RU')} ₽)` : ''}`,
+    `💰 Клиенту: ${rub(o.price_client)}${o.client_paid ? ' ✅ оплачено' : ' ❌ не оплачено'} · Себестоимость: ${rub(o.cost)}${o.lab_paid ? ' ✅ лаб. оплачена' : ' ❌ лаб. не оплачена'}`,
+    extras ? `➕ Доп: ${extras}` : '',
+    `📈 Маржа: ${rub(orderMargin(o))}`,
     o.notes ? `📝 ${o.notes}` : '',
   ].filter(Boolean).join('\n');
 }
 
-// Сводка для Джарвиса/отчёта: что требует внимания
+// Сводка: что требует внимания
 export function docsAlerts() {
   const act = listOrders();
   const a = [];
@@ -64,4 +95,15 @@ export function docsAlerts() {
     if (days > 3 && o.stage !== 'готово') a.push(`⏳ ${o.id} ${o.client}: без движения ${Math.floor(days)} дн. (${o.stage})`);
   }
   return a;
+}
+
+// Итоги по деньгам (для дашборда): выручка/себестоимость/маржа по активным и за всё время
+export function docsTotals() {
+  const all = orders();
+  const sum = (arr) => arr.reduce((s, o) => ({
+    revenue: s.revenue + (Number(o.price_client) || 0) + (o.extras || []).reduce((x, e) => x + (Number(e.price) || 0), 0),
+    cost: s.cost + (Number(o.cost) || 0),
+    margin: s.margin + orderMargin(o),
+  }), { revenue: 0, cost: 0, margin: 0 });
+  return { active: sum(listOrders()), total: sum(all), count: all.length };
 }
