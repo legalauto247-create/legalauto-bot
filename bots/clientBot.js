@@ -376,6 +376,9 @@ const KB_MAIN = {
       ],
       [
         { text: '📋 Статус моей заявки',       callback_data: 'svc_status'  },
+        { text: '📄 Статус документов',        callback_data: 'svc_docs'    },
+      ],
+      [
         { text: '🎁 Пригласить друга (+500₽)', callback_data: 'svc_ref'     },
       ],
     ]
@@ -450,6 +453,7 @@ export function setupClientBot(bot) {
     { command: 'calc',      description: '🚢 Расчёт растаможки под ключ' },
     { command: 'util',      description: '🧮 Калькулятор утильсбора' },
     { command: 'status',    description: '📋 Статус моей заявки' },
+    { command: 'docs',      description: '📄 Статус документов (СБКТС/ЭПТС)' },
     { command: 'subscribe', description: '🔔 Уведомить о поступлении' },
     { command: 'mysubs',    description: '📑 Мои подписки' },
     { command: 'oem',       description: '🔍 Поиск по OEM-артикулу' },
@@ -731,6 +735,11 @@ export function setupClientBot(bot) {
   });
 
   // ── 📋 СБКТС / ЭПТС ──────────────────────────────────────────────────────
+  bot.command('docs', async (ctx) => {
+    setState(ctx.chat.id, { service: 'docs_status' });
+    await ctx.reply('📄 Введите последние 6 символов VIN вашего авто (или номер телефона, который оставляли менеджеру):');
+  });
+
   bot.action('svc_docs', async (ctx) => {
     await ctx.answerCbQuery();
     await ctx.reply(
@@ -835,6 +844,13 @@ export function setupClientBot(bot) {
   });
 
   // ── 📋 Статус заявки ──────────────────────────────────────────────────────
+  // ── Статус документов (СБКТС/ЭПТС/утиль): клиент сам смотрит стадию, как трекинг посылки ──
+  bot.action('svc_docs', async (ctx) => {
+    await ctx.answerCbQuery();
+    setState(ctx.chat.id, { service: 'docs_status' });
+    await ctx.reply('📄 Введите последние 6 символов VIN вашего авто (или номер телефона, который оставляли менеджеру):');
+  });
+
   bot.action('svc_status', async (ctx) => {
     await ctx.answerCbQuery();
     const chatId = String(ctx.chat.id);
@@ -1087,6 +1103,35 @@ export function setupClientBot(bot) {
     if (text.startsWith('/')) return;
 
     const state = getState(ctx.chat.id);
+
+    // ── Статус документов: поиск по хвосту VIN или телефону ──────────────────
+    if (state?.service === 'docs_status') {
+      clearState(ctx.chat.id);
+      const q = text.replace(/[^A-Za-z0-9А-Яа-я+]/g, '').toUpperCase();
+      if (q.length < 5) return ctx.reply('Нужно минимум 5 символов VIN или телефон. Попробуйте ещё раз через «📄 Статус документов».');
+      try {
+        const { listOrders } = await import('../services/docsCrm.js');
+        const digits = q.replace(/\D/g, '');
+        const found = listOrders({ activeOnly: false }).filter(o =>
+          (o.vin && o.vin.toUpperCase().endsWith(q)) ||
+          (digits.length >= 10 && String(o.phone || '').replace(/\D/g, '').endsWith(digits.slice(-10)))
+        ).slice(0, 3);
+        if (!found.length) {
+          return ctx.reply(`По этим данным ничего не нашли. Проверьте VIN или напишите менеджеру: @${MGR}`);
+        }
+        // клиентские формулировки стадий (без внутренней кухни и денег)
+        const LBL = { 'Ожидание': '🕐 В очереди на оформление', 'Макет': '📐 Готовим макет документов', 'Печать': '🖨 Документы печатаются', 'Эптс': '📄 Оформляем ЭПТС', 'Выпущено': '✅ Готово — можно забирать', 'Оплачено': '✅ Выдано', 'Отмена': '🚫 Отменено' };
+        const msg = found.map(o => [
+          `🚗 ${o.car}${o.vin ? ` (VIN …${o.vin.slice(-6)})` : ''}`,
+          ...(o.works || []).map(w => `• ${w.type}: ${LBL[w.status] || w.status}`),
+        ].join('\n')).join('\n\n');
+        return ctx.reply(`📄 Статус ваших документов:\n\n${msg}\n\nВопросы — менеджер @${MGR}`, { reply_markup: { inline_keyboard: [[
+          { text: '📲 Написать менеджеру', url: `https://t.me/${MGR}` },
+        ]]}});
+      } catch (e) {
+        return ctx.reply(`Не получилось проверить. Напишите менеджеру: @${MGR}`);
+      }
+    }
 
     // ── Платный калькулятор растаможки/утиля ──────────────────────────────────
     if (state?.service === 'calc_import') {
