@@ -120,8 +120,8 @@ function isCarListingSimple(text) {
 
 // ── Брендинг LegalAutoStore (зашит, не от AI — чужие контакты не просочатся) ─
 const BRAND_MANAGER  = process.env.STORE_MANAGER  || '@LegalAuto247';
-const BRAND_PHONE    = process.env.STORE_PHONE    || '+79385152429';
-const BRAND_WHATSAPP = process.env.STORE_WHATSAPP || '+79385152429';
+const BRAND_PHONE    = process.env.STORE_PHONE    || '+7 938 515 24 29';
+const BRAND_WHATSAPP = process.env.STORE_WHATSAPP || '+7 938 515 24 29';
 
 const BRAND_FOOTER =
   `🎯 LegalAutoStore — гарантированная легальность и надёжность каждого автомобиля! ✅\n\n` +
@@ -134,7 +134,7 @@ const BRAND_FOOTER =
 // чужие @юзернеймы, телефоны, ссылки, строки "Заказать/Связаться" партнёра.
 function stripForeignContacts(text) {
   const OURS = /^(legalauto|legalautostore|legalauto247|legalautoassist|legalautoparts|legalauto24|legalautopartsbot)/i;
-  return text
+  return decodeEntities(text)
     .split('\n')
     .map(line => {
       // строки с телефоном / WhatsApp / «Заказать» / «Связаться» источника — убираем целиком
@@ -159,12 +159,12 @@ function stripForeignContacts(text) {
 function enforcePrice(body, price) {
   if (!price) return body;
   if (/Цена под ключ:/i.test(body)) {
-    return body.replace(/Цена под ключ:.*/i, `💰 Цена под ключ: ${price}`);
+    return body.replace(/^.*Цена под ключ:.*$/im, `💰 Цена под ключ: ${price}`);
   }
   return `${body}\n💰 Цена под ключ: ${price}`;
 }
 
-async function rewriteForChannel(originalText, channelName) {
+export async function rewriteForChannel(originalText, channelName) {
   const clean = stripForeignContacts(originalText);
   const price = extractPriceFromText(originalText);   // точная цена из источника
   if (!claude) return enforcePrice(buildFallbackPost(clean, channelName), price);
@@ -176,28 +176,26 @@ async function rewriteForChannel(originalText, channelName) {
       messages: [{
         role: 'user',
         content:
-`Перепиши объявление об авто в фирменный пост канала LegalAutoStore. Строго по шаблону ниже.
+`Ты — автоэксперт LegalAutoStore (пригон авто под ключ из Китая/Кореи в РФ). Перепиши объявление в продающий пост нашего канала.
 
-ЖЁСТКИЕ ЗАПРЕТЫ:
-- НЕ упоминай другие магазины, каналы, @юзернеймы, телефоны, ссылки, имена продавцов из исходника. Только LegalAutoStore.
-- НЕ пиши про СБКТС, ЭПТС, "оформим документы", "помощь с документами". Это пост о ПРОДАЖЕ авто, не об услугах.
-- НЕ добавляй блок контактов — его добавят автоматически.
+ГОЛОС БРЕНДА: прямо и по фактам, на «вы», уверенно, по-человечески, без пафоса. Каждое утверждение — из исходника.
+ЗАПРЕЩЕНО (слоп): «откройте для себя», «не упустите», «индивидуальный подход», «лучшие цены», пустые прилагательные без факта («отличный», «превосходный»), >1 эмодзи на строку, «!!!», выдуманные данные.
+ЖЁСТКО: никаких чужих магазинов/@юзернеймов/телефонов/ссылок из исходника. Без блока контактов (добавится сам). Не пиши про СБКТС/ЭПТС/услуги — это пост о продаже авто.
 
-ШАБЛОН (заполни данными из исходника, что нет — пропусти строку):
-🚗 Автомобиль в продаже
+СТРУКТУРА:
+🚗 {Марка Модель} {год} — заголовок-факт: главное преимущество ЭТОЙ машины цифрой или конкретикой (не эпитетом)
+{1-2 живые фразы: для кого эта машина и что в ней реально ценно — из характеристик исходника}
 
-✨ {Марка Модель} — {краткий цепляющий эпитет}!
-
-📋 Технические характеристики:
-📅 Год выпуска: {год}
-🛣 Пробег: {пробег} км
-⛽ Двигатель: {топливо}, {объём} ({л.с} л.с)
-🔄 Привод: {привод}
+📋 Факты:
+📅 {год} · 🛣 {пробег} км · ⛽ {двигатель, л.с.} · 🔄 {привод/коробка — если есть}
+{комплектация/опции из исходника — 1 строка, если есть}
 
 💰 Цена под ключ: ${price || '{цена}'}
 🌍 Доставка в РФ: 6-8 недель
 
-ЦЕНА: впиши РОВНО «${price || 'как в исходнике'}», не меняй цифры.
+{1 строка-закрытие: конкретная причина написать сейчас — из фактов (напр. «Такой пробег на M6 — редкость, уйдёт быстро»), НЕ «не упустите»}
+
+ЦЕНА: впиши РОВНО «${price || 'как в исходнике'}», цифры не менять.
 
 Исходное объявление:
 "${clean.substring(0, 700)}"`,
@@ -467,6 +465,7 @@ function decodeEntities(s) {
   return s
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<[^>]+>/g, '')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
     .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ')
     .trim();
