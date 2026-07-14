@@ -25,19 +25,41 @@ export type StoreShortsProps = {
 };
 
 const FPS = 30;
-const ACC = '#00D1C2';   // ЛИСТ 6: акцент бирюзой на ключевых словах
+// ЛИСТ 4 (STORE): чёрно-ЗОЛОТОЙ премиум. Золото — главный акцент, бирюза — точечно (наличие).
 const GOLD = '#D4AF37';
+const ACC = GOLD;               // акцент ключевых слов = золото (по эталону Эдо)
+const TEAL = '#00D1C2';         // бирюза из палитры — только мелкие элементы
+const GOLD_GRAD = 'linear-gradient(120deg, #FFD700 0%, #D4AF37 55%, #9A7B1E 100%)';   // «GOLD LIGHT» ЛИСТ 7
 const ease = Easing.bezier(0.22, 1, 0.36, 1);
 // границы кадров (сек по эталону): 0-3, 3-6, 6-12, 12-18, 18-24, 24-30
 const F = [0, 90, 180, 360, 540, 720, 900];
 export const storeShortsDuration = () => 900;
 
+// Щит STORE — золотой (ЛИСТ 4: у направления Store золотой логотип)
 const Shield: React.FC<{ size?: number }> = ({ size = 64 }) => (
   <svg width={size} height={size * 1.13} viewBox="0 0 92 104" fill="none">
-    <path d="M46 4 L84 18 V52 C84 78 66 94 46 100 C26 94 8 78 8 52 V18 Z" fill="#0D0D0D" stroke="#C0C0C0" strokeWidth="3.5" />
-    <text x="46" y="63" fontFamily={FONT} fontWeight="700" fontSize="38" fill="#E6E9EC" textAnchor="middle">LA</text>
+    <path d="M46 4 L84 18 V52 C84 78 66 94 46 100 C26 94 8 78 8 52 V18 Z" fill="#0D0D0D" stroke={GOLD} strokeWidth="3.5" />
+    <text x="46" y="63" fontFamily={FONT} fontWeight="700" fontSize="38" fill={GOLD} textAnchor="middle">LA</text>
   </svg>
 );
+
+// ЛИСТ 4, правило: «Логотип всегда в левом верхнем углу» — фирменная шапка на всём ролике
+const TopBrand: React.FC = () => (
+  <div style={{ position: 'absolute', top: 64, left: 56, display: 'flex', alignItems: 'center', gap: 14, zIndex: 21 }}>
+    <Shield size={46} />
+    <div>
+      <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 26, letterSpacing: 1.5, color: '#fff', lineHeight: 1.1 }}>LEGAL AUTO <span style={{ color: GOLD }}>STORE</span></div>
+      <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 15, letterSpacing: 2.2, color: '#9AA1A8' }}>ПОДБОР И ПРОДАЖА АВТО</div>
+    </div>
+  </div>
+);
+
+// Золотая акцент-линия под заголовком (ЛИСТ 4 «золотые линии»)
+const GoldLine: React.FC<{ width?: number; delay?: number }> = ({ width = 320, delay = 6 }) => {
+  const f = useCurrentFrame();
+  const s = spring({ frame: f - delay, fps: FPS, config: { damping: 16 } });
+  return <div style={{ marginTop: 18, height: 4, width: width * s, borderRadius: 3, background: GOLD_GRAD, boxShadow: `0 0 18px ${GOLD}80` }} />;
+};
 
 // Фото-фон кадра: Ken Burns, направление чередуется
 const Photo: React.FC<{ src: string; dur: number; mode?: 'in' | 'pan' | 'out' }> = ({ src, dur, mode = 'in' }) => {
@@ -104,7 +126,7 @@ const Progress: React.FC = () => {
         const fill = f <= from ? 0 : f >= to ? 1 : (f - from) / (to - from);
         return (
           <div key={i} style={{ flex: 1, height: 4, borderRadius: 3, background: 'rgba(255,255,255,0.18)', overflow: 'hidden' }}>
-            <div style={{ width: `${fill * 100}%`, height: '100%', borderRadius: 3, background: i % 2 ? GOLD : ACC, boxShadow: `0 0 8px ${i % 2 ? GOLD : ACC}` }} />
+            <div style={{ width: `${fill * 100}%`, height: '100%', borderRadius: 3, background: GOLD_GRAD, boxShadow: `0 0 8px ${GOLD}` }} />
           </div>
         );
       })}
@@ -157,13 +179,13 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
   // Наличие определяет всю подачу: в наличии = «забирай сегодня», под заказ = «привезём под ключ»
   const inStock = p.avail === 'stock';
   const availLabel = inStock ? '✓ В НАЛИЧИИ В РФ' : `✈ ПОД ЗАКАЗ${p.eta ? ` • ${p.eta}` : ' • ПРИГОН ПОД КЛЮЧ'}`;
-  const availColor = inStock ? ACC : GOLD;
+  const availColor = inStock ? TEAL : GOLD;
   const ctaWhite = inStock ? `${p.model.toUpperCase()} УЖЕ В РФ —` : `ПРИВЕЗЁМ ТВОЙ ${p.model.toUpperCase()}`;
   const ctaAccent = inStock ? 'ЗАБИРАЙ СЕГОДНЯ' : 'ПОД КЛЮЧ';
 
   return (
     <AbsoluteFill style={{ background: '#0A0A0A' }}>
-      {p.musicFile ? <Audio src={staticFile(p.musicFile)} volume={0.6} /> : null}
+      {p.musicFile ? <Audio src={staticFile(p.musicFile)} volume={0.82} /> : null}
       {/* SFX: удар на хуке + whoosh на каждой смене кадра — «дорогое» звучание */}
       {p.sfxImpact ? <Sequence from={2} durationInFrames={40}><Audio src={staticFile(p.sfxImpact)} volume={0.85} /></Sequence> : null}
       {p.sfxWhoosh ? [1, 2, 3, 4, 5].map((i) => (
@@ -186,7 +208,7 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
             </div>
           </In>
         </AbsoluteFill>
-        <LogoBottom line="LEGAL AUTO STORE" />
+        
       </Sequence>
 
       {/* 02 МОЩЬ 3-6с */}
@@ -196,7 +218,7 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
           <In><H white="МОЩЬ" size={92} /></In>
           <In delay={6}><div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 52, color: ACC, marginTop: 18, textShadow: '0 3px 20px rgba(0,0,0,.9)' }}>{p.power}</div></In>
         </AbsoluteFill>
-        <LogoBottom />
+        
       </Sequence>
 
       {/* 03 КОМПЛЕКТАЦИЯ 6-12с: чек-лист опций */}
@@ -206,7 +228,7 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
           <In><H white="МАКСИМАЛЬНАЯ" accent="КОМПЛЕКТАЦИЯ" size={62} /></In>
           <div style={{ marginTop: 44 }}><Check items={(p.options || []).slice(0, 6)} /></div>
         </AbsoluteFill>
-        <LogoBottom />
+        
       </Sequence>
 
       {/* 04 СОСТОЯНИЕ 12-18с: крупный план */}
@@ -216,7 +238,7 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
           <In><H white="ИДЕАЛЬНОЕ" accent="СОСТОЯНИЕ" size={72} /></In>
           <In delay={8}><div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 44, color: '#F0F2F4', marginTop: 22, textShadow: '0 3px 18px rgba(0,0,0,.9)' }}>{p.condition}</div></In>
         </AbsoluteFill>
-        <LogoBottom />
+        
       </Sequence>
 
       {/* 05 ДОВЕРИЕ 18-24с: чек-лист гарантий */}
@@ -226,7 +248,7 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
           <In><H white="ПРОВЕРЕН И ГОТОВ" accent="К НОВОМУ ВЛАДЕЛЬЦУ" size={58} /></In>
           <div style={{ marginTop: 44 }}><Check items={(p.trust || []).slice(0, 4)} /></div>
         </AbsoluteFill>
-        <LogoBottom />
+        
       </Sequence>
 
       {/* 06 ФИНАЛ CTA 24-30с */}
@@ -245,13 +267,14 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
             </In>
           ) : null}
           <In delay={14}>
-            <div style={{ marginTop: 30, display: 'inline-flex', alignItems: 'center', gap: 12, background: ACC, color: '#0A0A0A', fontFamily: FONT, fontWeight: 700, fontSize: 40, padding: '20px 42px', borderRadius: 16, boxShadow: `0 10px 44px ${ACC}55` }}>✈ {channel}</div>
+            <div style={{ marginTop: 30, display: 'inline-flex', alignItems: 'center', gap: 12, background: GOLD_GRAD, color: '#0A0A0A', fontFamily: FONT, fontWeight: 700, fontSize: 40, padding: '20px 42px', borderRadius: 16, boxShadow: `0 10px 44px ${GOLD}66` }}>✈ {channel}</div>
           </In>
           <In delay={16}><div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 28, color: '#C8CDD2', marginTop: 24 }}>Свяжись с нами и узнай больше</div></In>
         </AbsoluteFill>
         <LogoBottom line="ФАКТЫ • КОНТРОЛЬ • РЕЗУЛЬТАТ" />
       </Sequence>
 
+      <TopBrand />
       <Progress />
     </AbsoluteFill>
   );
