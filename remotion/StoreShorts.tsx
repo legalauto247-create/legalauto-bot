@@ -219,6 +219,8 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
       {/* 06 ФИНАЛ CTA 24-30с */}
       <Sequence from={F[5]} durationInFrames={F[6] - F[5]}>
         <Photo src={ph(0)} dur={F[6] - F[5]} mode="out" /><Scrim /><Flash color="#D4AF37" />
+        {/* доп. затемнение по центру — CTA-текст читается на любом (даже белом) фото */}
+        <AbsoluteFill style={{ background: 'radial-gradient(ellipse 90% 62% at 50% 50%, rgba(10,10,10,0.72) 0%, rgba(10,10,10,0.45) 55%, transparent 100%)' }} />
         <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 70px' }}>
           <In><H white={`ТВОЙ НОВЫЙ ${p.model.toUpperCase()}`} accent="ЖДЁТ ТЕБЯ" size={68} /></In>
           {p.price ? (
