@@ -624,6 +624,11 @@ avail — КЛЮЧЕВОЕ ПОЛЕ, определи строго по текс
   if (d.avail !== 'stock') d.avail = 'order';   // по умолчанию — под заказ, мы пригоняем
   if (!d.eta) { const em = String(text).match(/(\d{1,2}\s*[-–—]\s*\d{1,3}|\d{1,3})\s*дн/); if (em) d.eta = `${em[1].replace(/\s/g, '')} дней`; }
 
+  // Анти-слоп: «не указано/неизвестно/по запросу» в кадре недопустимы — вырезаем
+  const deslop = (s) => String(s || '').split('/').map(x => x.trim()).filter(x => x && !/не указан|неизвест|нет данных|отсутств|не разобра/i.test(x)).join(' / ');
+  d.condition = deslop(d.condition); d.power = deslop(d.power);
+  d.options = (d.options || []).filter(o => o && !/не указан|неизвест|нет данных/i.test(o));
+
   // 2) Quality Gate против исходного поста
   const gate = await reviewContent({
     title: d.title || `${d.brand} ${d.model}`, description: `${d.description || ''}\n➡️ @LegalAutoStore · t.me/LegalAutoAssist_bot?start=yt_store`,
