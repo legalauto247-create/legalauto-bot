@@ -5,8 +5,9 @@ import {
 } from 'remotion';
 import { theme, FONT, ensureFonts } from './theme';
 
-// Эталон: ЛИСТ 6 — YouTube Shorts, 6 кадров / 30 секунд (1080x1920).
-// 1 хук 0-3 → 2 мощь 3-6 → 3 комплектация 6-12 → 4 состояние 12-18 → 5 доверие 18-24 → 6 CTA 24-30.
+// Эталон: ЛИСТ 4 (STORE, чёрно-золотой премиум) + ЛИСТ 6 (структура Shorts) + ЛИСТ 7 (motion).
+// Карточная вёрстка: фото в золотой рамке + инфопанель с иконками — как в эталоне Эдо.
+// 1 хук 0-3 → 2 характеристики 3-6 → 3 комплектация 6-12 → 4 состояние 12-18 → 5 доверие 18-24 → 6 CTA 24-30.
 export type StoreShortsProps = {
   brand: string; model: string; year?: string;
   hook: string;                 // «ПРЕМИУМ КОТОРЫЙ ВПЕЧАТЛЯЕТ»
@@ -25,17 +26,15 @@ export type StoreShortsProps = {
 };
 
 const FPS = 30;
-// ЛИСТ 4 (STORE): чёрно-ЗОЛОТОЙ премиум. Золото — главный акцент, бирюза — точечно (наличие).
 const GOLD = '#D4AF37';
-const ACC = GOLD;               // акцент ключевых слов = золото (по эталону Эдо)
-const TEAL = '#00D1C2';         // бирюза из палитры — только мелкие элементы
-const GOLD_GRAD = 'linear-gradient(120deg, #FFD700 0%, #D4AF37 55%, #9A7B1E 100%)';   // «GOLD LIGHT» ЛИСТ 7
-const ease = Easing.bezier(0.22, 1, 0.36, 1);
-// границы кадров (сек по эталону): 0-3, 3-6, 6-12, 12-18, 18-24, 24-30
+const TEAL = '#00D1C2';
+const BG = '#0B0F14';
+const SURF = 'rgba(18, 23, 30, 0.92)';
+const GOLD_GRAD = 'linear-gradient(120deg, #FFD700 0%, #D4AF37 55%, #9A7B1E 100%)';
+const HAIR = 'rgba(212,175,55,0.4)';   // золотая волосяная окантовка
 const F = [0, 90, 180, 360, 540, 720, 900];
 export const storeShortsDuration = () => 900;
 
-// Щит STORE — золотой (ЛИСТ 4: у направления Store золотой логотип)
 const Shield: React.FC<{ size?: number }> = ({ size = 64 }) => (
   <svg width={size} height={size * 1.13} viewBox="0 0 92 104" fill="none">
     <path d="M46 4 L84 18 V52 C84 78 66 94 46 100 C26 94 8 78 8 52 V18 Z" fill="#0D0D0D" stroke={GOLD} strokeWidth="3.5" />
@@ -43,7 +42,22 @@ const Shield: React.FC<{ size?: number }> = ({ size = 64 }) => (
   </svg>
 );
 
-// ЛИСТ 4, правило: «Логотип всегда в левом верхнем углу» — фирменная шапка на всём ролике
+// Мини-иконки в стиле эталона (тонкая линия, золото)
+const Ico: React.FC<{ d: string }> = ({ d }) => (
+  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
+);
+const I = {
+  gauge: 'M12 15 L16 9 M12 21 a9 9 0 1 1 0 -18 a9 9 0 0 1 0 18 M7 17 a6.6 6.6 0 0 1 10 0',
+  engine: 'M5 9 H9 L11 7 H15 V9 H18 V15 H15 V17 H11 L9 15 H5 Z M3 11 V13 M21 11 V13',
+  gear: 'M12 8 V4 M12 8 a4 4 0 1 0 0 8 a4 4 0 0 0 0 -8 M12 16 V20 M8 12 H4 M20 12 H16',
+  drive: 'M7 7 a2 2 0 1 0 0.01 0 M17 7 a2 2 0 1 0 0.01 0 M7 17 a2 2 0 1 0 0.01 0 M17 17 a2 2 0 1 0 0.01 0 M9 9 L15 15 M15 9 L9 15',
+  shield: 'M12 3 L20 6 V12 C20 17 16.5 20 12 21.5 C7.5 20 4 17 4 12 V6 Z M9 12 L11 14 L15 10',
+  doc: 'M7 3 H14 L19 8 V21 H7 Z M14 3 V8 H19 M10 13 H16 M10 17 H16',
+  truck: 'M2 7 H14 V16 H2 Z M14 10 H18 L21 13 V16 H14 M6 19 a1.6 1.6 0 1 0 0.01 0 M17 19 a1.6 1.6 0 1 0 0.01 0',
+  key: 'M14 10 a4 4 0 1 0 -4 4 L4 20 V22 H8 L8.5 19.5 L11 19 L10 14',
+};
+
+// ЛИСТ 4: «Логотип всегда в левом верхнем углу»
 const TopBrand: React.FC = () => (
   <div style={{ position: 'absolute', top: 64, left: 56, display: 'flex', alignItems: 'center', gap: 14, zIndex: 21 }}>
     <Shield size={46} />
@@ -54,116 +68,89 @@ const TopBrand: React.FC = () => (
   </div>
 );
 
-// Золотая акцент-линия под заголовком (ЛИСТ 4 «золотые линии»)
-const GoldLine: React.FC<{ width?: number; delay?: number }> = ({ width = 320, delay = 6 }) => {
-  const f = useCurrentFrame();
-  const s = spring({ frame: f - delay, fps: FPS, config: { damping: 16 } });
-  return <div style={{ marginTop: 18, height: 4, width: width * s, borderRadius: 3, background: GOLD_GRAD, boxShadow: `0 0 18px ${GOLD}80` }} />;
-};
-
-// Фото-фон кадра: Ken Burns, направление чередуется
-const Photo: React.FC<{ src: string; dur: number; mode?: 'in' | 'pan' | 'out' }> = ({ src, dur, mode = 'in' }) => {
-  const f = useCurrentFrame();
-  // Машина ВСЕГДА ЦЕЛИКОМ: contain на размытой подложке (Эдо: «кроп — непонятно какая машина»).
-  // Панч-въезд (ЛИСТ 7) — на самом фото, мягкий, без обрезки.
-  const punch = spring({ frame: f, fps: FPS, config: { damping: 15, stiffness: 110 } });
-  const scale = interpolate(punch, [0, 1], [1.14, 1.0]) + interpolate(f, [0, dur], [0, 0.05]);
-  const panX = mode === 'pan' ? interpolate(f, [0, dur], [-16, 16]) : 0;
-  const url = /^https?:/.test(src) ? src : staticFile(src);
-  return (
-    <AbsoluteFill>
-      {/* подложка: то же фото, blur + затемнение — заполняет вертикаль без обрезки авто */}
-      <Img src={url} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(38px) brightness(0.42) saturate(1.1)', transform: 'scale(1.3)' }} />
-      {/* само фото: ЦЕЛИКОМ, по центру, лёгкий панч и дрейф */}
-      <Img src={url} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', transform: `scale(${scale}) translateX(${panX}px)`, filter: 'drop-shadow(0 24px 44px rgba(0,0,0,.6))' }} />
-    </AbsoluteFill>
-  );
-};
-
-// ЛИСТ 7: световой штрих (light streak) — проходит по кадру в начале сцены
-const Sweep: React.FC<{ color?: string }> = ({ color = '#00D1C2' }) => {
-  const f = useCurrentFrame();
-  const x = interpolate(f, [0, 26], [-40, 140], { extrapolateRight: 'clamp' });
-  const op = interpolate(f, [0, 6, 22, 30], [0, 0.9, 0.5, 0], { extrapolateRight: 'clamp' });
-  return <AbsoluteFill style={{ background: `linear-gradient(105deg, transparent ${x - 14}%, ${color}55 ${x}%, transparent ${x + 14}%)`, mixBlendMode: 'screen', opacity: op }} />;
-};
-
-// золотые частицы-бокэ (премиум-атмосфера, ЛИСТ 7 bokeh)
-const Gold: React.FC = () => {
-  const f = useCurrentFrame();
-  const dots = [];
-  for (let i = 0; i < 14; i++) {
-    const seed = (i * 9301 + 49297) % 233280;
-    const rx = seed / 233280, ry = ((seed * 7 + 13) % 233280) / 233280;
-    const size = 5 + rx * 12;
-    const y = ((ry * 1920 - f * (0.4 + ry) * 2.4) % 2040 + 2040) % 2040 - 60;
-    const tw = 0.2 + 0.5 * (0.5 + 0.5 * Math.sin(f * 0.06 + i * 1.7));
-    dots.push(<div key={i} style={{ position: 'absolute', left: `${rx * 100}%`, top: y, width: size, height: size, borderRadius: '50%', background: i % 2 ? '#D4AF37' : '#F2E6B1', opacity: tw * 0.4, filter: `blur(${size > 10 ? 3 : 1}px)`, boxShadow: '0 0 12px #D4AF37' }} />);
-  }
-  return <AbsoluteFill style={{ mixBlendMode: 'screen', pointerEvents: 'none' }}>{dots}</AbsoluteFill>;
-};
-
-// Скрим для читаемости + низовой градиент
-const Scrim: React.FC = () => (
-  <AbsoluteFill style={{ background: 'linear-gradient(to bottom, rgba(10,10,10,0.42) 0%, transparent 30%, transparent 48%, rgba(10,10,10,0.78) 76%, rgba(10,10,10,0.95) 100%)' }} />
+// Фирменный тёмный фон с золотыми диагональными штрихами (ЛИСТ 4 «акценты и элементы»)
+const Bg: React.FC = () => (
+  <AbsoluteFill style={{ background: `radial-gradient(140% 90% at 50% 0%, #141B23 0%, ${BG} 55%, #06090D 100%)` }}>
+    <div style={{ position: 'absolute', top: -140, right: -220, width: 800, height: 480, background: `linear-gradient(115deg, transparent 42%, ${GOLD}22 49%, ${GOLD}0E 52%, transparent 60%)`, transform: 'rotate(-8deg)' }} />
+    <div style={{ position: 'absolute', bottom: 120, left: -260, width: 900, height: 400, background: `linear-gradient(115deg, transparent 44%, ${GOLD}14 50%, transparent 58%)`, transform: 'rotate(-8deg)' }} />
+  </AbsoluteFill>
 );
 
-// Вспышка на входе сцены (первые кадры) — кинематографичный переход whoosh
-const Flash: React.FC<{ color?: string }> = ({ color = '#FFFFFF' }) => {
+// Фото в карточке с золотой окантовкой: авто ЦЕЛИКОМ (contain на тёмной подложке того же фото)
+const PhotoCard: React.FC<{ src: string; top: number; height: number; dur: number; pan?: boolean }> = ({ src, top, height, dur, pan }) => {
   const f = useCurrentFrame();
-  const op = interpolate(f, [0, 4, 10], [0.55, 0.22, 0], { extrapolateRight: 'clamp' });
-  return op > 0.01 ? <AbsoluteFill style={{ background: color, opacity: op, mixBlendMode: 'screen' }} /> : null;
-};
-
-// Прогресс-бар всего ролика (6 сегментов) — верх кадра
-const Progress: React.FC = () => {
-  const f = useCurrentFrame();
-  const seg = 6;
+  const enter = spring({ frame: f, fps: FPS, config: { damping: 16, stiffness: 90 } });
+  const scale = interpolate(enter, [0, 1], [1.08, 1]) + interpolate(f, [0, dur], [0, 0.045]);
+  const panX = pan ? interpolate(f, [0, dur], [-12, 12]) : 0;
+  const url = /^https?:/.test(src) ? src : staticFile(src);
   return (
-    <div style={{ position: 'absolute', top: 40, left: 56, right: 56, display: 'flex', gap: 7, zIndex: 20 }}>
-      {Array.from({ length: seg }).map((_, i) => {
-        const from = F[i], to = F[i + 1];
-        const fill = f <= from ? 0 : f >= to ? 1 : (f - from) / (to - from);
-        return (
-          <div key={i} style={{ flex: 1, height: 4, borderRadius: 3, background: 'rgba(255,255,255,0.18)', overflow: 'hidden' }}>
-            <div style={{ width: `${fill * 100}%`, height: '100%', borderRadius: 3, background: GOLD_GRAD, boxShadow: `0 0 8px ${GOLD}` }} />
-          </div>
-        );
-      })}
+    <div style={{ position: 'absolute', top, left: 48, right: 48, height, borderRadius: 30, overflow: 'hidden', border: `1.5px solid ${HAIR}`, boxShadow: `0 30px 70px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,0.04) inset`, opacity: enter }}>
+      <Img src={url} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(34px) brightness(0.36) saturate(1.15)', transform: 'scale(1.35)' }} />
+      <Img src={url} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', transform: `scale(${scale}) translateX(${panX}px)` }} />
+      {/* лёгкий золотой отблеск по верхней кромке */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: GOLD_GRAD, opacity: 0.7 }} />
     </div>
   );
 };
 
-// Лого по эталону: низ кадра, отступ ≥5%
-const LogoBottom: React.FC<{ line?: string }> = ({ line }) => (
-  <div style={{ position: 'absolute', bottom: 96, left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-    <Shield size={72} />
-    {line ? <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 24, letterSpacing: 2, color: '#C8CDD2' }}>{line}</div> : null}
-  </div>
+// Инфопанель под фото (тёмная поверхность, золотая окантовка — как карточка эталона)
+const Panel: React.FC<{ top: number; children: React.ReactNode; center?: boolean }> = ({ top, children, center }) => {
+  const f = useCurrentFrame();
+  const s = spring({ frame: f - 4, fps: FPS, config: { damping: 16 } });
+  return (
+    <div style={{ position: 'absolute', top, left: 48, right: 48, bottom: 88, borderRadius: 30, background: SURF, border: `1.5px solid ${HAIR}`, padding: '46px 52px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: center ? 'center' : 'flex-start', textAlign: center ? 'center' : 'left', opacity: s, transform: `translateY(${interpolate(s, [0, 1], [40, 0])}px)`, overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: GOLD_GRAD }} />
+      {children}
+    </div>
+  );
+};
+
+// Малый золотой заголовок-ярлык секции (как «СОВМЕСТИМОСТЬ:» на ЛИСТЕ 3)
+const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 26, letterSpacing: 3.5, color: GOLD, textTransform: 'uppercase' }}>{children}</div>
 );
 
-const In: React.FC<{ children: React.ReactNode; delay?: number; y?: number }> = ({ children, delay = 0, y = 34 }) => {
+// Строка характеристики с иконкой (эталон: иконка + подпись + значение)
+const SpecRow: React.FC<{ icon: keyof typeof I; text: string; idx?: number }> = ({ icon, text, idx = 0 }) => {
+  const f = useCurrentFrame();
+  const s = spring({ frame: f - 8 - idx * 5, fps: FPS, config: { damping: 15 } });
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 20, opacity: s, transform: `translateX(${interpolate(s, [0, 1], [34, 0])}px)` }}>
+      <div style={{ width: 58, height: 58, borderRadius: 14, border: `1.5px solid ${HAIR}`, background: 'rgba(212,175,55,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Ico d={I[icon]} /></div>
+      <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 37, color: '#F0F2F4', lineHeight: 1.25 }}>{text}</div>
+    </div>
+  );
+};
+
+const In: React.FC<{ children: React.ReactNode; delay?: number; y?: number }> = ({ children, delay = 0, y = 30 }) => {
   const f = useCurrentFrame();
   const s = spring({ frame: f - delay, fps: FPS, config: { damping: 16, stiffness: 100 } });
   return <div style={{ opacity: s, transform: `translateY(${interpolate(s, [0, 1], [y, 0])}px)` }}>{children}</div>;
 };
 
-const H: React.FC<{ white: string; accent?: string; size?: number }> = ({ white, accent, size = 78 }) => (
-  <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: size, lineHeight: 1.08, textTransform: 'uppercase', color: '#fff', textShadow: '0 4px 28px rgba(0,0,0,.9)' }}>
-    {white}{accent ? <span style={{ color: ACC }}> {accent}</span> : null}
+const H: React.FC<{ white: string; accent?: string; size?: number }> = ({ white, accent, size = 66 }) => (
+  <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: size, lineHeight: 1.1, textTransform: 'uppercase', color: '#fff' }}>
+    {white}{accent ? <span style={{ color: GOLD }}> {accent}</span> : null}
   </div>
 );
 
-const Check: React.FC<{ items: string[]; delay?: number }> = ({ items, delay = 8 }) => {
+// Вспышка перехода
+const Flash: React.FC<{ color?: string }> = ({ color = '#FFFFFF' }) => {
+  const f = useCurrentFrame();
+  const op = interpolate(f, [0, 4, 10], [0.4, 0.16, 0], { extrapolateRight: 'clamp' });
+  return op > 0.01 ? <AbsoluteFill style={{ background: color, opacity: op, mixBlendMode: 'screen', zIndex: 30 }} /> : null;
+};
+
+// Прогресс-бар (6 сегментов, золото)
+const Progress: React.FC = () => {
   const f = useCurrentFrame();
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {items.map((t, i) => {
-        const s = spring({ frame: f - delay - i * 5, fps: FPS, config: { damping: 15 } });
+    <div style={{ position: 'absolute', top: 36, left: 56, right: 56, display: 'flex', gap: 7, zIndex: 20 }}>
+      {Array.from({ length: 6 }).map((_, i) => {
+        const fill = f <= F[i] ? 0 : f >= F[i + 1] ? 1 : (f - F[i]) / (F[i + 1] - F[i]);
         return (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, opacity: s, transform: `translateX(${interpolate(s, [0, 1], [30, 0])}px)` }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, border: `2px solid ${ACC}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: ACC, fontWeight: 700, fontSize: 24, background: 'rgba(10,10,10,0.55)' }}>✓</div>
-            <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 36, color: '#F0F2F4', textShadow: '0 2px 14px rgba(0,0,0,.9)' }}>{t}</div>
+          <div key={i} style={{ flex: 1, height: 4, borderRadius: 3, background: 'rgba(255,255,255,0.16)', overflow: 'hidden' }}>
+            <div style={{ width: `${fill * 100}%`, height: '100%', borderRadius: 3, background: GOLD_GRAD }} />
           </div>
         );
       })}
@@ -171,111 +158,130 @@ const Check: React.FC<{ items: string[]; delay?: number }> = ({ items, delay = 8
   );
 };
 
+// Нижняя фирменная полоса (эталон: «ФАКТЫ • КОНТРОЛЬ • РЕЗУЛЬТАТ»)
+const BottomStrip: React.FC = () => (
+  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, background: 'rgba(8,11,15,0.9)', borderTop: `1px solid ${HAIR}`, zIndex: 21 }}>
+    <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 22, letterSpacing: 4, color: '#B9C0C7' }}>ФАКТЫ <span style={{ color: GOLD }}>•</span> КОНТРОЛЬ <span style={{ color: GOLD }}>•</span> РЕЗУЛЬТАТ</div>
+  </div>
+);
+
+// Раскладка сцены: шапка 150px → фото-карточка → инфопанель → полоса
+const PH_TOP = 168;            // под шапкой
+const PH_H = 850;              // фото-карточка
+const PN_TOP = PH_TOP + PH_H + 26;
+
 export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
   ensureFonts();
   const ph = (i: number) => (p.photos && p.photos.length ? p.photos[i % p.photos.length] : '');
-  const carName = `${p.brand} ${p.model}`.trim();
   const channel = p.channel || '@LegalAutoStore';
-  // Наличие определяет всю подачу: в наличии = «забирай сегодня», под заказ = «привезём под ключ»
   const inStock = p.avail === 'stock';
   const availLabel = inStock ? '✓ В НАЛИЧИИ В РФ' : `✈ ПОД ЗАКАЗ${p.eta ? ` • ${p.eta}` : ' • ПРИГОН ПОД КЛЮЧ'}`;
   const availColor = inStock ? TEAL : GOLD;
   const ctaWhite = inStock ? `${p.model.toUpperCase()} УЖЕ В РФ —` : `ПРИВЕЗЁМ ТВОЙ ${p.model.toUpperCase()}`;
   const ctaAccent = inStock ? 'ЗАБИРАЙ СЕГОДНЯ' : 'ПОД КЛЮЧ';
+  // Характеристики из power/condition: «3.0d / 400 л.с. · xDrive · Автомат» → строки с иконками
+  const powerParts = String(p.power || '').split(/[·•|,]/).map(s => s.trim()).filter(Boolean).slice(0, 3);
+  const specIcons: (keyof typeof I)[] = ['engine', 'drive', 'gear'];
+
+  const scene = (i: number, from: number, to: number, panel: React.ReactNode, opts: { pan?: boolean; flash?: string; tall?: boolean } = {}) => {
+    const phh = opts.tall ? 1060 : PH_H;   // мало текста → фото крупнее, панель компактнее
+    return (
+      <Sequence from={from} durationInFrames={to - from}>
+        <Bg />
+        <PhotoCard src={ph(i)} top={PH_TOP} height={phh} dur={to - from} pan={opts.pan} />
+        <Panel top={PH_TOP + phh + 26}>{panel}</Panel>
+        <Flash color={opts.flash} />
+      </Sequence>
+    );
+  };
 
   return (
-    <AbsoluteFill style={{ background: '#0A0A0A' }}>
+    <AbsoluteFill style={{ background: BG }}>
       {p.musicFile ? <Audio src={staticFile(p.musicFile)} volume={0.82} /> : null}
-      {/* SFX: удар на хуке + whoosh на каждой смене кадра — «дорогое» звучание */}
       {p.sfxImpact ? <Sequence from={2} durationInFrames={40}><Audio src={staticFile(p.sfxImpact)} volume={0.85} /></Sequence> : null}
       {p.sfxWhoosh ? [1, 2, 3, 4, 5].map((i) => (
         <Sequence key={i} from={F[i] - 6} durationInFrames={30}><Audio src={staticFile(p.sfxWhoosh!)} volume={0.5} /></Sequence>
       )) : null}
 
-      {/* 01 ХУК 0-3с: эмоц. заголовок + бейдж модели */}
-      <Sequence durationInFrames={F[1]}>
-        <Photo src={ph(0)} dur={F[1]} mode="in" /><Scrim /><Flash color="#D4AF37" />
-        <AbsoluteFill style={{ justifyContent: 'flex-start', alignItems: 'center', paddingTop: 200, textAlign: 'center', padding: '200px 70px 0' }}>
-          <In><H white={p.hook} size={86} /></In>
-          <In delay={8}>
-            <div style={{ marginTop: 34, display: 'inline-flex', alignItems: 'center', gap: 12, border: `2px solid ${GOLD}`, borderRadius: 12, padding: '12px 26px', fontFamily: FONT, fontWeight: 700, fontSize: 34, color: '#fff', background: 'rgba(10,10,10,0.6)' }}>
-              {carName}{p.year ? <span style={{ color: GOLD }}>{p.year}</span> : null}
+      {/* 01 ХУК: фото + модель/год/наличие в панели */}
+      {scene(0, F[0], F[1], (
+        <>
+          <In><H white={p.hook} size={58} /></In>
+          <In delay={7}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 18, marginTop: 22 }}>
+              <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 68, color: '#fff', textTransform: 'uppercase' }}>{p.brand} <span style={{ color: GOLD }}>{p.model}</span></div>
+              {p.year ? <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 34, color: '#0A0A0A', background: GOLD_GRAD, borderRadius: 10, padding: '4px 16px' }}>{p.year}</div> : null}
             </div>
           </In>
-          <In delay={13}>
-            <div style={{ marginTop: 18, display: 'inline-block', borderRadius: 10, padding: '10px 24px', fontFamily: FONT, fontWeight: 700, fontSize: 30, color: '#0A0A0A', background: availColor, boxShadow: `0 8px 30px ${availColor}55` }}>
-              {availLabel}
-            </div>
+          <In delay={12}>
+            <div style={{ marginTop: 20, display: 'inline-block', borderRadius: 10, padding: '10px 24px', fontFamily: FONT, fontWeight: 700, fontSize: 29, color: '#0A0A0A', background: availColor }}>{availLabel}</div>
           </In>
-        </AbsoluteFill>
-        
-      </Sequence>
+        </>
+      ), { flash: GOLD })}
 
-      {/* 02 МОЩЬ 3-6с */}
-      <Sequence from={F[1]} durationInFrames={F[2] - F[1]}>
-        <Photo src={ph(1)} dur={F[2] - F[1]} mode="pan" /><Scrim /><Flash />
-        <AbsoluteFill style={{ justifyContent: 'flex-start', padding: '220px 70px 0', textAlign: 'center', alignItems: 'center' }}>
-          <In><H white="МОЩЬ" size={92} /></In>
-          <In delay={6}><div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 52, color: ACC, marginTop: 18, textShadow: '0 3px 20px rgba(0,0,0,.9)' }}>{p.power}</div></In>
-        </AbsoluteFill>
-        
-      </Sequence>
+      {/* 02 ХАРАКТЕРИСТИКИ: строки с иконками, как на эталоне */}
+      {scene(1, F[1], F[2], (
+        <>
+          <Label>Характеристики</Label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 22, marginTop: 30 }}>
+            {powerParts.map((t, i) => <SpecRow key={i} icon={specIcons[i % 3]} text={t} idx={i} />)}
+            {p.condition ? <SpecRow icon="gauge" text={p.condition} idx={powerParts.length} /> : null}
+          </div>
+        </>
+      ), { pan: true, tall: powerParts.length <= 2 })}
 
-      {/* 03 КОМПЛЕКТАЦИЯ 6-12с: чек-лист опций */}
-      <Sequence from={F[2]} durationInFrames={F[3] - F[2]}>
-        <Photo src={ph(2)} dur={F[3] - F[2]} mode="in" /><Scrim /><Flash />
-        <AbsoluteFill style={{ padding: '190px 80px 0' }}>
-          <In><H white="МАКСИМАЛЬНАЯ" accent="КОМПЛЕКТАЦИЯ" size={62} /></In>
-          <div style={{ marginTop: 44 }}><Check items={(p.options || []).slice(0, 6)} /></div>
-        </AbsoluteFill>
-        
-      </Sequence>
+      {/* 03 КОМПЛЕКТАЦИЯ */}
+      {scene(2, F[2], F[3], (
+        <>
+          <Label>Комплектация</Label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 19, marginTop: 28 }}>
+            {(p.options || []).slice(0, 5).map((t, i) => <SpecRow key={i} icon={i % 2 ? 'key' : 'shield'} text={t} idx={i} />)}
+          </div>
+        </>
+      ))}
 
-      {/* 04 СОСТОЯНИЕ 12-18с: крупный план */}
-      <Sequence from={F[3]} durationInFrames={F[4] - F[3]}>
-        <Photo src={ph(3)} dur={F[4] - F[3]} mode="out" /><Scrim /><Flash color="#D4AF37" />
-        <AbsoluteFill style={{ justifyContent: 'flex-start', padding: '220px 70px 0', textAlign: 'center', alignItems: 'center' }}>
-          <In><H white="ИДЕАЛЬНОЕ" accent="СОСТОЯНИЕ" size={72} /></In>
-          <In delay={8}><div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 44, color: '#F0F2F4', marginTop: 22, textShadow: '0 3px 18px rgba(0,0,0,.9)' }}>{p.condition}</div></In>
-        </AbsoluteFill>
-        
-      </Sequence>
+      {/* 04 СОСТОЯНИЕ */}
+      {scene(3, F[3], F[4], (
+        <>
+          <Label>Состояние</Label>
+          <In delay={6}><div style={{ marginTop: 26 }}><H white="ИДЕАЛЬНОЕ" accent="СОСТОЯНИЕ" size={60} /></div></In>
+          <In delay={11}><div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 40, color: '#F0F2F4', marginTop: 20 }}>{p.condition}</div></In>
+        </>
+      ), { pan: true, flash: GOLD, tall: true })}
 
-      {/* 05 ДОВЕРИЕ 18-24с: чек-лист гарантий */}
-      <Sequence from={F[4]} durationInFrames={F[5] - F[4]}>
-        <Photo src={ph(4)} dur={F[5] - F[4]} mode="pan" /><Scrim /><Flash />
-        <AbsoluteFill style={{ padding: '190px 80px 0' }}>
-          <In><H white="ПРОВЕРЕН И ГОТОВ" accent="К НОВОМУ ВЛАДЕЛЬЦУ" size={58} /></In>
-          <div style={{ marginTop: 44 }}><Check items={(p.trust || []).slice(0, 4)} /></div>
-        </AbsoluteFill>
-        
-      </Sequence>
+      {/* 05 ДОВЕРИЕ */}
+      {scene(4, F[4], F[5], (
+        <>
+          <Label>Гарантии Legal Auto</Label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 19, marginTop: 28 }}>
+            {(p.trust || []).slice(0, 4).map((t, i) => <SpecRow key={i} icon={(['shield', 'doc', 'truck', 'key'] as (keyof typeof I)[])[i % 4]} text={t} idx={i} />)}
+          </div>
+        </>
+      ))}
 
-      {/* 06 ФИНАЛ CTA 24-30с */}
+      {/* 06 ФИНАЛ CTA: цена золотом в рамке + золотая кнопка */}
       <Sequence from={F[5]} durationInFrames={F[6] - F[5]}>
-        <Photo src={ph(0)} dur={F[6] - F[5]} mode="out" /><Scrim /><Flash color="#D4AF37" />
-        {/* доп. затемнение по центру — CTA-текст читается на любом (даже белом) фото */}
-        <AbsoluteFill style={{ background: 'radial-gradient(ellipse 90% 62% at 50% 50%, rgba(10,10,10,0.72) 0%, rgba(10,10,10,0.45) 55%, transparent 100%)' }} />
-        <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 70px' }}>
-          <In><H white={ctaWhite} accent={ctaAccent} size={68} /></In>
-          {!inStock && p.eta ? (
-            <In delay={6}><div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 32, color: GOLD, marginTop: 16 }}>Срок поставки: {p.eta}</div></In>
-          ) : null}
+        <Bg />
+        <PhotoCard src={ph(0)} top={PH_TOP} height={760} dur={F[6] - F[5]} />
+        <Panel top={PH_TOP + 760 + 26} center>
+          <In><H white={ctaWhite} accent={ctaAccent} size={48} /></In>
+          {!inStock && p.eta ? <In delay={5}><div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 30, color: GOLD, marginTop: 12 }}>Срок поставки: {p.eta}</div></In> : null}
           {p.price ? (
             <In delay={8}>
-              <div style={{ marginTop: 30, display: 'inline-block', border: `2.5px solid ${GOLD}`, borderRadius: 16, padding: '14px 36px', fontFamily: FONT, fontWeight: 700, fontSize: 52, color: GOLD, background: 'rgba(10,10,10,0.75)', boxShadow: `0 0 44px ${GOLD}40` }}>{p.price}</div>
+              <div style={{ marginTop: 22, display: 'inline-block', border: `2.5px solid ${GOLD}`, borderRadius: 16, padding: '12px 40px', fontFamily: FONT, fontWeight: 700, fontSize: 56, color: GOLD, background: 'rgba(10,10,10,0.6)', boxShadow: `0 0 40px ${GOLD}30` }}>{p.price}</div>
             </In>
           ) : null}
-          <In delay={14}>
-            <div style={{ marginTop: 30, display: 'inline-flex', alignItems: 'center', gap: 12, background: GOLD_GRAD, color: '#0A0A0A', fontFamily: FONT, fontWeight: 700, fontSize: 40, padding: '20px 42px', borderRadius: 16, boxShadow: `0 10px 44px ${GOLD}66` }}>✈ {channel}</div>
+          <In delay={13}>
+            <div style={{ marginTop: 24, display: 'inline-flex', alignItems: 'center', gap: 12, background: GOLD_GRAD, color: '#0A0A0A', fontFamily: FONT, fontWeight: 700, fontSize: 38, padding: '18px 46px', borderRadius: 14, boxShadow: `0 10px 40px ${GOLD}55` }}>✈ {channel}</div>
           </In>
-          <In delay={16}><div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 28, color: '#C8CDD2', marginTop: 24 }}>Свяжись с нами и узнай больше</div></In>
-        </AbsoluteFill>
-        <LogoBottom line="ФАКТЫ • КОНТРОЛЬ • РЕЗУЛЬТАТ" />
+          <In delay={15}><div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 26, color: '#B9C0C7', marginTop: 18 }}>Консультация бесплатно</div></In>
+        </Panel>
+        <Flash color={GOLD} />
       </Sequence>
 
       <TopBrand />
       <Progress />
+      <BottomStrip />
     </AbsoluteFill>
   );
 };
