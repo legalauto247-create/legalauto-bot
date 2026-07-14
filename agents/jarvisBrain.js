@@ -115,6 +115,7 @@ const TOOLS = [
   { name: 'media_collections', description: 'MEDIA_FACTORY: показать готовые смысловые коллекции для роликов (Оптика BMW X5 G05, Двери и молдинги BMW X7...) с составом и рейтингом. Вызывай, когда Эдо спрашивает «какие темы для роликов / что снять» или перед выбором темы.', input_schema: { type: 'object', properties: {} } },
   { name: 'scan_news', description: 'Просканировать свежие новости (6 живых RSS: авто + деловые) и отфильтровать ПОЛЕЗНЫЕ для импортёров (таможня/утиль/авторынок/импорт). Возвращает список заголовков с ссылками. Используй на «что нового / есть ли новости / проверь новости». Дальше можешь предложить Эдо сделать из лучшей новости ролик (make_cinematic с direction=docs и темой новости) или пост.', input_schema: { type: 'object', properties: { max: { type: 'number' } } } },
   { name: 'scan_partner_cars', description: 'Просканировать канал партнёра и прислать свежие авто на одобрение.', input_schema: { type: 'object', properties: {} } },
+  { name: 'docs_crm', description: 'CRM направления ДОКУМЕНТЫ (СБКТС/ЭПТС/утильсбор): учёт заказов — клиент, авто, VIN, услуга, стадия (новая→авто в лаборатории→документы оформляются→готово→выдано клиенту), оплаты (клиент нам / мы лаборатории). action: add (новый заказ), update (смени стадию/отметь оплату, по id типа D001), list (все активные + предупреждения о неоплате/простое). Вызывай на «запиши клиента на СБКТС», «машина заехала в лабораторию», «клиент оплатил», «что по документам».', input_schema: { type: 'object', properties: { action: { type: 'string', enum: ['add', 'update', 'list'] }, id: { type: 'string' }, client: { type: 'string' }, phone: { type: 'string' }, car: { type: 'string' }, vin: { type: 'string' }, service: { type: 'string' }, stage: { type: 'string' }, client_paid: { type: 'boolean' }, lab_paid: { type: 'boolean' }, amount_client: { type: 'number' }, amount_lab: { type: 'number' }, notes: { type: 'string' } }, required: ['action'] } },
   { name: 'manage_partners', description: 'ПОДКЛЮЧИТЬ/отключить партнёрские Telegram-каналы для наблюдения (Mission Engine: боты следят, отбирают лучшие посты score≥7, шлют Эдо на одобрение). Эдо присылает @каналы и цель («следи за этими по пригону») → action=add. Также list (показать) и remove.', input_schema: { type: 'object', properties: { action: { type: 'string', enum: ['add', 'remove', 'list'] }, channels: { type: 'array', items: { type: 'string' }, description: '@юзернеймы каналов' }, purpose: { type: 'string', description: 'цель наблюдения, напр. «пригон авто из Китая»' } }, required: ['action'] } },
   { name: 'post_part', description: 'Опубликовать одну запчасть в канал запчастей сейчас.', input_schema: { type: 'object', properties: {} } },
   { name: 'ask_gemini', description: 'Спросить Gemini (длинный контекст, второе мнение, анализ больших данных).', input_schema: { type: 'object', properties: { prompt: { type: 'string' } }, required: ['prompt'] } },
@@ -206,6 +207,23 @@ async function runTool(name, input, ctx) {
         const news = await fetchFreshNews(Math.min(input.max || 5, 8));
         if (!news.length) return 'Свежих полезных новостей для импортёров сейчас нет (проверил 6 источников).';
         return 'Свежие полезные новости:\n' + news.map((n, i) => `${i + 1}. ${n.title}\n   ${n.link}`).join('\n');
+      }
+      case 'docs_crm': {
+        const crm = await import('../services/docsCrm.js');
+        if (input.action === 'add') {
+          if (!input.client || !input.car) return 'Для нового заказа нужны минимум клиент и авто.';
+          const o = crm.addOrder(input);
+          return `Заказ создан:\n${crm.fmtOrder(o)}`;
+        }
+        if (input.action === 'update') {
+          if (!input.id) return 'Укажи номер заказа (D001).';
+          const o = crm.updateOrder(input.id, input);
+          return o ? `Обновил:\n${crm.fmtOrder(o)}` : `Заказ ${input.id} не найден.`;
+        }
+        const list = crm.listOrders();
+        const alerts = crm.docsAlerts();
+        if (!list.length) return 'Активных заказов по документам нет.';
+        return [alerts.length ? '🔔 Требует внимания:\n' + alerts.join('\n') + '\n' : '', ...list.map(crm.fmtOrder)].filter(Boolean).join('\n\n');
       }
       case 'manage_partners': {
         const cur = getSection('partners') || {};

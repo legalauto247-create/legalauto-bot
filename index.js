@@ -433,6 +433,8 @@ startAdScheduler();
 startPublicChannelPoller(10);
 // Mission Engine: отбор лучших постов, слежение за подписчиками, вечерний отчёт Эдо
 import('./services/missionEngine.js').then(m => m.startMissionEngine()).catch(e => console.error('[Mission]', e.message));
+// Онлайн-дашборд: https://<railway-домен>/?key=<ADMIN_CHAT_ID>
+import('./services/dashboard.js').then(m => m.startDashboard()).catch(e => console.error('[Dashboard]', e.message));
 
 // ── Review Agent — запрос отзывов через 4 дня после заказа ────────────────
 setupReviewScheduler(clientBot);

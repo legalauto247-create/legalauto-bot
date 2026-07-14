@@ -65,5 +65,16 @@ export async function uploadShort({ path, title, description = '', tags = [] }) 
   });
   const res = await up.json();
   if (!res.id) throw new Error('upload failed: ' + JSON.stringify(res).slice(0, 300));
+  // журнал видео для дашборда/отчётов Mission Engine
+  try {
+    const { getSection, setSection, logEvent } = await import('../services/stateService.js');
+    const cur = getSection('videos') || {};
+    const list = Array.isArray(cur.list) ? cur.list : [];
+    list.unshift({ id: res.id, url: `https://youtube.com/shorts/${res.id}`, title: title.slice(0, 80), at: new Date().toISOString() });
+    setSection('videos', { ...cur, list: list.slice(0, 100) });
+    logEvent('yt_upload', { note: title.slice(0, 60) });
+    const { recordMission } = await import('../services/missionEngine.js');
+    recordMission('video');
+  } catch {}
   return { id: res.id, url: `https://youtube.com/shorts/${res.id}` };
 }
