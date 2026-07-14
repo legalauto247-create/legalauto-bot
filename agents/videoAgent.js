@@ -228,6 +228,8 @@ export async function renderStoreShorts({ musicPath, images = [], ...props }) {
     if (musicPath && existsSync(musicPath)) cpSync(musicPath, join(PUBLIC_DIR, 'music.mp3'));
     for (const im of images) { if (im?.name && im?.buffer) writeFileSync(join(PUBLIC_DIR, im.name), im.buffer); }
     // SFX для «дорогого» звучания: whoosh на переходах + impact на хуке
+    const bgSrc = join(ROOT, 'assets', 'brand', 'store-bg.png');
+    if (existsSync(bgSrc)) cpSync(bgSrc, join(PUBLIC_DIR, 'store-bg.png'));
     const whooshSrc = join(ROOT, 'assets', 'sfx', 'whoosh.mp3');
     const impactSrc = join(ROOT, 'assets', 'sfx', 'impact.mp3');
     const hasWhoosh = existsSync(whooshSrc), hasImpact = existsSync(impactSrc);

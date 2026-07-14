@@ -68,13 +68,17 @@ const TopBrand: React.FC = () => (
   </div>
 );
 
-// Фирменный тёмный фон с золотыми диагональными штрихами (ЛИСТ 4 «акценты и элементы»)
-const Bg: React.FC = () => (
-  <AbsoluteFill style={{ background: `radial-gradient(140% 90% at 50% 0%, #141B23 0%, ${BG} 55%, #06090D 100%)` }}>
-    <div style={{ position: 'absolute', top: -140, right: -220, width: 800, height: 480, background: `linear-gradient(115deg, transparent 42%, ${GOLD}22 49%, ${GOLD}0E 52%, transparent 60%)`, transform: 'rotate(-8deg)' }} />
-    <div style={{ position: 'absolute', bottom: 120, left: -260, width: 900, height: 400, background: `linear-gradient(115deg, transparent 44%, ${GOLD}14 50%, transparent 58%)`, transform: 'rotate(-8deg)' }} />
-  </AbsoluteFill>
-);
+// Фирменный фон: AI-плита по эталону ЛИСТ 4 (карбон, золотые штрихи, боке) + медленный дрейф.
+// Плита сгенерирована из брендбука Эдо (gpt-image), лежит в assets/brand/store-bg.png.
+const Bg: React.FC = () => {
+  const f = useCurrentFrame();
+  const drift = interpolate(f, [0, 900], [1.0, 1.08]);
+  return (
+    <AbsoluteFill style={{ background: '#06090D' }}>
+      <Img src={staticFile('store-bg.png')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${drift})` }} />
+    </AbsoluteFill>
+  );
+};
 
 // Фото в карточке с золотой окантовкой: авто ЦЕЛИКОМ (contain на тёмной подложке того же фото)
 const PhotoCard: React.FC<{ src: string; top: number; height: number; dur: number; pan?: boolean }> = ({ src, top, height, dur, pan }) => {
@@ -217,7 +221,7 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
             <div style={{ marginTop: 20, display: 'inline-block', borderRadius: 10, padding: '10px 24px', fontFamily: FONT, fontWeight: 700, fontSize: 29, color: '#0A0A0A', background: availColor }}>{availLabel}</div>
           </In>
         </>
-      ), { flash: GOLD })}
+      ), { flash: GOLD, tall: true })}
 
       {/* 02 ХАРАКТЕРИСТИКИ: строки с иконками, как на эталоне */}
       {scene(1, F[1], F[2], (
@@ -244,8 +248,7 @@ export const StoreShorts: React.FC<StoreShortsProps> = (p) => {
       {scene(3, F[3], F[4], (
         <>
           <Label>Состояние</Label>
-          <In delay={6}><div style={{ marginTop: 26 }}><H white="ИДЕАЛЬНОЕ" accent="СОСТОЯНИЕ" size={60} /></div></In>
-          <In delay={11}><div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 40, color: '#F0F2F4', marginTop: 20 }}>{p.condition}</div></In>
+          <In delay={6}><div style={{ marginTop: 24 }}><H white={p.condition || 'Проверено Legal Auto'} size={52} /></div></In>
         </>
       ), { pan: true, flash: GOLD, tall: true })}
 

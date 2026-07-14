@@ -654,8 +654,8 @@ avail — КЛЮЧЕВОЕ ПОЛЕ, определи строго по текс
   });
 
   // 4) Shorts 6 кадров / 30 сек (ЛИСТ 6). Фонк — фирменный саунд авто-контента.
-  // Только САМЫЕ бодрые треки (замер RMS-энергии): phonk5/6/2/8 — остальные вялые, не берём
-  const music = pickMusic(['phonk5', 'phonk6', 'phonk2', 'phonk8']);
+  // turbo* — фонк с студийной прокачкой (бас-буст, компрессия, +6% темп, клиповая громкость)
+  const music = pickMusic(['turbo']);
   const result = { ok: true, cardPath: card.path, cardCleanup: card.cleanup, title: d.title || `${d.brand} ${d.model}` };
   if (platforms.includes('youtube')) {
     const video = await renderStoreShorts({
