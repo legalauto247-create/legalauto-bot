@@ -115,6 +115,7 @@ const TOOLS = [
   { name: 'media_collections', description: 'MEDIA_FACTORY: показать готовые смысловые коллекции для роликов (Оптика BMW X5 G05, Двери и молдинги BMW X7...) с составом и рейтингом. Вызывай, когда Эдо спрашивает «какие темы для роликов / что снять» или перед выбором темы.', input_schema: { type: 'object', properties: {} } },
   { name: 'scan_news', description: 'Просканировать свежие новости (6 живых RSS: авто + деловые) и отфильтровать ПОЛЕЗНЫЕ для импортёров (таможня/утиль/авторынок/импорт). Возвращает список заголовков с ссылками. Используй на «что нового / есть ли новости / проверь новости». Дальше можешь предложить Эдо сделать из лучшей новости ролик (make_cinematic с direction=docs и темой новости) или пост.', input_schema: { type: 'object', properties: { max: { type: 'number' } } } },
   { name: 'scan_partner_cars', description: 'Просканировать канал партнёра и прислать свежие авто на одобрение.', input_schema: { type: 'object', properties: {} } },
+  { name: 'manage_partners', description: 'ПОДКЛЮЧИТЬ/отключить партнёрские Telegram-каналы для наблюдения (Mission Engine: боты следят, отбирают лучшие посты score≥7, шлют Эдо на одобрение). Эдо присылает @каналы и цель («следи за этими по пригону») → action=add. Также list (показать) и remove.', input_schema: { type: 'object', properties: { action: { type: 'string', enum: ['add', 'remove', 'list'] }, channels: { type: 'array', items: { type: 'string' }, description: '@юзернеймы каналов' }, purpose: { type: 'string', description: 'цель наблюдения, напр. «пригон авто из Китая»' } }, required: ['action'] } },
   { name: 'post_part', description: 'Опубликовать одну запчасть в канал запчастей сейчас.', input_schema: { type: 'object', properties: {} } },
   { name: 'ask_gemini', description: 'Спросить Gemini (длинный контекст, второе мнение, анализ больших данных).', input_schema: { type: 'object', properties: { prompt: { type: 'string' } }, required: ['prompt'] } },
   { name: 'save_template', description: 'Template Registry: сохранить НОВЫЙ шаблон контента в библиотеку templates/. ПОРЯДОК: сначала покажи Эдо черновик шаблона в чате и дождись его «да/сохраняй»; только после подтверждения вызывай с confirm=true. Категории: news/parts/shorts.', input_schema: { type: 'object', properties: { category: { type: 'string', enum: ['news', 'parts', 'shorts', 'docs', 'store'] }, id: { type: 'string', description: 'уникальный id, напр. docs_short_002' }, template_json: { type: 'string', description: 'JSON шаблона строкой (id, direction, use_for, structure, metrics)' }, confirm: { type: 'boolean', description: 'true ТОЛЬКО после явного подтверждения Эдо в чате' } }, required: ['category', 'id', 'template_json', 'confirm'] } },
@@ -205,6 +206,34 @@ async function runTool(name, input, ctx) {
         const news = await fetchFreshNews(Math.min(input.max || 5, 8));
         if (!news.length) return 'Свежих полезных новостей для импортёров сейчас нет (проверил 6 источников).';
         return 'Свежие полезные новости:\n' + news.map((n, i) => `${i + 1}. ${n.title}\n   ${n.link}`).join('\n');
+      }
+      case 'manage_partners': {
+        const cur = getSection('partners') || {};
+        const list = Array.isArray(cur.list) ? cur.list : [];
+        if (input.action === 'list') {
+          const env = (process.env.PARTNER_CHANNELS || '').split(',').map(x => x.trim()).filter(Boolean);
+          const all = [...env.map(c => ({ ch: c, purpose: 'из Railway (постоянный)' })), ...list];
+          return all.length ? 'Наблюдаем каналы:\n' + all.map(p => `• ${p.ch} — ${p.purpose || 'без цели'}`).join('\n') : 'Партнёрских каналов пока нет. Пришли @каналы — подключу.';
+        }
+        const chans = (input.channels || []).map(c => c.trim().replace(/^https?:\/\/t(elegram)?\.me\//, '@').replace(/^(?!@)/, '@')).filter(c => c.length > 3);
+        if (!chans.length) return 'Не увидел @каналов в запросе.';
+        if (input.action === 'remove') {
+          setSection('partners', { ...cur, list: list.filter(p => !chans.includes(p.ch)) });
+          return `Отключил: ${chans.join(', ')}`;
+        }
+        // add: проверяем что канал публичный и читается
+        const { fetchPublicFeed } = await import('./autoAdsAgent.js');
+        const ok = [], bad = [];
+        for (const c of chans) {
+          try { const posts = await fetchPublicFeed(c); ok.push({ ch: c, purpose: input.purpose || 'пригон авто', posts: posts.length }); }
+          catch { bad.push(c); }
+        }
+        const merged = [...list.filter(p => !ok.some(o => o.ch === p.ch)), ...ok.map(({ ch, purpose }) => ({ ch, purpose }))];
+        setSection('partners', { ...cur, list: merged });
+        stateEvent('partners_add', { note: ok.map(o => o.ch).join(',') });
+        let out = ok.length ? `Подключил (${input.purpose || 'пригон авто'}): ${ok.map(o => `${o.ch} (${o.posts} постов видно)`).join(', ')}. Боты уже следят: лучшие посты (score≥7) будут приходить тебе на одобрение.` : '';
+        if (bad.length) out += `\nНе читаются (приватные или не существуют): ${bad.join(', ')}`;
+        return out || 'Ничего не подключено.';
       }
       case 'scan_partner_cars': {
         await pollPublicChannels();

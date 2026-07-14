@@ -23,7 +23,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import { heartbeat as stateHeartbeat, logEvent as stateEvent, persistentPath } from '../services/stateService.js';
+import { heartbeat as stateHeartbeat, logEvent as stateEvent, persistentPath, getSection } from '../services/stateService.js';
 import fetch     from 'node-fetch';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
@@ -47,8 +47,11 @@ const claude = CLAUDE_API_KEY ? new Anthropic({ apiKey: CLAUDE_API_KEY }) : null
 
 // Парсим список партнёрских каналов из env
 function getPartnerChannels() {
-  if (!PARTNER_CHANNELS) return [];
-  return PARTNER_CHANNELS.split(',').map(s => s.trim()).filter(Boolean);
+  const env = PARTNER_CHANNELS ? PARTNER_CHANNELS.split(',').map(s => s.trim()).filter(Boolean) : [];
+  // + каналы, подключённые Джарвисом на лету (State section 'partners', без редеплоя)
+  let dyn = [];
+  try { dyn = (getSection('partners')?.list || []).map(p => p.ch); } catch {}
+  return [...new Set([...env, ...dyn])];
 }
 
 // Нормализуем ID канала для сравнения (@username → lowercase, числа → строка)
