@@ -60,65 +60,112 @@ async function apiState() {
   };
 }
 
-// ── Визуальный офис: живая сцена, каждый ИИ-сотрудник за своим столом ────────
+// ── Визуальный офис 2.0: комната в фирменном стиле, живые сотрудники ─────────
 const OFFICE = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LegalAuto — Офис ИИ-сотрудников</title><style>
-:root{--gold:#D4AF37;--bg:#0B0F14;--surf:#141B23;--mut:#9AA1A8}
-*{box-sizing:border-box;margin:0}body{background:radial-gradient(120% 100% at 50% 0%,#131A22 0%,#0B0F14 60%,#06090D 100%);color:#F0F2F4;font:15px/1.4 -apple-system,Segoe UI,Roboto,sans-serif;padding:18px;min-height:100vh}
-h1{font-size:20px;letter-spacing:1px}h1 b{color:var(--gold)}.sub{color:var(--mut);font-size:12px;margin:4px 0 18px}
-.office{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
-.desk{position:relative;background:var(--surf);border:1px solid rgba(212,175,55,.25);border-radius:16px;padding:18px 16px 14px;transition:box-shadow .4s}
-.desk.working{box-shadow:0 0 24px rgba(212,175,55,.35);border-color:var(--gold)}
-.ava{font-size:44px;line-height:1}.led{position:absolute;top:14px;right:14px;width:10px;height:10px;border-radius:50%}
-.led.on{background:#4ade80;box-shadow:0 0 10px #4ade80;animation:pulse 2s infinite}.led.off{background:#f87171}
-@keyframes pulse{50%{opacity:.4}}
-.name{font-weight:700;margin-top:8px}.role{color:var(--mut);font-size:12px}
-.bubble{margin-top:10px;background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.25);border-radius:10px;padding:8px 10px;font-size:12.5px;min-height:38px}
-.bubble .t{color:var(--mut);font-size:11px}
-.typing{display:inline-block;animation:blink 1.1s infinite}@keyframes blink{50%{opacity:.2}}
-.feed{margin-top:22px;background:var(--surf);border:1px solid rgba(212,175,55,.25);border-radius:14px;padding:14px}
-.feed h2{font-size:13px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:8px}
-.frow{display:flex;gap:10px;padding:4px 0;font-size:13px;border-bottom:1px solid rgba(255,255,255,.04)}.frow .t{color:var(--mut);min-width:38px}
+<title>LegalAuto — Офис</title><style>
+:root{--gold:#D4AF37;--bg:#07090D;--wall:#10151C;--floor:#0D1219;--mut:#9AA1A8}
+*{box-sizing:border-box;margin:0}body{background:var(--bg);color:#F0F2F4;font:14px/1.4 -apple-system,Segoe UI,Roboto,sans-serif;padding:14px;min-height:100vh}
+h1{font-size:19px;letter-spacing:1px}h1 b{color:var(--gold)}.sub{color:var(--mut);font-size:12px;margin:4px 0 12px}
 a{color:#00D1C2;text-decoration:none;font-size:12px}
+.room{position:relative;max-width:1060px;margin:0 auto;border:2px solid rgba(212,175,55,.5);border-radius:18px;overflow:hidden;
+ background:linear-gradient(180deg,var(--wall) 0 90px,var(--floor) 90px 100%);box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.room::after{content:"";position:absolute;inset:90px 0 0 0;background:
+ repeating-linear-gradient(90deg,transparent 0 79px,rgba(212,175,55,.06) 79px 80px),
+ repeating-linear-gradient(0deg,transparent 0 79px,rgba(212,175,55,.06) 79px 80px);pointer-events:none}
+.logo-wall{position:absolute;top:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;z-index:2}
+.shield{width:40px;height:46px;border:2.5px solid var(--gold);border-radius:8px 8px 16px 16px;display:flex;align-items:center;justify-content:center;color:var(--gold);font-weight:800;font-size:16px;background:#0B0F14}
+.lw{font-weight:800;letter-spacing:3px;font-size:20px}.lw b{color:var(--gold)}
+.lamp{position:absolute;top:0;width:120px;height:70px;background:radial-gradient(60% 100% at 50% 0%,rgba(212,175,55,.16),transparent 75%);pointer-events:none}
+.grid{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:26px;padding:110px 30px 26px;z-index:1}
+.spot{position:relative;height:190px}
+.desk{position:absolute;left:50%;top:78px;transform:translateX(-50%);width:150px;height:56px;background:linear-gradient(180deg,#1D2630,#141B23);border:1.5px solid rgba(212,175,55,.55);border-radius:10px;box-shadow:0 14px 22px rgba(0,0,0,.5)}
+.desk::after{content:"";position:absolute;left:8px;right:8px;top:0;height:3px;border-radius:3px;background:linear-gradient(90deg,#FFD700,#D4AF37,#9A7B1E);opacity:.8}
+.mon{position:absolute;left:50%;top:-34px;transform:translateX(-50%);width:64px;height:38px;background:#05070A;border:2px solid #2A333E;border-radius:5px;overflow:hidden}
+.mon::after{content:"";position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);width:16px;height:8px;background:#2A333E}
+.scr{position:absolute;inset:2px;background:#0A0F14;transition:.4s}
+.working .scr{background:linear-gradient(135deg,#1a2b1f,#0f1f2a);animation:flick 1.3s infinite}
+.working .scr::before{content:"";position:absolute;left:4px;top:5px;right:22px;height:2px;background:#4ade80;box-shadow:0 7px 0 -0.5px #D4AF37,0 13px 0 -0.5px #4ade8088;animation:code 1.8s infinite}
+@keyframes flick{50%{filter:brightness(1.35)}}
+@keyframes code{50%{right:8px}}
+.chair{position:absolute;left:50%;top:120px;transform:translateX(-50%);width:34px;height:10px;background:#1A222B;border:1px solid #2A333E;border-radius:4px}
+.guy{position:absolute;left:50%;top:86px;transform:translateX(-50%);width:34px;text-align:center;z-index:3;transition:top 1s}
+.head{width:16px;height:16px;border-radius:50%;background:#E8C9A0;margin:0 auto;border:1px solid #0008}
+.body{width:26px;height:20px;border-radius:8px 8px 4px 4px;margin:-2px auto 0;background:linear-gradient(180deg,#232B35,#1A222B);border:1.5px solid var(--gold)}
+.working .guy{animation:type .5s infinite}
+@keyframes type{50%{transform:translateX(-50%) translateY(1.5px)}}
+.idle .guy{animation:wander 9s ease-in-out infinite}
+@keyframes wander{0%,55%,100%{transform:translateX(-50%)}20%,35%{transform:translateX(calc(-50% + 34px)) }}
+.off .guy{opacity:.35;animation:none}
+.off .scr{background:#05070A}
+.zzz{position:absolute;right:-4px;top:-12px;font-size:11px;color:var(--mut);display:none}.off .zzz{display:block}
+.tag{position:absolute;left:50%;top:148px;transform:translateX(-50%);white-space:nowrap;font-size:12px;font-weight:700}
+.tag small{display:block;font-weight:500;color:var(--mut);font-size:10.5px;text-align:center}
+.bub{position:absolute;left:50%;top:-6px;transform:translateX(-50%);max-width:170px;background:#141B23;border:1px solid rgba(212,175,55,.5);border-radius:9px;padding:5px 8px;font-size:10.5px;color:#E6E9EC;opacity:0;transition:.4s;z-index:4;white-space:normal;text-align:center}
+.working .bub{opacity:1}
+.cooler{position:absolute;right:26px;top:112px;width:26px;height:52px;background:linear-gradient(180deg,#1A222B,#10151C);border:1.5px solid #2A333E;border-radius:6px;z-index:1}
+.cooler::before{content:"";position:absolute;left:4px;top:-12px;right:4px;height:16px;background:#78c7e344;border:1px solid #78c7e366;border-radius:4px}
+.plant{position:absolute;left:22px;top:104px;font-size:30px;z-index:1}
+.rug{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);width:200px;height:38px;border:1.5px dashed rgba(212,175,55,.4);border-radius:50%;display:flex;align-items:center;justify-content:center;color:rgba(212,175,55,.5);font-size:11px;letter-spacing:3px}
+.feed{max-width:1060px;margin:14px auto 0;background:#141B23;border:1px solid rgba(212,175,55,.3);border-radius:14px;padding:12px 16px}
+.feed h2{font-size:12px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:6px}
+.frow{display:flex;gap:10px;padding:3px 0;font-size:12.5px;border-bottom:1px solid rgba(255,255,255,.04)}.frow .t{color:var(--mut);min-width:36px}
 </style></head><body>
-<h1>LEGAL <b>AUTO</b> — офис ИИ-сотрудников</h1>
-<div class="sub"><span id="upd">загрузка…</span> · <a id="back" href="#">← цифры</a></div>
-<div class="office" id="office"></div>
-<div class="feed"><h2>Что происходит прямо сейчас</h2><div id="feed"></div></div>
+<h1>LEGAL <b>AUTO</b> — офис</h1>
+<div class="sub"><span id="upd">открываем офис…</span> · <a id="back" href="#">← цифры</a></div>
+<div class="room" id="room">
+ <div class="logo-wall"><div class="shield">LA</div><div class="lw">LEGAL <b>AUTO</b><div style="font-size:9px;letter-spacing:4px;color:var(--mut);font-weight:600">ФАКТЫ • КОНТРОЛЬ • РЕЗУЛЬТАТ</div></div></div>
+ <div class="lamp" style="left:12%"></div><div class="lamp" style="left:44%"></div><div class="lamp" style="left:76%"></div>
+ <div class="grid" id="grid"></div>
+ <div class="cooler" title="кулер"></div><div class="plant">🪴</div>
+ <div class="rug">LEGAL AUTO</div>
+</div>
+<div class="feed"><h2>Рабочий эфир</h2><div id="feed"></div></div>
 <script>
 const KEY=new URLSearchParams(location.search).get('key')||'';
 document.getElementById('back').href='/?key='+encodeURIComponent(KEY);
 function esc(s){return String(s??'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}
 const STAFF=[
- {id:'jarvis',ava:'🧠',name:'Джарвис',role:'директор: команды, решения',match:['jarvis','autopilot_toggle','remember']},
- {id:'autoads',ava:'🕵️',name:'Разведчик',role:'каналы партнёров, отбор авто',match:['autoads','mission_scanned','mission_picked','partners']},
- {id:'mission',ava:'🎯',name:'Mission Engine',role:'цели, отчёты, подписчики',match:['mission_published','growth_report','mission_video']},
- {id:'writer',ava:'✍️',name:'Копирайтер',role:'посты фирменным голосом',match:['autoads_poll']},
- {id:'photo',ava:'📸',name:'Фоторедактор',role:'отбор чистых фото',match:['photo']},
- {id:'video',ava:'🎬',name:'Видеозавод',role:'Shorts по брендбуку',match:['yt_upload','video']},
- {id:'autopost',ava:'📦',name:'Публикатор',role:'запчасти в канал',match:['autopost','post_part']},
- {id:'docs',ava:'📄',name:'Документовед',role:'СБКТС/ЭПТС, оплаты, стадии',match:['docs_']},
- {id:'health',ava:'🩺',name:'Медик',role:'здоровье платформы',match:['health']},
+ {id:'jarvis',name:'Джарвис',role:'директор',match:['jarvis','autopilot_toggle','remember']},
+ {id:'autoads',name:'Разведчик',role:'каналы партнёров',match:['autoads','mission_scanned','mission_picked','partners']},
+ {id:'writer',name:'Копирайтер',role:'посты и рерайт',match:['autoads_poll']},
+ {id:'photo',name:'Фоторедактор',role:'отбор фото',match:['photo']},
+ {id:'video',name:'Видеозавод',role:'Shorts',match:['yt_upload','video']},
+ {id:'autopost',name:'Публикатор',role:'запчасти в канал',match:['autopost','post_part']},
+ {id:'docs',name:'Документовед',role:'СБКТС / ЭПТС',match:['docs_']},
+ {id:'mission',name:'Mission Engine',role:'цели и отчёты',match:['mission_published','growth_report']},
+ {id:'health',name:'Медик',role:'здоровье систем',match:['health']},
 ];
+let built=false;
+function build(){
+ document.getElementById('grid').innerHTML=STAFF.map((st,i)=>
+  '<div class="spot" id="spot-'+st.id+'">'+
+   '<div class="bub" id="bub-'+st.id+'"></div>'+
+   '<div class="mon"><div class="scr"></div></div>'.replace('class="mon"','class="mon" style="position:absolute;left:50%;top:44px;transform:translateX(-50%)"')+
+   '<div class="desk"></div>'+
+   '<div class="guy"><span class="zzz">💤</span><div class="head"></div><div class="body"></div></div>'+
+   '<div class="chair"></div>'+
+   '<div class="tag">'+st.name+'<small>'+st.role+'</small></div>'+
+  '</div>').join('');
+ built=true;
+}
 async function tick(){
  try{
   const d=await (await fetch('/api/state?key='+encodeURIComponent(KEY))).json();
+  if(!built)build();
   document.getElementById('upd').textContent='живой эфир · '+new Date(d.updated).toLocaleTimeString('ru-RU');
-  const hb={};d.employees.forEach(e=>hb[e.name]=e);
+  const hb={};d.employees.forEach(e=>hb[(e.name||'').toLowerCase()]=e);
   const now=Date.now();
-  const cards=STAFF.map(st=>{
+  for(const st of STAFF){
    const evs=d.events.filter(e=>st.match.some(m=>e.kind.startsWith(m)||e.kind.includes(m)));
    const last=evs[0];
    const fresh=last&&(now-Date.parse(last.at)<10*60e3);
-   const hbAlive=Object.entries(hb).some(([k,v])=>k.toLowerCase().includes(st.id)&&v.alive);
+   const hbAlive=Object.keys(hb).some(k=>k.includes(st.id)&&hb[k].alive);
    const alive=fresh||hbAlive||st.id==='jarvis';
-   const doing=last?('<span class="t">'+last.at.slice(11,16)+'</span> '+esc(last.note||last.kind)):'<span class="t">ждёт задач…</span>';
-   return '<div class="desk'+(fresh?' working':'')+'"><span class="led '+(alive?'on':'off')+'"></span>'+
-    '<div class="ava">'+st.ava+'</div><div class="name">'+st.name+(fresh?' <span class="typing">⌨️</span>':'')+'</div>'+
-    '<div class="role">'+st.role+'</div><div class="bubble">'+doing+'</div></div>';
-  }).join('');
-  document.getElementById('office').innerHTML=cards;
-  document.getElementById('feed').innerHTML=d.events.slice(0,14).map(e=>'<div class="frow"><span class="t">'+e.at.slice(11,16)+'</span><span>'+esc(e.kind)+'</span><span style="color:var(--mut)">'+esc(e.note)+'</span></div>').join('');
+   const spot=document.getElementById('spot-'+st.id);
+   spot.className='spot '+(fresh?'working':alive?'idle':'off');
+   document.getElementById('bub-'+st.id).textContent=last?(esc(last.note||last.kind).slice(0,70)):'';
+  }
+  document.getElementById('feed').innerHTML=d.events.slice(0,12).map(e=>'<div class="frow"><span class="t">'+e.at.slice(11,16)+'</span><span>'+esc(e.kind)+'</span><span style="color:var(--mut)">'+esc(e.note)+'</span></div>').join('');
  }catch(e){document.getElementById('upd').textContent='ошибка: '+e.message}
 }
 tick();setInterval(tick,15000);
