@@ -19,9 +19,18 @@ const CLIENT_BOT_TOKEN    = process.env.CLIENT_BOT_TOKEN;
 const MGR                 = process.env.MANAGER_USERNAME || 'LegalAuto247';
 const MINI_APP_URL        = 'https://legalauto.online/';
 
-// Отслеживаем кому уже отправляли follow-up (in-memory, сбрасывается при рестарте)
-// chatId → { sent_1d, sent_3d, sent_7d }
-const followUpLog = new Map();
+// Отслеживаем кому уже отправляли follow-up — ХРАНИМ в Platform State (Volume),
+// чтобы редеплой не приводил к повторной рассылке тем же клиентам.
+import { getSection, setSection } from '../services/stateService.js';
+const followUpLog = {
+  get(chatId) { return ((getSection('followup') || {}).log || {})[chatId]; },
+  set(chatId, v) {
+    const cur = getSection('followup') || {};
+    const log = cur.log || {};
+    log[chatId] = v;
+    setSection('followup', { ...cur, log });
+  },
+};
 
 // ── GAS helper ────────────────────────────────────────────────────────────────
 async function gasGet(action, params = {}) {
@@ -196,6 +205,29 @@ export async function runFollowUp() {
   }
 
   console.log(`[FollowUp] Готово — отправлено: ${sent}, закрыто: ${closed}`);
+
+  // Сводка Эдо: кого дожать ЛИЧНО (2+ дня в работе без движения) — бот напомнил,
+  // но живой звонок закрывает сделки лучше
+  try {
+    const hot = leads.filter(l => {
+      const created = l.created_at ? new Date(l.created_at).getTime() : 0;
+      const days = created ? (now - created) / 864e5 : 0;
+      return days >= 2 && days < 14;
+    }).slice(0, 8);
+    const ADMIN_BOT_TOKEN = process.env.ADMIN_BOT_TOKEN, ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
+    if (hot.length && ADMIN_BOT_TOKEN && ADMIN_CHAT_ID) {
+      const lines = hot.map(l => {
+        const days = Math.floor((now - new Date(l.created_at).getTime()) / 864e5);
+        const what = (l.data || l.car || '').split('\n')[0].slice(0, 50);
+        return `• ${l.username ? '@' + l.username : 'клиент ' + l.chat_id} — ${what || 'заявка'} (${days} дн., источник: ${l.source || '—'})`;
+      });
+      await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: ADMIN_CHAT_ID, text: `🔥 Лиды, которые стоит дожать лично (бот уже напомнил им):\n\n${lines.join('\n')}` }),
+      }).catch(() => {});
+    }
+  } catch {}
+
   return { sent, closed, total: leads.length };
 }
 
