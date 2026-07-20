@@ -93,6 +93,34 @@ export function labCost(labName, workType) {
   return lab?.costs?.[workType] ?? null;
 }
 
+// Просчёт услуги для КЛИЕНТА: ищем где дешевле себес и предлагаем цену с наценкой.
+// Возвращает варианты (дешёвый/средний) + твою маржу. Для быстрых котировок в продажах.
+export function quoteService(workType, { region = '', markup = 10000 } = {}) {
+  const k = knowledge();
+  // Синонимы регионов: «Москва/МСК» → лаборатории МО, «Питер» → СПб и т.п.
+  const SYN = {
+    'москва': ['москва', 'мо,', 'мо ', 'одинцово', 'химки', 'чехов', 'селятино', 'голицыно', 'люберцы', 'дмитров', 'бронницы'],
+    'мск': ['мо,', 'одинцово', 'химки', 'чехов', 'селятино', 'голицыно', 'люберцы', 'дмитров'],
+    'питер': ['спб', 'санкт', 'руставели', 'ленинград', 'федоровское'],
+    'спб': ['спб', 'санкт', 'руставели', 'ленинград', 'федоровское'],
+  };
+  const rlow = region ? String(region).toLowerCase().trim() : '';
+  const needles = SYN[rlow] || (rlow ? [rlow] : []);
+  const opts = k.labs
+    .map(l => ({ lab: l.name, owner: l.owner, cost: l.costs?.[workType], notes: l.notes }))
+    .filter(o => typeof o.cost === 'number' && o.cost > 0)
+    .filter(o => !needles.length || needles.some(nd => o.lab.toLowerCase().includes(nd) || (o.notes || '').toLowerCase().includes(nd)))
+    .sort((a, b) => a.cost - b.cost);
+  if (!opts.length) return { workType, region, options: [] };
+  const cheapest = opts[0];
+  const clientPrice = cheapest.cost + markup;
+  return {
+    workType, region,
+    cheapest, clientPrice, margin: markup,
+    options: opts.slice(0, 5).map(o => ({ ...o, client: o.cost + markup, margin: markup })),
+  };
+}
+
 // ── Нумерация по клиенту: А1, А2 / Б1 ────────────────────────────────────────
 const LETTERS = 'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯ';
 function clientLetter(client, list) {
