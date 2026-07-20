@@ -50,6 +50,27 @@ export function upsertCustoms({ post, price = 0, includes = '', notes = '' }) {
   return k.customs.find(c => c.post.toLowerCase() === String(post).toLowerCase());
 }
 export function getKnowledge() { return knowledge(); }
+
+// Сид базы знаний из brand/docs_knowledge_seed.json (прайсы партнёров, себестоимости).
+// НЕ перезаписывает добавленное через Джарвиса — только дополняет отсутствующее.
+export async function seedKnowledge() {
+  try {
+    const { readFile } = await import('fs/promises');
+    const { join, dirname } = await import('path');
+    const { fileURLToPath } = await import('url');
+    const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+    const seed = JSON.parse(await readFile(join(root, 'brand', 'docs_knowledge_seed.json'), 'utf8'));
+    const k = knowledge();
+    let added = 0;
+    for (const lab of seed.labs || []) {
+      if (!k.labs.some(l => l.name.toLowerCase() === lab.name.toLowerCase())) { k.labs.push(lab); added++; }
+    }
+    for (const c of seed.customs || []) {
+      if (!k.customs.some(x => x.post.toLowerCase() === c.post.toLowerCase())) { k.customs.push(c); added++; }
+    }
+    if (added) { setSection('docs_knowledge', k); console.log(`[DocsCRM] 📚 База знаний: добавлено ${added} записей из сида`); }
+  } catch (e) { console.error('[DocsCRM] seed:', e.message); }
+}
 export function labCost(labName, workType) {
   const lab = knowledge().labs.find(l => labName && l.name.toLowerCase() === String(labName).toLowerCase());
   return lab?.costs?.[workType] ?? null;

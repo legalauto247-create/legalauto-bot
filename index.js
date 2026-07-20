@@ -435,6 +435,8 @@ startPublicChannelPoller(10);
 import('./services/missionEngine.js').then(m => m.startMissionEngine()).catch(e => console.error('[Mission]', e.message));
 // Онлайн-дашборд: https://<railway-домен>/?key=<ADMIN_CHAT_ID>
 import('./services/dashboard.js').then(m => m.startDashboard()).catch(e => console.error('[Dashboard]', e.message));
+// База знаний документов: подгружаем прайсы партнёров из репо (без перезаписи правок Джарвиса)
+import('./services/docsCrm.js').then(m => m.seedKnowledge()).catch(e => console.error('[DocsSeed]', e.message));
 
 // ── Review Agent — запрос отзывов через 4 дня после заказа ────────────────
 setupReviewScheduler(clientBot);
