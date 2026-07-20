@@ -33,8 +33,9 @@ function knowledge() {
 export function upsertLab({ name, owner = '', costs = {}, notes = '' }) {
   const k = knowledge();
   const i = k.labs.findIndex(l => l.name.toLowerCase() === String(name).toLowerCase());
-  if (i >= 0) k.labs[i] = { ...k.labs[i], owner: owner || k.labs[i].owner, costs: { ...k.labs[i].costs, ...costs }, notes: notes || k.labs[i].notes };
-  else k.labs.push({ name, owner, costs, notes });
+  // rev 9999 = «правил вручную», будущий сид из репо это не затрёт
+  if (i >= 0) k.labs[i] = { ...k.labs[i], owner: owner || k.labs[i].owner, costs: { ...k.labs[i].costs, ...costs }, notes: notes || k.labs[i].notes, rev: 9999 };
+  else k.labs.push({ name, owner, costs, notes, rev: 9999 });
   setSection('docs_knowledge', k);
   logEvent('docs_kb_lab', { note: `${name} (${owner})` });
   return k.labs.find(l => l.name.toLowerCase() === String(name).toLowerCase());
@@ -51,6 +52,17 @@ export function upsertCustoms({ post, price = 0, includes = '', notes = '' }) {
 }
 export function getKnowledge() { return knowledge(); }
 
+// Удалить лабораторию из активных (партнёр отвалился / точка закрылась)
+export function removeLab(name) {
+  const k = knowledge();
+  const before = k.labs.length;
+  k.labs = k.labs.filter(l => l.name.toLowerCase() !== String(name).toLowerCase());
+  setSection('docs_knowledge', k);
+  const removed = before - k.labs.length;
+  if (removed) logEvent('docs_kb_lab_del', { note: name });
+  return removed;
+}
+
 // Сид базы знаний из brand/docs_knowledge_seed.json (прайсы партнёров, себестоимости).
 // НЕ перезаписывает добавленное через Джарвиса — только дополняет отсутствующее.
 export async function seedKnowledge() {
@@ -61,14 +73,19 @@ export async function seedKnowledge() {
     const root = join(dirname(fileURLToPath(import.meta.url)), '..');
     const seed = JSON.parse(await readFile(join(root, 'brand', 'docs_knowledge_seed.json'), 'utf8'));
     const k = knowledge();
-    let added = 0;
+    let added = 0, updated = 0;
     for (const lab of seed.labs || []) {
-      if (!k.labs.some(l => l.name.toLowerCase() === lab.name.toLowerCase())) { k.labs.push(lab); added++; }
+      const ex = k.labs.find(l => l.name.toLowerCase() === lab.name.toLowerCase());
+      if (!ex) { k.labs.push(lab); added++; }
+      // Обновляем ТОЛЬКО если у сида выше rev — не затираем правки, сделанные Джарвисом
+      else if ((lab.rev || 0) > (ex.rev || 0)) { Object.assign(ex, lab); updated++; }
     }
     for (const c of seed.customs || []) {
-      if (!k.customs.some(x => x.post.toLowerCase() === c.post.toLowerCase())) { k.customs.push(c); added++; }
+      const ex = k.customs.find(x => x.post.toLowerCase() === c.post.toLowerCase());
+      if (!ex) { k.customs.push(c); added++; }
+      else if ((c.rev || 0) > (ex.rev || 0)) { Object.assign(ex, c); updated++; }
     }
-    if (added) { setSection('docs_knowledge', k); console.log(`[DocsCRM] 📚 База знаний: добавлено ${added} записей из сида`); }
+    if (added || updated) { setSection('docs_knowledge', k); console.log(`[DocsCRM] 📚 База знаний: +${added} новых, ${updated} обновлено из сида`); }
   } catch (e) { console.error('[DocsCRM] seed:', e.message); }
 }
 export function labCost(labName, workType) {
