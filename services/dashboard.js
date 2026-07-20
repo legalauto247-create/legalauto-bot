@@ -9,6 +9,7 @@
  */
 import http from 'http';
 import { getState, getSection } from './stateService.js';
+import { sourceSummary } from './missionEngine.js';
 import { listOrders, docsAlerts, docsTotals, orderMargin } from './docsCrm.js';
 
 const KEY = process.env.DASHBOARD_KEY || process.env.ADMIN_CHAT_ID || 'legalauto';
@@ -56,6 +57,7 @@ async function apiState() {
       failed: Object.values(st.tasks || {}).filter(t => t.status === 'failed').slice(-5).map(t => ({ id: t.id.slice(0, 8), type: t.type, error: (t.error || '').slice(0, 90) })),
     },
     docs: { orders: listOrders().map(o => ({ ...o, margin: orderMargin(o) })), alerts: docsAlerts(), totals: docsTotals() },
+    sources: sourceSummary(7),
     events: (st.events || []).slice(-25).reverse().map(e => ({ at: e.at, kind: e.kind, note: e.note || '' })),
   };
 }
@@ -219,6 +221,7 @@ async function tick(){
    '<div class="card"><h2>Подписчики каналов</h2>'+subs+'</div>'+
    '<div class="card"><h2>Документы — СБКТС / ЭПТС / утиль</h2><div class="kpi" style="margin-bottom:8px"><div><b>'+(d.docs.totals.active.revenue).toLocaleString('ru-RU')+'</b><span>выручка (актив), ₽</span></div><div><b>'+(d.docs.totals.active.margin).toLocaleString('ru-RU')+'</b><span>маржа (актив), ₽</span></div><div><b>'+(d.docs.totals.total.margin).toLocaleString('ru-RU')+'</b><span>маржа всего, ₽</span></div></div>'+alerts+orders+'</div>'+
    '<div class="card"><h2>Последние видео (YouTube)</h2>'+vids+'</div>'+
+   '<div class="card"><h2>Источники лидов (7 дней)</h2>'+(Object.entries(d.sources||{}).sort((a,b)=>b[1].leads-a[1].leads||b[1].clicks-a[1].clicks).map(([k,v])=>'<div class="row"><span>'+esc(k)+'</span><span>'+v.clicks+' кликов → <b>'+v.leads+' лидов</b></span></div>').join('')||'<div class="mut">пока нет переходов по ссылкам из роликов</div>')+'</div>'+
    '<div class="card"><h2>Каналы партнёров</h2>'+parts+'</div>'+
    (fails?'<div class="card"><h2>Провалы</h2>'+fails+'</div>':'')+
    '<div class="card"><h2>Лента событий</h2>'+ev+'</div>';

@@ -65,6 +65,34 @@ export function recordMission(kind, extra = {}) {
   stateEvent('mission_' + kind, extra);
 }
 
+// ── 3б. ВОРОНКА ИСТОЧНИКОВ: клик по ссылке (?start=yt_...) → лид ─────────────
+// Показывает, КАКОЙ ролик/пост реально приводит клиентов.
+export function recordSource(source, kind /* 'click' | 'lead' */) {
+  if (!source) return;
+  const funnel = getSection('funnel') || {};
+  const day = funnel[today()] || {};
+  const src = day[source] || { clicks: 0, leads: 0 };
+  src[kind === 'lead' ? 'leads' : 'clicks']++;
+  day[source] = src; funnel[today()] = day;
+  setSection('funnel', funnel);
+  stateEvent('funnel_' + kind, { note: source });
+}
+
+// Сводка по источникам за N дней: { source: {clicks, leads} }
+export function sourceSummary(days = 7) {
+  const funnel = getSection('funnel') || {};
+  const from = Date.now() - days * 864e5;
+  const out = {};
+  for (const [d, srcs] of Object.entries(funnel)) {
+    if (!/^\d{4}-/.test(d) || Date.parse(d) < from) continue;
+    for (const [src, v] of Object.entries(srcs)) {
+      out[src] = out[src] || { clicks: 0, leads: 0 };
+      out[src].clicks += v.clicks || 0; out[src].leads += v.leads || 0;
+    }
+  }
+  return out;
+}
+
 // ── 4. Вечерний отчёт Эдо ────────────────────────────────────────────────────
 async function leadsToday() {
   try {
@@ -100,6 +128,10 @@ export async function dailyReport() {
     `📢 Опубликовано в каналах: ${day.published || 0}`,
     `🎬 Роликов сделано: ${day.video || 0}`,
     leads == null ? '📋 Лиды: нет данных' : `📋 Лидов за день: ${leads}`,
+    ...(() => {
+      const srcs = Object.entries(sourceSummary(1)).sort((a, b) => b[1].leads - a[1].leads || b[1].clicks - a[1].clicks).slice(0, 5);
+      return srcs.length ? ['', '🔗 Откуда пришли (клики → лиды):', ...srcs.map(([k, v]) => `• ${k}: ${v.clicks} → ${v.leads}`)] : [];
+    })(),
     '',
     '👥 Подписчики:',
     ...(lines.length ? lines : ['нет данных']),

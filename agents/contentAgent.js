@@ -56,6 +56,13 @@ function parseCSV(t) {
   return rows;
 }
 
+// Слаг для deep-link метки источника: «Geely Monjaro» → geely_monjaro (какой ролик привёл лид)
+const TR = { а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'i',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'c',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya' };
+function srcSlug(...parts) {
+  return parts.join(' ').toLowerCase().split('').map(c => TR[c] ?? c).join('')
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
+}
+
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID || '1oxJ1wdyjReC6fCarq0PsmO-T1TSW9FqqLeksQyKRZE8';
 
 // Читаем ВЕСЬ каталог напрямую из таблицы (gviz CSV) — все 1378 позиций и ВСЕ марки
@@ -668,7 +675,7 @@ avail — КЛЮЧЕВОЕ ПОЛЕ, определи строго по текс
       avail: d.avail, eta: d.eta || '',
     });
     try {
-      const desc = `${d.description || ''}\n\n✅ ЗАКАЗАТЬ (бот, 1 минута): https://t.me/LegalAutoAssist_bot?start=yt_store\n🚗 Канал: https://t.me/LegalAutoStore`;
+      const desc = `${d.description || ''}\n\n✅ ЗАКАЗАТЬ (бот, 1 минута): https://t.me/LegalAutoAssist_bot?start=yt_store_${srcSlug(d.brand, d.model)}\n🚗 Канал: https://t.me/LegalAutoStore`;
       const yt = await uploadShort({ path: video.path, title: result.title, description: desc, tags: ['shorts', 'авто', 'пригон', 'LegalAuto'] });
       result.ytUrl = yt.url;
     } catch (e) { result.ytError = e.message; }
@@ -701,7 +708,7 @@ async function _makeStoreDigest({ posts = [], platforms = ['youtube'] } = {}) {
   if (cars.length < 2) return { ok: false, error: 'Не удалось разобрать посты (марка/модель не распознаны)' };
 
   const title = `ТОП-${cars.length} авто в наличии: ${cars.map(c => c.title.split(' ')[0]).join(', ')} 🚗`;
-  const desc = `${cars.map(c => `• ${c.title} — ${c.kicker || 'цена по запросу'}`).join('\n')}\n\n✅ ЗАКАЗАТЬ (бот, 1 минута): https://t.me/LegalAutoAssist_bot?start=yt_store\n🚗 Канал: https://t.me/LegalAutoStore`;
+  const desc = `${cars.map(c => `• ${c.title} — ${c.kicker || 'цена по запросу'}`).join('\n')}\n\n✅ ЗАКАЗАТЬ (бот, 1 минута): https://t.me/LegalAutoAssist_bot?start=yt_digest_${srcSlug(cars[0]?.title || 'top')}\n🚗 Канал: https://t.me/LegalAutoStore`;
 
   const gate = await reviewContent({
     title, description: desc, texts: cars.map(c => `${c.title} ${c.kicker} ${c.text}`),

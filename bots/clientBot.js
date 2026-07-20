@@ -469,6 +469,7 @@ export function setupClientBot(bot) {
     const srcMatch = /^(yt|tg|ig|vk|vid)_(.+)$/.exec(payload);
     if (srcMatch) {
       const source = payload;   // напр. yt_parts_geely — целиком в CRM
+      import('../services/missionEngine.js').then(m => m.recordSource(source, 'click')).catch(() => {});
       const topic = srcMatch[2] || '';
       if (/^(docs|sbkts|epts|custom|util)/.test(topic)) {
         // из ролика про документы → сразу диалог по СБКТС/ЭПТС
@@ -1225,6 +1226,7 @@ export function setupClientBot(bot) {
       // Сохраняем заявку в GAS (source: откуда пришёл клиент — ролик/прямой)
       const leadText = `Запчасть: ${partQuery}\nТелефон: ${phone}\nКлиент: @${ctx.from?.username || ctx.from?.id}`;
       saveLead(ctx.chat.id, state.source || 'buy_direct', leadText, ctx.from?.username).catch(() => {});
+      import('../services/missionEngine.js').then(m => m.recordSource(state.source || 'buy_direct', 'lead')).catch(() => {});
 
       // Ищем ZZap параллельно с уведомлением
       const zzapBuyResult = await searchZzap({ partName: partQuery })
