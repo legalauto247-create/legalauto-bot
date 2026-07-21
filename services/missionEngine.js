@@ -62,6 +62,25 @@ export async function classifyPost(text) {
   } catch { return { category: 'skip', why: 'ошибка классификации' }; }
 }
 
+// Сид партнёрских каналов из brand/partners_seed.json — добавляет в State 'partners'
+// то, чего там ещё нет (правки Джарвиса не затирает).
+export async function seedPartners() {
+  try {
+    const { readFile } = await import('fs/promises');
+    const { join, dirname } = await import('path');
+    const { fileURLToPath } = await import('url');
+    const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+    const seed = JSON.parse(await readFile(join(root, 'brand', 'partners_seed.json'), 'utf8'));
+    const cur = getSection('partners') || {};
+    const list = Array.isArray(cur.list) ? cur.list : [];
+    let added = 0;
+    for (const p of seed.list || []) {
+      if (!list.some(x => x.ch.toLowerCase() === p.ch.toLowerCase())) { list.push(p); added++; }
+    }
+    if (added) { setSection('partners', { ...cur, list }); console.log(`[Mission] 🤝 Партнёры: +${added} из сида (${seed.list.map(p => p.ch).join(', ')})`); }
+  } catch (e) { console.error('[Mission] seedPartners:', e.message); }
+}
+
 // Очередь идей контента (docs/parts) — Эдо смотрит и превращает в ролик/пост
 export function queueContentIdea(category, source, text, why) {
   const cur = getSection('content_ideas') || {};
@@ -243,6 +262,7 @@ ${week.map(([d, v]) => `${d}: ${v.scanned || 0}/${v.picked || 0}/${v.published |
 let started = false;
 export function startMissionEngine() {
   if (started) return; started = true;
+  seedPartners().catch(() => {});
   console.log(`[Mission] 🎯 Engine запущен: отбор score≥${MIN_SCORE}, отчёт в 20:00 МСК, каналы: ${MY_CHANNELS.join(', ')}`);
   let lastReport = '', lastGrowth = '';
   setInterval(async () => {
