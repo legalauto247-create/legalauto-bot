@@ -33,6 +33,15 @@ const WHITE = '#FFFFFF';
 const F = [0, 90, 180, 360, 540, 720, 900];
 export const storeShortsDuration = () => 900;
 
+// Ритм-пульс на BPM: фото/акценты слегка «дышат» в такт биту — приём вирусных авто-эдитов.
+// ~140 BPM (drift phonk) → бит каждые ~12.86 кадра. Мягкий, не эпилепсия.
+const BPM = 140;
+const beatPulse = (f: number, amp = 0.012) => {
+  const beat = (60 / BPM) * FPS;
+  const ph = (f % beat) / beat;              // 0..1 внутри бита
+  return 1 + amp * Math.max(0, 1 - ph * 3);  // резкий удар на доле → спад
+};
+
 // Щит LA — серебристый контур (как на ЛИСТ 6), бирюзовые буквы
 const Shield: React.FC<{ size?: number }> = ({ size = 64 }) => (
   <svg width={size} height={size * 1.13} viewBox="0 0 92 104" fill="none">
@@ -46,7 +55,7 @@ const Shield: React.FC<{ size?: number }> = ({ size = 64 }) => (
 const Photo: React.FC<{ src: string; dur: number; mode?: 'in' | 'pan' | 'out' }> = ({ src, dur, mode = 'in' }) => {
   const f = useCurrentFrame();
   const push = spring({ frame: f, fps: FPS, config: { damping: 18, stiffness: 90 } });
-  const scale = interpolate(push, [0, 1], [1.12, 1.0]) + interpolate(f, [0, dur], [0, 0.05]);
+  const scale = (interpolate(push, [0, 1], [1.12, 1.0]) + interpolate(f, [0, dur], [0, 0.05])) * beatPulse(f);
   const panX = mode === 'pan' ? interpolate(f, [0, dur], [-14, 14]) : 0;
   const url = /^https?:/.test(src) ? src : staticFile(src);
   return (
