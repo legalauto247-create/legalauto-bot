@@ -35,6 +35,42 @@ export async function scorePost(text) {
   } catch (e) { return { score: MIN_SCORE, why: 'оценка не удалась — пропускаю' }; }
 }
 
+// ── 1б. МАРШРУТИЗАТОР: куда пост относится и брать ли его вообще ─────────────
+// Один пост из партнёрского канала → категория → НАШ канал. Чужую рекламу и оффтоп режем.
+//   store — конкретное авто на продажу/пригон → @LegalAutoStore (рерайт + Shorts)
+//   parts — конкретная запчасть на продажу     → @LegalAutoParts24
+//   docs  — ПОЛЕЗНАЯ инфа по растаможке/СБКТС/ЭПТС/утилю/пошлинам (тренд/закон/разбор,
+//           НЕ реклама конкурента) → @LegalAuto24 (тема для инфо-ролика)
+//   skip  — чужая прямая реклама услуг, спам, приветствие, опрос, оффтоп
+export const CHANNEL_BY_CAT = { store: '@LegalAutoStore', parts: '@LegalAutoParts24', docs: '@LegalAuto24' };
+export async function classifyPost(text) {
+  if (!claude) return { category: 'skip', why: 'нет ключа' };
+  if (!text || text.length < 25) return { category: 'skip', why: 'слишком коротко' };
+  try {
+    const m = await claude.messages.create({ model: FAST, max_tokens: 60, messages: [{ role: 'user', content:
+`Ты — контент-диспетчер автобизнеса LegalAuto (пригон авто, запчасти, документы). Определи, КУДА отнести пост из чужого Telegram-канала и брать ли его.
+Категории:
+- "store": конкретное АВТО на продажу/пригон (есть марка+модель, цена/год/пробег).
+- "parts": конкретная ЗАПЧАСТЬ на продажу (деталь + авто).
+- "docs": ПОЛЕЗНАЯ инфа по растаможке/СБКТС/ЭПТС/утильсбору/пошлинам/ввозу — новость, изменение закона, разбор, лайфхак. НЕ прямая реклама услуг брокера.
+- "skip": прямая реклама УСЛУГ конкурента (с их ценами/контактами), спам, приветствие, опрос, оффтоп, мемы.
+Верни ТОЛЬКО JSON: {"category":"store|parts|docs|skip","why":"3-5 слов"}
+Пост: "${String(text).slice(0, 700)}"` }] });
+    const r = JSON.parse(m.content[0].text.match(/\{[\s\S]*\}/)[0]);
+    const category = ['store', 'parts', 'docs', 'skip'].includes(r.category) ? r.category : 'skip';
+    return { category, why: String(r.why || ''), channel: CHANNEL_BY_CAT[category] };
+  } catch { return { category: 'skip', why: 'ошибка классификации' }; }
+}
+
+// Очередь идей контента (docs/parts) — Эдо смотрит и превращает в ролик/пост
+export function queueContentIdea(category, source, text, why) {
+  const cur = getSection('content_ideas') || {};
+  const list = Array.isArray(cur.list) ? cur.list : [];
+  list.unshift({ at: new Date().toISOString(), category, source, why, text: String(text).slice(0, 400) });
+  setSection('content_ideas', { list: list.slice(0, 60) });
+  stateEvent('content_idea', { note: `${category}: ${why}` });
+}
+
 // ── 2. Подписчики каналов (публичная страница t.me) ─────────────────────────
 export async function channelSubscribers(channel) {
   const handle = channel.replace(/^@/, '');

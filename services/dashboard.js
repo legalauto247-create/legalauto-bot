@@ -58,6 +58,7 @@ async function apiState() {
     },
     docs: { orders: listOrders().map(o => ({ ...o, margin: orderMargin(o) })), alerts: docsAlerts(), totals: docsTotals() },
     sources: sourceSummary(7),
+    ideas: ((getSection('content_ideas')||{}).list||[]).slice(0,8),
     events: (st.events || []).slice(-25).reverse().map(e => ({ at: e.at, kind: e.kind, note: e.note || '' })),
   };
 }
@@ -221,6 +222,7 @@ async function tick(){
    '<div class="card"><h2>Подписчики каналов</h2>'+subs+'</div>'+
    '<div class="card"><h2>Документы — СБКТС / ЭПТС / утиль</h2><div class="kpi" style="margin-bottom:8px"><div><b>'+(d.docs.totals.active.revenue).toLocaleString('ru-RU')+'</b><span>выручка (актив), ₽</span></div><div><b>'+(d.docs.totals.active.margin).toLocaleString('ru-RU')+'</b><span>маржа (актив), ₽</span></div><div><b>'+(d.docs.totals.total.margin).toLocaleString('ru-RU')+'</b><span>маржа всего, ₽</span></div></div>'+alerts+orders+'</div>'+
    '<div class="card"><h2>Последние видео (YouTube)</h2>'+vids+'</div>'+
+   '<div class="card"><h2>Идеи контента из каналов</h2>'+((d.ideas||[]).map(i=>'<div class="row"><span class="tag">'+esc(i.category)+'</span><span>'+esc(i.why)+'</span><span class="mut">'+esc((i.text||'').slice(0,40))+'</span></div>').join('')||'<div class="mut">маршрутизатор наполнит после подключения каналов</div>')+'</div>'+
    '<div class="card"><h2>Источники лидов (7 дней)</h2>'+(Object.entries(d.sources||{}).sort((a,b)=>b[1].leads-a[1].leads||b[1].clicks-a[1].clicks).map(([k,v])=>'<div class="row"><span>'+esc(k)+'</span><span>'+v.clicks+' кликов → <b>'+v.leads+' лидов</b></span></div>').join('')||'<div class="mut">пока нет переходов по ссылкам из роликов</div>')+'</div>'+
    '<div class="card"><h2>Каналы партнёров</h2>'+parts+'</div>'+
    (fails?'<div class="card"><h2>Провалы</h2>'+fails+'</div>':'')+

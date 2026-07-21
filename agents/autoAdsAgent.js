@@ -555,31 +555,39 @@ export async function pollPublicChannels() {
 
       if (!batch.length) { seen[handle] = Math.max(lastSeen, ...posts.map(p => p.num), 0); continue; }
 
-      const MAX_PER_RUN = 5;       // присылаем не больше 5 авто за прогон
-      let sent = 0, maxProcessed = lastSeen;
+      const MAX_PER_RUN = 5;       // не больше 5 постов в работу за прогон
+      let sent = 0, ideas = 0, maxProcessed = lastSeen;
+      const { classifyPost, scorePost, recordMission, queueContentIdea, MIN_SCORE } = await import('../services/missionEngine.js');
       for (const post of batch) {
         if (sent >= MAX_PER_RUN) break;   // остальные подтянем следующим прогоном
         maxProcessed = Math.max(maxProcessed, post.num);
         if (!post.text || post.text.length < 30) continue;
-        const isListing = await isCarListing(post.text);
-        if (!isListing) { console.log(`[AutoAds] ⏭ ${post.id} не авто`); continue; }
-
-        // Mission Engine: в работу идут ТОЛЬКО лучшие посты (ликвидность/цена/полнота)
-        const { scorePost, recordMission, MIN_SCORE } = await import('../services/missionEngine.js');
         recordMission('scanned');
-        const { score, why } = await scorePost(post.text);
-        if (score < MIN_SCORE) { console.log(`[AutoAds] ⏭ ${post.id} score ${score}/10 (${why})`); continue; }
-        recordMission('picked', { note: `score ${score}: ${why}` });
 
-        console.log(`[AutoAds] 🚗 ${post.id} — score ${score}/10 (${why}), переписываю (${sent + 1}/${MAX_PER_RUN})`);
-        const rewritten = await rewriteForChannel(post.text, ch);
-        await sendForApproval(rewritten, post.text, ch, post.photos, `⭐ ${score}/10 — ${why}`);
-        sent++;
+        // МОЗГ-МАРШРУТИЗАТОР: берём только наше и разводим по направлениям
+        const { category, why, channel } = await classifyPost(post.text);
+        if (category === 'skip') { console.log(`[AutoAds] ⏭ ${post.id} skip (${why})`); continue; }
+
+        // Авто на продажу → рерайт под Store + одобрение (полный конвейер)
+        if (category === 'store') {
+          const { score, why: sw } = await scorePost(post.text);
+          if (score < MIN_SCORE) { console.log(`[AutoAds] ⏭ ${post.id} авто score ${score} (${sw})`); continue; }
+          recordMission('picked', { note: `store score ${score}: ${sw}` });
+          console.log(`[AutoAds] 🚗 ${post.id} → Store, score ${score}/10 (${sw})`);
+          const rewritten = await rewriteForChannel(post.text, ch);
+          await sendForApproval(rewritten, post.text, ch, post.photos, `🚗 → @LegalAutoStore · ⭐ ${score}/10 — ${sw}`);
+          sent++;
+        } else {
+          // docs/parts → в очередь идей нужного направления (Эдо решит, сделать ли ролик/пост)
+          queueContentIdea(category, ch, post.text, why);
+          console.log(`[AutoAds] 💡 ${post.id} → идея ${category} (${channel}): ${why}`);
+          ideas++;
+        }
       }
       // seen двигаем только до реально просмотренных — непросмотренные останутся на след. прогон
       seen[handle] = Math.max(lastSeen, maxProcessed);
-      console.log(`[AutoAds] ${handle}: отправлено ${sent} авто на одобрение`);
-      stateEvent('autoads_poll', { note: `${handle}: ${sent} авто на одобрение` });
+      console.log(`[AutoAds] ${handle}: ${sent} авто на одобрение, ${ideas} идей контента`);
+      stateEvent('autoads_poll', { note: `${handle}: ${sent} авто, ${ideas} идей` });
     }
 
     saveSeen(seen);
