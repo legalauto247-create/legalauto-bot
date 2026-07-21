@@ -647,8 +647,19 @@ avail — КЛЮЧЕВОЕ ПОЛЕ, определи строго по текс
 
   // 3) ФОТО-РЕДАКТОР: сам отбирает лучшие фото (без чужих клейм, машина целиком)
   const { curatePhotos } = await import('../services/photoCurator.js');
-  const curated = await curatePhotos(photos, { want: 6 });
+  let curated = await curatePhotos(photos, { want: 6 });
   if (!curated.length) return { ok: false, error: 'Нет пригодных фото (все с чужими клеймами или битые)' };
+
+  // 3б) СТУДИЯ: для ПРЕМИУМ-авто (от 7 млн) дорисовываем тёмный студийный фон через OpenAI —
+  // окупается одной продажей. Остальные идут как есть (не тратим токены).
+  try {
+    const { studioizePhotos, isPremium } = await import('../services/photoStudio.js');
+    if (isPremium(price)) {
+      const st = await studioizePhotos(curated, { price, maxStudio: 3 });
+      if (st.used) curated = st.photos;
+    }
+  } catch (e) { console.error('[Content] studio:', e.message); }
+
   const images = curated.map((c, i) => ({ name: `car-${i}.jpg`, buffer: c.buffer }));
   const localNames = images.map(im => im.name);
 
