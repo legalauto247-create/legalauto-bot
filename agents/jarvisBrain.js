@@ -267,6 +267,7 @@ async function runTool(name, input, ctx) {
           `💰 Просчёт «${q.workType}»${q.region ? ` (${q.region})` : ''} — наценка ${rub(q.margin)}:`,
           '',
           `✅ Выгоднее всего: ${q.cheapest.lab} (${q.cheapest.owner}) — себес ${rub(q.cheapest.cost)} → клиенту ${rub(q.clientPrice)}, маржа ${rub(q.margin)}`,
+          q.market ? `📊 Рынок берёт ${rub(q.market.low)}–${rub(q.market.high)} — мы дешевле на ${rub(Math.max(0, q.market.cheaper))}${q.market.note ? ` (${q.market.note})` : ''}` : '',
           '',
           'Другие варианты:',
           ...q.options.slice(1).map(o => `• ${o.lab} (${o.owner}): себес ${rub(o.cost)} → клиенту ${rub(o.client)}`),

@@ -93,6 +93,16 @@ export function labCost(labName, workType) {
   return lab?.costs?.[workType] ?? null;
 }
 
+// Рыночный бенчмарк конкурентов (разведка июль 2026: whitebrokerdv.ru, vlb-broker.ru, агрегаторы).
+// Чтобы Джарвис показывал «мы дешевле рынка» при просчёте клиенту.
+export const MARKET = {
+  'СБКТС+ЭПТС': { low: 40000, high: 60000, note: 'у брокеров СБКТС идёт пакетом с растаможкой 40-60к' },
+  'ЭПТС': { low: 7000, high: 15000, note: '' },
+  'Утиль коммерческий': { low: 25000, high: 40000, note: 'после отмены льгот 12.2025 спрос вырос' },
+  'Утиль льготный': { low: 25000, high: 40000, note: '' },
+  'ГЛОНАСС': { low: 28000, high: 40000, note: '' },
+};
+
 // Просчёт услуги для КЛИЕНТА: ищем где дешевле себес и предлагаем цену с наценкой.
 // Возвращает варианты (дешёвый/средний) + твою маржу. Для быстрых котировок в продажах.
 export function quoteService(workType, { region = '', markup = 10000 } = {}) {
@@ -114,9 +124,11 @@ export function quoteService(workType, { region = '', markup = 10000 } = {}) {
   if (!opts.length) return { workType, region, options: [] };
   const cheapest = opts[0];
   const clientPrice = cheapest.cost + markup;
+  const mk = MARKET[workType];
+  const market = mk ? { ...mk, cheaper: mk.low - clientPrice } : null;   // насколько мы ниже нижней планки рынка
   return {
     workType, region,
-    cheapest, clientPrice, margin: markup,
+    cheapest, clientPrice, margin: markup, market,
     options: opts.slice(0, 5).map(o => ({ ...o, client: o.cost + markup, margin: markup })),
   };
 }
