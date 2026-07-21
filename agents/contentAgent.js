@@ -260,14 +260,33 @@ async function _makeProductShort({ platforms = ['youtube'], theme = '', lengthSe
   if (validParts.length < 3) return { ok: false, error: 'Мало деталей с рабочими фото (битые ссылки в облаке)' };
   parts.length = 0; parts.push(...validParts);
 
-  // items: КАЖДАЯ запчасть со своим названием и ценой (текст совпадает с фото)
-  const items = parts.map(p => ({
-    photo: p.photo || p.photo_cover,
-    photos: (p.photos && p.photos.length ? p.photos : [p.photo || p.photo_cover]).filter(Boolean).slice(0, 3),
-    name: p.name,
-    price: p.price ? Number(p.price).toLocaleString('ru-RU') + ' ₽' : '',
-    fits: [p.brand, (p.model || p.series || '').replace(/\|/g, '/')].filter(Boolean).join(' ').trim(),
-  }));
+  // Проверка доступности фото — битая ссылка (404) в Remotion роняет весь рендер.
+  const imgOk = async (url) => {
+    if (!url) return false;
+    try {
+      const r = await Promise.race([
+        fetch(url, { method: 'GET', headers: { Range: 'bytes=0-2048', 'User-Agent': 'Mozilla/5.0' } }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('t')), 8000)),
+      ]);
+      return r.ok || r.status === 206;
+    } catch { return false; }
+  };
+
+  // items: КАЖДАЯ запчасть со своим названием и ценой (текст совпадает с фото).
+  // Фото ВАЛИДИРУЕМ: оставляем только реально доступные, деталь без живого фото выкидываем.
+  const items = [];
+  for (const p of parts) {
+    const cand = (p.photos && p.photos.length ? p.photos : [p.photo || p.photo_cover]).filter(Boolean).slice(0, 3);
+    const live = [];
+    for (const u of cand) if (await imgOk(u)) live.push(u);
+    if (!live.length) { console.log(`[Content] ⏭ ${p.name}: фото недоступны, пропускаю`); continue; }
+    items.push({
+      photo: live[0], photos: live, name: p.name,
+      price: p.price ? Number(p.price).toLocaleString('ru-RU') + ' ₽' : '',
+      fits: [p.brand, (p.model || p.series || '').replace(/\|/g, '/')].filter(Boolean).join(' ').trim(),
+    });
+  }
+  if (items.length < 2) return { ok: false, error: `Живых фото запчастей мало (${items.length}) — ролик не собрать` };
 
   // марка(и) и происхождение — из РЕАЛЬНЫХ деталей ролика (не хардкод)
   const brands = [...new Set(parts.map(p => String(p.brand || '').trim()).filter(Boolean))];
